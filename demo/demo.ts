@@ -1,16 +1,17 @@
-// Loom Engine - Phase 3 demo (animation-system driven).
+// Loom Engine - Phase 5 demo (audio + input).
 //
-// Same scene as Phase 2 (knight + 5x5 iso tile diamond), but the
-// walk cycle is now driven by the formal AnimationSystem. The
-// demo's old WalkCycleSystem is gone; the demo just calls
-// AnimationStatePool.play(knight, manifest, 'default') once on boot
-// and the engine handles frame stepping in PHASE_ANIMATION.
-//
-// The knight asset's manifest has no clips[] field, so the loader
-// synthesizes a 'default' clip covering all 4 frames, looping. A
-// real game ships manifests with named clips (idle / walk / attack).
-// The 'default' synthesis is just backward-compat with Phase 2
-// manifests.
+// Adds to the Phase 4 scene:
+//   - InputSystem in PHASE_INPUT promotes DOM events to a frame-
+//     coherent InputSnapshot resource each tick
+//   - VeilBudgetSystem propagates VeilBudget.audioBudget into the
+//     AudioBus and budget.particleBudget into the ParticlePool
+//   - Arrow keys / WASD pan the camera
+//   - Click anywhere on the canvas: bursts 24 sparkle particles AND
+//     plays a violet -> teal chirp through the AudioBus 'sfx' bus
+//     (after first user gesture, which also unlocks AudioContext)
+//   - Mouse hover reports the iso tile coordinate under the cursor
+//   - The knight's continuous sparkle emitter from Phase 4 stays
+//     active
 
 import {
   LOOM_ENGINE_VERSION,
@@ -32,15 +33,22 @@ import {
   ParticleSimulationSystem,
   ParticleEmitterSystem,
   ParticleRenderSystem,
+  InputSystem,
+  VeilBudgetSystem,
+  isoToTile,
   RESOURCE_DEVICE,
   RESOURCE_CAMERA,
   RESOURCE_TIME,
+  RESOURCE_INPUT,
+  SYSTEM_PHASE_INPUT,
   SYSTEM_PHASE_LOGIC,
   SYSTEM_PHASE_PHYSICS,
   SYSTEM_PHASE_ANIMATION,
   SYSTEM_PHASE_RENDER,
   loadSpriteSheet,
   hexToRgba,
+  vec2,
+  worldToScreen,
   type LoadedSpriteSheet,
   type System,
   type World,
@@ -49,12 +57,13 @@ import {
   type TimeResource,
   type AtlasHandle,
   type EntityId,
+  type InputSnapshot,
 } from '../dist/index.js';
 
 const canvas = document.getElementById('stage') as HTMLCanvasElement;
 const stats = document.getElementById('stats') as HTMLDivElement;
 
-// ---------- Procedural tile atlas (terrain stays code-only) ----------
+// ---------- Procedural tile atlas ----------
 
 function makeTileAtlas(): HTMLCanvasElement {
   const c = document.createElement('canvas');
@@ -81,7 +90,7 @@ function makeTileAtlas(): HTMLCanvasElement {
   return c;
 }
 
-// ---------- Custom systems for the demo ----------
+// ---------- Demo systems ----------
 
 class HoverSystem implements System {
   readonly name: string = 'demo-hover';
@@ -109,6 +118,80 @@ class TileRenderSystem implements System {
   }
 }
 
+// Reads the InputSnapshot each tick, pans the camera with arrow keys
+// or WASD, and updates a shared "last hover tile" for the stats panel.
+class CameraInputSystem implements System {
+  readonly name: string = 'demo-camera-input';
+  hoverTileX: number = 0;
+  hoverTileY: number = 0;
+  hoverInside: boolean = false;
+  constructor(private speed: number) {}
+  update(world: World, dt: number): void {
+    const input = world.resources.get<InputSnapshot>(RESOURCE_INPUT);
+    const camera = world.resources.get<CameraView>(RESOURCE_CAMERA);
+    if (!input || !camera) return;
+    let dx = 0;
+    let dy = 0;
+    if (input.keysHeld.has('ArrowLeft') || input.keysHeld.has('KeyA')) dx -= 1;
+    if (input.keysHeld.has('ArrowRight') || input.keysHeld.has('KeyD')) dx += 1;
+    if (input.keysHeld.has('ArrowUp') || input.keysHeld.has('KeyW')) dy -= 1;
+    if (input.keysHeld.has('ArrowDown') || input.keysHeld.has('KeyS')) dy += 1;
+    if (dx !== 0 || dy !== 0) {
+      const len = Math.sqrt(dx * dx + dy * dy);
+      camera.centerX += (dx / len) * this.speed * dt;
+      camera.centerY += (dy / len) * this.speed * dt;
+    }
+
+    // Mouse-to-tile picking: take pointer canvas coords, undo camera
+    // transform to get iso world coords, then iso -> tile.
+    this.hoverInside = input.pointer.inside;
+    if (input.pointer.inside) {
+      const worldIsoX = (input.pointer.x - camera.viewportWidth / 2) / camera.zoom + camera.centerX;
+      const worldIsoY = (input.pointer.y - camera.viewportHeight / 2) / camera.zoom + camera.centerY;
+      const out = vec2(0, 0);
+      isoToTile(worldIsoX, worldIsoY, out);
+      this.hoverTileX = Math.round(out.x);
+      this.hoverTileY = Math.round(out.y);
+    }
+  }
+}
+
+// Listens for left-click. On click: burst 24 particles from the knight
+// AND play a violet -> teal chirp on the SFX bus. Also unlocks audio.
+class ClickInputSystem implements System {
+  readonly name: string = 'demo-click-input';
+  burstCount: number = 0;
+  constructor(private knight: EntityId) {}
+  update(world: World, _dt: number): void {
+    const input = world.resources.get<InputSnapshot>(RESOURCE_INPUT);
+    if (!input) return;
+    const leftClicked = (input.pointerPressedThisFrame & 1) !== 0;
+    if (!leftClicked) return;
+
+    // Burst particles via the existing emitter.
+    const emitters = world.requirePool<ParticleEmitterPool>(POOL_EMITTER);
+    emitters.burst(this.knight, 24);
+
+    // Play a SFX chirp. Engine.audio is exposed via a helper attach
+    // below; we read it from the world resource registry here for
+    // proper indirection.
+    const audioAny = (world as unknown as { __audio?: { unlock: () => Promise<void>; isUnlocked: () => boolean; playTone: (b: string, f: number, d: number, o?: { gain?: number; type?: OscillatorType }) => void } }).__audio;
+    if (audioAny) {
+      // Browsers require unlock inside the user gesture - the click
+      // we just observed IS the user gesture for THIS frame, so it's
+      // OK to call here despite being a system (the system runs
+      // synchronously inside a click handler-driven tick path).
+      void audioAny.unlock();
+      // 880 Hz fade to 440 Hz isn't easy with a single tone, so do
+      // two quick chirps that suggest a violet -> teal arc.
+      audioAny.playTone('sfx', 880, 80, { gain: 0.18, type: 'triangle' });
+      setTimeout(() => audioAny.playTone('sfx', 440, 100, { gain: 0.14, type: 'sine' }), 60);
+    }
+
+    this.burstCount++;
+  }
+}
+
 // ---------- Engine boot ----------
 
 (async function boot(): Promise<void> {
@@ -132,9 +215,6 @@ class TileRenderSystem implements System {
   }
   const knightAtlas = engine.device.registerAtlas(knightSheet.atlas);
 
-  // One knight entity. Transform + Sprite as before; AnimationState
-  // is the new component that swaps in a clip and the AnimationSystem
-  // advances the frame field on SpritePool each tick.
   const transforms = engine.world.requirePool<TransformPool>(POOL_TRANSFORM);
   const sprites = engine.world.requirePool<SpritePool>(POOL_SPRITE);
   const animations = engine.world.requirePool<AnimationStatePool>(POOL_ANIMATION);
@@ -142,43 +222,36 @@ class TileRenderSystem implements System {
   const knight = engine.world.createEntity();
   transforms.attach(knight, 0, 0, 0.2);
   sprites.attach(knight, knightAtlas, 0);
-  // Manifests without an explicit clips[] get a synthesized 'default'
-  // clip covering all frames in order, looping. The knight sheet does
-  // not declare clips, so 'default' is what we play.
   animations.play(knight, knightSheet.manifest, 'default');
 
-  // Phase 4: violet/teal sparkle emitter attached to the knight. The
-  // emitter spawns 30 particles/sec in an upward cone, additive
-  // blended for a soft glow. Veil-weaver palette: hot purple -> cool
-  // cyan as particles age.
   const emitters = engine.world.requirePool<ParticleEmitterPool>(POOL_EMITTER);
   emitters.attach(knight, {
     rate: 30,
     particleLife: 1.2,
     speedMin: 0.6,
     speedMax: 1.4,
-    dirX: 0,
-    dirY: 0,
-    dirZ: 1,                  // upward in iso world (Z is height)
-    coneRadians: Math.PI / 4,  // 45 degree half-angle cone
-    ax: 0,
-    ay: 0,
-    az: -0.8,                  // gravity pulls back down
+    dirX: 0, dirY: 0, dirZ: 1,
+    coneRadians: Math.PI / 4,
+    ax: 0, ay: 0, az: -0.8,
     startSize: 6,
     endSize: 1,
-    startColor: hexToRgba(0xc88cff, 1.0),   // violet
-    endColor: hexToRgba(0x6effff, 0),        // teal fade
+    startColor: hexToRgba(0xc88cff, 1.0),
+    endColor: hexToRgba(0x6effff, 0),
     additive: true,
   });
 
-  // Phase order:
-  //   LOGIC      hover bobs the knight, emitter system spawns
-  //              this tick's particles
-  //   PHYSICS    particle simulation advances life + integrates
-  //              velocity / acceleration
-  //   ANIMATION  knight sprite frame steps
-  //   RENDER     tiles, sprites, particles (in this order so
-  //              particles draw above sprites)
+  // Stash audio bus as an opaque ref so the click system can find it.
+  // (Demo-only shortcut; production code would inject via constructor.)
+  if (engine.audio) {
+    (engine.world as unknown as { __audio: typeof engine.audio }).__audio = engine.audio;
+  }
+
+  // Demo systems registered explicitly.
+  const cameraInput = new CameraInputSystem(2.5);   // 2.5 world-units/sec pan speed
+  engine.world.addSystem(new InputSystem(), SYSTEM_PHASE_INPUT);
+  engine.world.addSystem(new VeilBudgetSystem(), SYSTEM_PHASE_INPUT);
+  engine.world.addSystem(cameraInput, SYSTEM_PHASE_LOGIC);
+  engine.world.addSystem(new ClickInputSystem(knight), SYSTEM_PHASE_LOGIC);
   engine.world.addSystem(new HoverSystem(knight, 0.1, 1.5, 0.2), SYSTEM_PHASE_LOGIC);
   engine.world.addSystem(new ParticleEmitterSystem(), SYSTEM_PHASE_LOGIC);
   engine.world.addSystem(new ParticleSimulationSystem(), SYSTEM_PHASE_PHYSICS);
@@ -188,8 +261,6 @@ class TileRenderSystem implements System {
   engine.world.addSystem(new ParticleRenderSystem(), SYSTEM_PHASE_RENDER);
   const particles = engine.world.requirePool<ParticlePool>(POOL_PARTICLE);
 
-  // Frame loop with the parallel session's hidden-tab fallback so the
-  // preview keeps animating when not focused.
   let frameCount = 0;
   let lastFpsAt = performance.now();
   let lastFps = 0;
@@ -206,16 +277,23 @@ class TileRenderSystem implements System {
 
     const t = engine.world.resources.require<TimeResource>(RESOURCE_TIME);
     const activeClip = animations.getClipName(knight);
+    const audioState = engine.audio
+      ? (engine.audio.isUnlocked() ? 'unlocked' : 'locked (click to unlock)')
+      : 'unavailable';
+    const hover = cameraInput.hoverInside
+      ? '(' + cameraInput.hoverTileX + ',' + cameraInput.hoverTileY + ')'
+      : '(off)';
     stats.textContent =
       'engine     ' + LOOM_ENGINE_VERSION + '\n' +
       'fps        ' + lastFps + '\n' +
       'draw calls ' + engine.device.getDrawCallCount() + ' (per frame)\n' +
       'frame      ' + t.frame + '   elapsed ' + t.elapsed.toFixed(2) + 's\n' +
       'entities   ' + engine.world.countEntities() + '   systems ' + engine.world.countSystems() + '\n' +
-      'sheet      ' + knightSheet.manifest.name + '   clips ' + knightSheet.manifest.clips.length + '\n' +
-      'playing    ' + (activeClip || '(none)') + '   frame idx ' + sprites.frame[0 + (knight & 0x00ffffff)] + '\n' +
+      'audio      ' + audioState + '\n' +
+      'sheet      ' + knightSheet.manifest.name + '   playing ' + (activeClip || '(none)') + '   frame ' + sprites.frame[0 + (knight & 0x00ffffff)] + '\n' +
       'particles  ' + particles.getLiveCount() + ' live  cap ' + particles.getMaxParticles() + '\n' +
-      'camera     center=(' + engine.camera.centerX.toFixed(2) + ',' + engine.camera.centerY.toFixed(2) + ') zoom=' + engine.camera.zoom.toFixed(2);
+      'camera     center=(' + engine.camera.centerX.toFixed(2) + ',' + engine.camera.centerY.toFixed(2) + ')   hover tile ' + hover + '\n' +
+      'controls   click = burst+chirp   arrows/WASD = pan camera';
 
     schedule();
   }

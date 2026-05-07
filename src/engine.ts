@@ -33,6 +33,12 @@ import {
   createVeilBudgetResource,
   RESOURCE_VEIL_BUDGET,
 } from './resources.js';
+import { AudioBus, RESOURCE_AUDIO_BUS } from './audio/audio-bus.js';
+import {
+  InputManager,
+  RESOURCE_INPUT_MANAGER,
+  RESOURCE_INPUT,
+} from './input/input-manager.js';
 import {
   RESOURCE_TIME,
   RESOURCE_CAMERA,
@@ -44,6 +50,14 @@ import { clamp } from './util/math.js';
 
 export interface EngineOptions {
   canvas: HTMLCanvasElement;
+  // Optional Window for input listeners. Defaults to globalThis.window
+  // when present. Tests pass a fake; non-DOM environments can pass
+  // null to skip input attachment.
+  inputWindow?: Window | null;
+  // If true, Engine.create will NOT construct an AudioBus. Useful in
+  // tests where AudioContext isn't available. Defaults to false in
+  // browser, true in Node.
+  skipAudio?: boolean;
 }
 
 // Max delta clamp. Long pauses (background tab, breakpoint) shouldn't
@@ -55,15 +69,26 @@ export class Engine {
   readonly device: IGraphicsDevice;
   readonly world: World;
   readonly camera: CameraView;
+  readonly input: InputManager;
+  readonly audio: AudioBus | null;
 
   private time: TimeResource;
   private prevTimeMs: number = 0;
 
-  private constructor(device: IGraphicsDevice, world: World, camera: CameraView, time: TimeResource) {
+  private constructor(
+    device: IGraphicsDevice,
+    world: World,
+    camera: CameraView,
+    time: TimeResource,
+    input: InputManager,
+    audio: AudioBus | null,
+  ) {
     this.device = device;
     this.world = world;
     this.camera = camera;
     this.time = time;
+    this.input = input;
+    this.audio = audio;
   }
 
   // Constructs an Engine + default resources + default pools +
@@ -75,11 +100,34 @@ export class Engine {
     const world = new World();
     const time = createTimeResource();
 
+    // Input manager - attached to the canvas so pointer events work.
+    // Window defaults to globalThis.window when in a DOM context.
+    const input = new InputManager();
+    if (opts.inputWindow !== null) {
+      const win = opts.inputWindow ?? (typeof window !== 'undefined' ? window : null);
+      if (win) input.attach(opts.canvas, win);
+    }
+
+    // Audio bus - browser-only. In Node tests, opts.skipAudio = true
+    // (or AudioContext is undefined) bypasses construction.
+    let audio: AudioBus | null = null;
+    const wantAudio = opts.skipAudio !== true && typeof AudioContext !== 'undefined';
+    if (wantAudio) {
+      try {
+        audio = AudioBus.create();
+      } catch {
+        audio = null;
+      }
+    }
+
     // Resources
     world.resources.set(RESOURCE_TIME, time);
     world.resources.set(RESOURCE_CAMERA, camera);
     world.resources.set(RESOURCE_DEVICE, device);
     world.resources.set(RESOURCE_VEIL_BUDGET, createVeilBudgetResource());
+    world.resources.set(RESOURCE_INPUT_MANAGER, input);
+    world.resources.set(RESOURCE_INPUT, input.snapshot());
+    if (audio) world.resources.set(RESOURCE_AUDIO_BUS, audio);
 
     // Pools
     world.registerPool(POOL_TRANSFORM, new TransformPool());
@@ -88,14 +136,13 @@ export class Engine {
     world.registerPool(POOL_PARTICLE, new ParticlePool());
     world.registerPool(POOL_EMITTER, new ParticleEmitterPool());
 
-    // Systems are NOT pre-registered. Callers add their own render
-    // and game logic systems explicitly, in the order they want.
-    // This keeps the engine flexible: a demo registers
-    // SpriteRenderSystem alone, an ARPG registers
-    // [TileRender, SpriteRender, ParticleRender, UIRender] in that
-    // order, etc.
+    // Systems are NOT pre-registered. Callers add their own systems
+    // explicitly. The Phase 5 idiomatic order is:
+    //   [InputSystem, VeilBudgetSystem] in PHASE_INPUT, then game
+    //   logic, then PHASE_PHYSICS for sim, then PHASE_ANIMATION,
+    //   then PHASE_RENDER. Demo wires this order.
 
-    return new Engine(device, world, camera, time);
+    return new Engine(device, world, camera, time, input, audio);
   }
 
   // One frame of work. Call from requestAnimationFrame.
@@ -129,8 +176,8 @@ export class Engine {
   }
 
   dispose(): void {
-    // Currently nothing to release. Atlases live on the device until
-    // explicitly released via device.releaseAtlas. Future work: tear
-    // down WebGL state, audio nodes, etc.
+    // Tear down listeners + audio nodes.
+    this.input.detach();
+    if (this.audio) this.audio.dispose();
   }
 }

@@ -4,7 +4,7 @@
 // SpritePool, SpriteRenderSystem, and the high-level Engine facade
 // that wires everything together with sane defaults.
 
-export const LOOM_ENGINE_VERSION = '0.4.0-phase4';
+export const LOOM_ENGINE_VERSION = '0.5.0-phase5';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -183,3 +183,27 @@ export {
   POOL_EMITTER,
 } from './systems/particle-emitter-system.js';
 export { ParticleRenderSystem } from './systems/particle-render-system.js';
+
+// Audio (Phase 5): Web Audio bus mixer with VE-budget gating.
+export type { BusOptions, BusPriority } from './audio/audio-bus.js';
+export {
+  AudioBus,
+  RESOURCE_AUDIO_BUS,
+  AUDIO_BUDGET_AMBIENT_FLOOR,
+  AUDIO_BUDGET_ESSENTIAL_FLOOR,
+} from './audio/audio-bus.js';
+
+// Input (Phase 5): unified keyboard / mouse / touch with frame-
+// coherent snapshot resource.
+export type {
+  PointerSnapshot,
+  TouchPoint,
+  InputSnapshot,
+} from './input/input-manager.js';
+export {
+  InputManager,
+  RESOURCE_INPUT_MANAGER,
+  RESOURCE_INPUT,
+} from './input/input-manager.js';
+export { InputSystem } from './systems/input-system.js';
+export { VeilBudgetSystem } from './systems/veil-budget-system.js';

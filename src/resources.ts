@@ -85,6 +85,11 @@ export interface VeilBudgetResource {
   shaderBudget: number;
   // Reserved for Phase 6: encounter event ingest rate (events/sec).
   eventBudget: number;
+  // Phase 5: audio level in [0, 1]. AudioBus reads this each tick
+  // and ducks ambient buses below 0.25, mutes everything below 0.05.
+  // 1 = full audio; 0 = silent. The Director-bridge sets this from
+  // server-side load + per-character VE drain.
+  audioBudget: number;
   // Diagnostic: last frame the Director updated this budget. -1 if
   // never updated (engine standalone or demo).
   lastUpdatedFrame: number;
@@ -95,6 +100,7 @@ export function createVeilBudgetResource(): VeilBudgetResource {
     particleBudget: 4096,
     shaderBudget: 8,
     eventBudget: 256,
+    audioBudget: 1.0,
     lastUpdatedFrame: -1,
   };
 }
