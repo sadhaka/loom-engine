@@ -22,6 +22,13 @@ export interface EventEnvelope<T extends DirectorEventType = DirectorEventType> 
   type: T;
   character_id: string;
   encounter_id: string | null;
+  // Phase 6.4 (backend): priority class assigned by the Director at
+  // emit time. Optional in v1 because pre-6.4 events on disk have no
+  // priority field; the renderer never enforces drops itself (server
+  // already did per LOOM-DIRECTOR-PROTOCOL.md Section 7.2). Surfaced
+  // here so consumers can branch on it for diagnostic / UI purposes
+  // (e.g. logging, replay viewer).
+  priority?: EventPriority;
   data: DirectorEventDataMap[T];
 }
 
@@ -250,6 +257,16 @@ export function parseEnvelope(raw: unknown): DirectorEvent {
   }
   if (e['encounter_id'] !== null && typeof e['encounter_id'] !== 'string') {
     throw new EventEnvelopeParseError('encounter_id must be string or null', raw);
+  }
+  // Priority field is optional (Phase 6.4 backend addition; pre-6.4
+  // events on disk lack it). When present, must be a known class.
+  if (e['priority'] !== undefined) {
+    if (e['priority'] !== 'P0' && e['priority'] !== 'P1' && e['priority'] !== 'P2') {
+      throw new EventEnvelopeParseError(
+        'priority must be P0 / P1 / P2 when present, got: ' + String(e['priority']),
+        raw,
+      );
+    }
   }
   if (!e['data'] || typeof e['data'] !== 'object') {
     throw new EventEnvelopeParseError('data must be an object', raw);

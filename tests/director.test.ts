@@ -153,6 +153,27 @@ test('envelope: priorityFor returns correct class', () => {
   assert.equal(priorityFor('system.heartbeat'), 'P2');
 });
 
+test('envelope: priority field optional but validated when present (Phase 6.4)', () => {
+  const baseRaw = {
+    id: 1, ts: 1, type: 'system.heartbeat', character_id: 'c', encounter_id: null,
+    data: { tail_id: 0, drops_p1: 0, drops_p2: 0 },
+  };
+  // No priority -> still parses (back-compat with pre-6.4 events).
+  const noPrio = parseEnvelope(baseRaw);
+  assert.equal(noPrio.priority, undefined);
+  // Valid priority -> parses + preserved on output.
+  const withP0 = parseEnvelope({ ...baseRaw, priority: 'P0' });
+  assert.equal(withP0.priority, 'P0');
+  const withP1 = parseEnvelope({ ...baseRaw, priority: 'P1' });
+  assert.equal(withP1.priority, 'P1');
+  const withP2 = parseEnvelope({ ...baseRaw, priority: 'P2' });
+  assert.equal(withP2.priority, 'P2');
+  // Invalid priority -> rejected.
+  assert.throws(() => parseEnvelope({ ...baseRaw, priority: 'P3' }), EventEnvelopeParseError);
+  assert.throws(() => parseEnvelope({ ...baseRaw, priority: 42 }), EventEnvelopeParseError);
+  assert.throws(() => parseEnvelope({ ...baseRaw, priority: '' }), EventEnvelopeParseError);
+});
+
 // ---------- MockDirectorBridge ----------
 
 test('mock bridge: starts idle, becomes connected after start()', () => {
