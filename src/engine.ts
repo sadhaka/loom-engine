@@ -40,6 +40,14 @@ import {
   RESOURCE_INPUT,
 } from './input/input-manager.js';
 import {
+  RESOURCE_KNOT_CONTEXT,
+} from './director/director-bridge.js';
+import { KnotContextResource } from './director/knot-context-resource.js';
+import {
+  RESOURCE_DIRECTOR_LOG,
+  createDirectorEventLog,
+} from './director/director-system.js';
+import {
   RESOURCE_TIME,
   RESOURCE_CAMERA,
   RESOURCE_DEVICE,
@@ -128,6 +136,14 @@ export class Engine {
     world.resources.set(RESOURCE_INPUT_MANAGER, input);
     world.resources.set(RESOURCE_INPUT, input.snapshot());
     if (audio) world.resources.set(RESOURCE_AUDIO_BUS, audio);
+
+    // Director defaults. RESOURCE_DIRECTOR_BRIDGE is intentionally
+    // NOT registered by Engine.create - the consumer chooses
+    // MockDirectorBridge or SSEDirectorBridge based on whether they
+    // have a backend. KnotContextResource defaults to Strknot palette;
+    // DirectorEventLog ring buffer is empty until events arrive.
+    world.resources.set(RESOURCE_KNOT_CONTEXT, new KnotContextResource());
+    world.resources.set(RESOURCE_DIRECTOR_LOG, createDirectorEventLog());
 
     // Pools
     world.registerPool(POOL_TRANSFORM, new TransformPool());

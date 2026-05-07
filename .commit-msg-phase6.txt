@@ -1,0 +1,125 @@
+feat(loom-engine) Phase 6: Director-bridge + event-sourced scene state
+
+Closes the patent-defensible novelty loop. Director events arriving
+over SSE (or synthetic via MockDirectorBridge) flow through
+DirectorSystem in PHASE_INPUT, mutate VeilBudget + KnotContext
+resources, and propagate same-tick to ParticlePool + AudioBus +
+render systems. Renderer never decides palette or VE tier per spec
+Section 5.1 / 6.5 - Director emits, renderer applies. Verified live:
+tier=red drops particle cap from 4096 to 205 (= 4096 * 0.05) within
+one tick of a ve.budget.update event landing.
+
+Per LOOM-ENGINE-SPEC.md Section 7 (Phase 6: 2-3 weeks budget) and
+LOOM-DIRECTOR-PROTOCOL.md (locked spec at commit 63f1934). Backend
+6.1 (event log + janitor) and 6.2 (SSE endpoint) already deployed
+on week-19-visual; the SSEDirectorBridge in this commit subscribes
+to /api/v1/loom/director/events directly when used.
+
+What ships:
+
+src/director/event-envelope.ts
+  Discriminated-union DirectorEvent typed against all 11 event
+  types in spec Section 3. Per-event data shape interfaces.
+  parseEnvelope strict + parseEnvelopeJson lenient. priorityFor
+  returns P0 / P1 / P2 per Section 7.2.
+
+src/director/director-bridge.ts
+  IDirectorBridge interface with status / isConnected /
+  getLastEventId / pollEvents / stats. Resource keys
+  RESOURCE_DIRECTOR_BRIDGE + RESOURCE_KNOT_CONTEXT.
+
+src/director/mock-director-bridge.ts
+  In-memory bridge for tests + offline demos. enqueue /
+  enqueueAll / pending helpers.
+
+src/director/sse-director-bridge.ts
+  Real EventSource subscription. Subscribes to all 11 event types
+  via addEventListener so SSE event lines are honored. Reorder
+  buffer per Section 4.2 (max 32 entries, 500ms timeout flushes
+  in-id-order on missing event). On system.snapshot.required
+  surfaces the event + closes; consumer must fetch /state and
+  rebuild bridge with new tail id (Phase 6.5 backend ships /state).
+  Browser-only - constructor throws if EventSource undefined.
+
+src/director/knot-context-resource.ts
+  Default Strknot palette per LOOM-CLASS-SYSTEM-SPEC Section 4.
+  beginFade snapshots current to fadeFrom and starts crossfade.
+  tickFade interpolates linearly each tick. fade_ms = 0 is rendered
+  as 16ms (1 frame) per spec 5.3. Mood multipliers per Section 5.4.
+
+src/director/director-system.ts
+  PHASE_INPUT system. Drains bridge.pollEvents and applies each
+  event. Tier-to-scalar table from Section 6.2:
+    green: 1.0 / 1.0 / 1.0 (particle / audio / shader)
+    amber: 0.5 / 0.7 / 0.5
+    red:   0.05 / 0.4 / 0.0
+  Multiplied against engine defaults (4096 particles, 8 shader
+  passes). Ring buffer of last 32 events for gameplay code.
+
+src/engine.ts
+  Engine.create now also registers KnotContextResource +
+  DirectorEventLog defaults. Bridge itself is NOT pre-registered -
+  consumer chooses Mock vs SSE based on backend availability.
+
+src/index.ts
+  Public Phase 6 surface. Version 0.6.0-phase6.
+
+demo/demo.ts
+  Subscribes to MockDirectorBridge. Registers DirectorSystem in
+  PHASE_INPUT BEFORE VeilBudgetSystem so budget mutations propagate
+  same-tick (1-frame lag bug observed + fixed during preview).
+  Two synthetic event timelines:
+  - knot.context every 6s cycling str / dex / int / center
+    palettes with 600ms crossfade
+  - ve.budget.update every 12s cycling green / amber / red
+  Stats panel reports knot + mood + tier + event count + active
+  palette hex + fade indicator.
+
+tests/director.test.ts (new, 26 assertions)
+  Envelope parsing edge cases. MockDirectorBridge contract.
+  KnotContextResource crossfade math. DirectorSystem end-to-end:
+  applies knot.context, scales VeilBudget through all 3 tiers
+  (4096 -> 2048 -> 205 particles), encounter spawn + end tracks
+  activeEncounterId, ring buffer caps at 32, tolerates missing
+  resources, narrator.line writes to log.
+
+tests/smoke.test.ts
+  Version sentinel 0.6.0-phase6.
+
+package.json
+  test script includes tests/director.test.ts.
+
+Verification:
+- npm run build: clean
+- npm run build:demo: clean
+- npm run test: 128 / 128 pass (20 P1 + 14 P2 + 15 asset + 16 P3 +
+  19 P4 + 18 P5 + 26 P6)
+- Browser preview: engine 0.6.0-phase6, 12 systems active (added
+  DirectorSystem). Verified via sampling: when tier shifts to red,
+  particle cap drops from 4096 to 205 the same tick (= 4096 * 0.05
+  scalar from Section 6.2 tier table). Knot cycle observed: str ->
+  dex -> int -> center with palette hex changing in stats output.
+  Zero console errors.
+- The patent-defensible novelty loop (LOOM-ENGINE-SPEC Section 3)
+  is now closed end-to-end: Director event arrives, resource
+  mutates, subsystem gates within one tick. The Loom is everything;
+  the Director is the Loom voice in the combat loop; the protocol
+  is the channel that voice rides on.
+
+Inspirations (per PRIOR-ART.md):
+- SSE / EventSource standard - W3C spec (no patent IP)
+- Last-Event-ID auto-reconnect - W3C SSE feature
+- Event sourcing as renderer scene-state derivation - canonical
+  architecture pattern (Greg Young, public CQRS literature)
+- Reorder buffer with timeout flush - common networking pattern
+- Director-driven render budget gated by per-user economy - novel
+  to TheWorldTable.ai per LOOM-ENGINE-SPEC.md Section 3 patent
+  strategy. Now wired live end-to-end.
+
+Phase 7 next: port the existing Survivor combat layer onto Loom
+Engine. 2-3 weeks budget per spec. Phase 8 is the 2.5D ARPG hub-
+and-spoke per LOOM-CLASS-SYSTEM-SPEC. Phase 6.3-6.5 (POST mirror,
+priority drop policy, /state snapshot endpoint) are queued backend
+work that complements but does not block Phase 7+ engine progress.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>

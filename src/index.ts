@@ -4,7 +4,7 @@
 // SpritePool, SpriteRenderSystem, and the high-level Engine facade
 // that wires everything together with sane defaults.
 
-export const LOOM_ENGINE_VERSION = '0.5.0-phase5';
+export const LOOM_ENGINE_VERSION = '0.6.0-phase6';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -207,3 +207,61 @@ export {
 } from './input/input-manager.js';
 export { InputSystem } from './systems/input-system.js';
 export { VeilBudgetSystem } from './systems/veil-budget-system.js';
+
+// Director (Phase 6): event-stream bridge to the Loom backend.
+// Consumes events per LOOM-DIRECTOR-PROTOCOL.md and mutates engine
+// resources (VeilBudget, KnotContext, DirectorEventLog). Renderer
+// never decides palette or VE tier - Director emits, renderer applies.
+export type {
+  EventEnvelope,
+  DirectorEvent,
+  DirectorEventType,
+  DirectorEventDataMap,
+  EventPriority,
+  // Per-event data shapes
+  EncounterSpawnData,
+  EncounterTickData,
+  EncounterEndData,
+  EncounterLootData,
+  KnotContextData,
+  KnotPaletteHex,
+  KnotMood,
+  VeBudgetUpdateData,
+  VeilTier,
+  SceneTransitionData,
+  SceneTransitionKind,
+  NarratorLineData,
+  NarratorVoice,
+  SystemHeartbeatData,
+  SystemReplayCompleteData,
+  SystemSnapshotRequiredData,
+  MobSpec,
+  BossSpec,
+  DropSpec,
+} from './director/event-envelope.js';
+export {
+  parseEnvelope,
+  parseEnvelopeJson,
+  priorityFor,
+  EventEnvelopeParseError,
+} from './director/event-envelope.js';
+export type {
+  IDirectorBridge,
+  DirectorBridgeStatus,
+  DirectorBridgeStats,
+} from './director/director-bridge.js';
+export {
+  RESOURCE_DIRECTOR_BRIDGE,
+  RESOURCE_KNOT_CONTEXT,
+} from './director/director-bridge.js';
+export { MockDirectorBridge } from './director/mock-director-bridge.js';
+export type { SSEDirectorBridgeOptions } from './director/sse-director-bridge.js';
+export { SSEDirectorBridge } from './director/sse-director-bridge.js';
+export type { KnotPaletteRgba } from './director/knot-context-resource.js';
+export { KnotContextResource } from './director/knot-context-resource.js';
+export type { DirectorEventLog } from './director/director-system.js';
+export {
+  DirectorSystem,
+  RESOURCE_DIRECTOR_LOG,
+  createDirectorEventLog,
+} from './director/director-system.js';

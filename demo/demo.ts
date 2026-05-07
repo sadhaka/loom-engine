@@ -49,6 +49,16 @@ import {
   hexToRgba,
   vec2,
   worldToScreen,
+  // Phase 6: Director-bridge
+  MockDirectorBridge,
+  DirectorSystem,
+  RESOURCE_DIRECTOR_BRIDGE,
+  RESOURCE_DIRECTOR_LOG,
+  RESOURCE_KNOT_CONTEXT,
+  type IDirectorBridge,
+  type DirectorEventLog,
+  type KnotContextResource,
+  type DirectorEvent,
   type LoadedSpriteSheet,
   type System,
   type World,
@@ -246,9 +256,20 @@ class ClickInputSystem implements System {
     (engine.world as unknown as { __audio: typeof engine.audio }).__audio = engine.audio;
   }
 
+  // Phase 6: subscribe to a MockDirectorBridge. Production replaces
+  // this with new SSEDirectorBridge({baseUrl, characterId}). Mock keeps
+  // the demo backend-independent.
+  const bridge: IDirectorBridge = new MockDirectorBridge();
+  bridge.start();
+  engine.world.resources.set(RESOURCE_DIRECTOR_BRIDGE, bridge);
+
   // Demo systems registered explicitly.
+  // Phase 6 ordering: Director first to mutate VeilBudgetResource,
+  // then VeilBudgetSystem same tick to propagate the new values into
+  // ParticlePool + AudioBus. Reverse order would lag by 1 frame.
   const cameraInput = new CameraInputSystem(2.5);   // 2.5 world-units/sec pan speed
   engine.world.addSystem(new InputSystem(), SYSTEM_PHASE_INPUT);
+  engine.world.addSystem(new DirectorSystem(), SYSTEM_PHASE_INPUT);
   engine.world.addSystem(new VeilBudgetSystem(), SYSTEM_PHASE_INPUT);
   engine.world.addSystem(cameraInput, SYSTEM_PHASE_LOGIC);
   engine.world.addSystem(new ClickInputSystem(knight), SYSTEM_PHASE_LOGIC);
@@ -260,6 +281,76 @@ class ClickInputSystem implements System {
   engine.world.addSystem(new SpriteRenderSystem(), SYSTEM_PHASE_RENDER);
   engine.world.addSystem(new ParticleRenderSystem(), SYSTEM_PHASE_RENDER);
   const particles = engine.world.requirePool<ParticlePool>(POOL_PARTICLE);
+  const knotCtx = engine.world.resources.require<KnotContextResource>(RESOURCE_KNOT_CONTEXT);
+  const directorLog = engine.world.resources.require<DirectorEventLog>(RESOURCE_DIRECTOR_LOG);
+
+  // Synthetic event timeline: cycle through Strknot -> Dexknot ->
+  // Intknot -> Centerknot palettes every 6 seconds with a 600ms
+  // crossfade. Also fire ve.budget.update tier shifts every 12s
+  // (green -> amber -> red -> green) to demonstrate the audio +
+  // particle gating loop. This is what a real Director would push
+  // over SSE.
+  const mockBridge = bridge as MockDirectorBridge;
+  let nextEventId = 1;
+  function pushEvent(ev: DirectorEvent): void {
+    mockBridge.enqueue(ev);
+  }
+  const KNOT_CYCLE = [
+    { knot: 'str', primary: '#b04a24', secondary: '#7a3416', accent: '#ffd86a' },
+    { knot: 'dex', primary: '#5ac9d6', secondary: '#2a8c95', accent: '#ffd86a' },
+    { knot: 'int', primary: '#9b5de5', secondary: '#603b91', accent: '#ffd86a' },
+    { knot: 'center', primary: '#ffd86a', secondary: '#ffffff', accent: '#ffffff' },
+  ];
+  let knotIdx = 0;
+  setInterval(() => {
+    const k = KNOT_CYCLE[knotIdx % KNOT_CYCLE.length];
+    if (k) {
+      pushEvent({
+        id: nextEventId++,
+        ts: Date.now() / 1000,
+        type: 'knot.context',
+        character_id: 'demo',
+        encounter_id: null,
+        data: {
+          knot: k.knot,
+          palette: { primary: k.primary, secondary: k.secondary, accent: k.accent },
+          mood: 'tense',
+          fade_ms: 600,
+        },
+      });
+    }
+    knotIdx++;
+  }, 6000);
+
+  const TIER_CYCLE: Array<{ tier: 'green' | 'amber' | 'red'; ve: number; ceil: number }> = [
+    { tier: 'green', ve: 8000, ceil: 10000 },
+    { tier: 'amber', ve: 3000, ceil: 10000 },
+    { tier: 'red',   ve:  500, ceil: 10000 },
+  ];
+  let tierIdx = 0;
+  let lastTier: 'green' | 'amber' | 'red' = 'green';
+  setInterval(() => {
+    const t = TIER_CYCLE[tierIdx % TIER_CYCLE.length];
+    if (t) {
+      pushEvent({
+        id: nextEventId++,
+        ts: Date.now() / 1000,
+        type: 've.budget.update',
+        character_id: 'demo',
+        encounter_id: null,
+        data: {
+          ve_remaining_month: t.ve,
+          ve_ceiling_month: t.ceil,
+          tier: t.tier,
+          tier_prev: lastTier,
+          encounter_budget_ve: t.tier === 'red' ? 20 : t.tier === 'amber' ? 60 : 120,
+          encounter_budget_usd: t.tier === 'red' ? 0.20 : t.tier === 'amber' ? 0.60 : 1.20,
+        },
+      });
+      lastTier = t.tier;
+    }
+    tierIdx++;
+  }, 12000);
 
   let frameCount = 0;
   let lastFpsAt = performance.now();
@@ -283,6 +374,8 @@ class ClickInputSystem implements System {
     const hover = cameraInput.hoverInside
       ? '(' + cameraInput.hoverTileX + ',' + cameraInput.hoverTileY + ')'
       : '(off)';
+    const palette = knotCtx.hexSnapshot();
+    const fadeStatus = knotCtx.isFading() ? ' (fading)' : '';
     stats.textContent =
       'engine     ' + LOOM_ENGINE_VERSION + '\n' +
       'fps        ' + lastFps + '\n' +
@@ -292,6 +385,8 @@ class ClickInputSystem implements System {
       'audio      ' + audioState + '\n' +
       'sheet      ' + knightSheet.manifest.name + '   playing ' + (activeClip || '(none)') + '   frame ' + sprites.frame[0 + (knight & 0x00ffffff)] + '\n' +
       'particles  ' + particles.getLiveCount() + ' live  cap ' + particles.getMaxParticles() + '\n' +
+      'director   knot=' + knotCtx.knot + '  mood=' + knotCtx.mood + '  tier=' + directorLog.lastTier + '  events=' + directorLog.eventsApplied + fadeStatus + '\n' +
+      'palette    ' + palette.primary + ' / ' + palette.secondary + ' / ' + palette.accent + '\n' +
       'camera     center=(' + engine.camera.centerX.toFixed(2) + ',' + engine.camera.centerY.toFixed(2) + ')   hover tile ' + hover + '\n' +
       'controls   click = burst+chirp   arrows/WASD = pan camera';
 
