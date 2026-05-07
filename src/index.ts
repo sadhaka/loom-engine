@@ -273,6 +273,8 @@ export {
   RESOURCE_DIRECTOR_LOG,
   createDirectorEventLog,
 } from './director/director-system.js';
+export type { DirectorEncounterSystemOptions } from './director/director-encounter-system.js';
+export { DirectorEncounterSystem } from './director/director-encounter-system.js';
 
 // Combat (Phase 7): health, damage, simple AI, attack. Engine-side
 // primitives that the actual Survivor port will use. The full

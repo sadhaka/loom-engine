@@ -1,11 +1,13 @@
-// Loom Engine - Phase 8 ARPG first slice demo.
+// Loom Engine - Phase 8 v1 ARPG demo.
 //
-// Hub: Lastlight Plaza. Knight player. One NPC (Misha Dev) at the
-// gate with a greeting line. One portal at the south edge that
-// transitions to Iron Reach (Strknot starter zone).
+// Lastlight Plaza is the only playable zone in v1. Every knot
+// archetype (str / dex / int / hybrids / center) spawns here on
+// /arpg-loom/ load - the knot still drives palette + HUD but does
+// not branch the spawn location until subsequent phases ship more
+// zones. Misha Dev is the only NPC.
 //
-// Per LOOM-CLASS-SYSTEM-SPEC §3 + §4 + the v1 hotkey lock list in
-// CLAUDE.md (E + Enter open NPC dialog).
+// Per LOOM-CLASS-SYSTEM-SPEC §3 (knot data shape) and the v1
+// hotkey lock list in CLAUDE.md (E + Enter open NPC dialog).
 
 import {
   LOOM_ENGINE_VERSION,
@@ -25,7 +27,6 @@ import {
   InputSystem,
   InteractionSystem,
   ZONE_CATALOG,
-  beginTransition,
   tickTransition,
   isTransitioning,
   RESOURCE_DEVICE,
@@ -126,29 +127,6 @@ function makeMishaSprite(): HTMLCanvasElement {
   return c;
 }
 
-// Portal - a glowing diamond marker.
-function makePortalSprite(): HTMLCanvasElement {
-  const c = document.createElement('canvas');
-  c.width = 32;
-  c.height = 32;
-  const ctx = c.getContext('2d')!;
-  ctx.fillStyle = '#9b5de5';
-  ctx.beginPath();
-  ctx.moveTo(16, 4);
-  ctx.lineTo(28, 16);
-  ctx.lineTo(16, 28);
-  ctx.lineTo(4, 16);
-  ctx.closePath();
-  ctx.fill();
-  ctx.strokeStyle = '#ffd86a';
-  ctx.lineWidth = 2;
-  ctx.stroke();
-  // Sigil core
-  ctx.fillStyle = '#ffd86a';
-  ctx.fillRect(14, 14, 4, 4);
-  return c;
-}
-
 // ---------- Demo systems ----------
 
 class ZoneTileRenderSystem implements System {
@@ -198,47 +176,35 @@ class WASDMoveSystem implements System {
   }
 }
 
-// Reads LastInteractionResource each tick, dispatches:
-//   kind=npc -> show dialog
-//   kind=portal -> begin zone transition
+// Reads LastInteractionResource each tick, dispatches NPC dialog.
+// (Portal handling intentionally omitted - v1 has only one zone, so
+// portals don't exist yet. The kind='portal' code path remains in
+// the engine surface for when subsequent phases add more zones.)
 class InteractionDispatchSystem implements System {
   readonly name: string = 'arpg-interaction-dispatch';
   private lastSeenFrame: number = -1;
-  update(world: World, _dt: number): void {
-    const last = world.resources.require<LastInteractionResource>(RESOURCE_LAST_INTERACTION);
-    if (last.atFrame === this.lastSeenFrame) return;
-    if (last.entityIndex < 0) {
-      this.lastSeenFrame = last.atFrame;
+  update(_world: World, _dt: number): void {
+    const _last = _world.resources.require<LastInteractionResource>(RESOURCE_LAST_INTERACTION);
+    if (_last.atFrame === this.lastSeenFrame) return;
+    if (_last.entityIndex < 0) {
+      this.lastSeenFrame = _last.atFrame;
       return;
     }
-    this.lastSeenFrame = last.atFrame;
+    this.lastSeenFrame = _last.atFrame;
 
-    if (last.kind === 'npc') {
-      // Payload is the dialog line id. Demo's dialog table:
+    if (_last.kind === 'npc') {
       const lines: Record<string, { speaker: string; line: string }> = {
         misha_greet: {
           speaker: 'Misha Dev',
-          line: 'You came through the smoke and the iron is still hot. Steady. Speak when the Loom asks.',
+          line: 'Lastlight holds the seam. The Loom set you down here whichever knot you pulled. Wait. Listen. The next step is named when it is named.',
         },
       };
-      const dl = lines[last.payload];
+      const dl = lines[_last.payload];
       if (dl) {
         dialogSpeaker.textContent = dl.speaker;
         dialogLine.textContent = dl.line;
         dialogBox.classList.add('show');
       }
-    } else if (last.kind === 'portal') {
-      const target = last.payload as ZoneId;
-      const zone = world.resources.require<ZoneStateResource>(RESOURCE_ZONE_STATE);
-      const now = typeof performance !== 'undefined' ? performance.now() : 0;
-      beginTransition(zone, target, 'walk', 600, now);
-      // Reset player position to the new zone's origin.
-      const transforms = world.requirePool<TransformPool>(POOL_TRANSFORM);
-      // We don't have the player handle here; use the convention that
-      // index 1 is the first-created entity (the player) in this demo.
-      // A real game tracks the player handle properly.
-      transforms.setPosition({ ...{ valueOf: () => 1 } } as unknown as EntityId, 0, 0, 0);
-      dialogBox.classList.remove('show');
     }
   }
 }
@@ -261,31 +227,21 @@ class ZoneTransitionTickSystem implements System {
   stats.textContent = 'booting... (load assets)';
   const engine = Engine.create({ canvas });
 
-  // Register tile atlases for the 2 zones we ship in the first
-  // slice. Future zones add their own atlas registrations.
+  // Register only the Plaza atlas - v1 ships a single playable
+  // zone. Other zone palettes still live in ZONE_CATALOG for when
+  // subsequent phases add their atlases here.
   const tileRender = new ZoneTileRenderSystem(2);
   const plazaAtlas = engine.device.registerAtlas({
     image: makeTileAtlasFor(ZONE_CATALOG.lastlight_plaza),
     frames: [{ x: 0, y: 0, w: ISO_TILE_WIDTH, h: ISO_TILE_HEIGHT }],
     name: 'tile-plaza',
   });
-  const ironAtlas = engine.device.registerAtlas({
-    image: makeTileAtlasFor(ZONE_CATALOG.iron_reach),
-    frames: [{ x: 0, y: 0, w: ISO_TILE_WIDTH, h: ISO_TILE_HEIGHT }],
-    name: 'tile-iron',
-  });
   tileRender.registerAtlas('lastlight_plaza', plazaAtlas);
-  tileRender.registerAtlas('iron_reach', ironAtlas);
 
   const mishaAtlas = engine.device.registerAtlas({
     image: makeMishaSprite(),
     frames: [{ x: 0, y: 0, w: 16, h: 32 }],
     name: 'misha-dev',
-  });
-  const portalAtlas = engine.device.registerAtlas({
-    image: makePortalSprite(),
-    frames: [{ x: 0, y: 0, w: 32, h: 32 }],
-    name: 'portal',
   });
 
   // Knight player (reuses Phase 1 asset).
@@ -309,7 +265,7 @@ class ZoneTransitionTickSystem implements System {
   sprites.attach(player, knightAtlas, 0);
   animations.play(player, knightSheet.manifest, 'default');
 
-  // Misha Dev NPC at (1, -1) - just north-east of player.
+  // Misha Dev NPC at (1, -1) - the only NPC on the Plaza.
   const misha = engine.world.createEntity();
   transforms.attach(misha, 1, -1, 0);
   sprites.attach(misha, mishaAtlas, 0);
@@ -318,17 +274,6 @@ class ZoneTransitionTickSystem implements System {
     prompt: 'Talk to Misha Dev',
     payload: 'misha_greet',
     radius: 1.5,
-  });
-
-  // Iron Reach portal at (0, 1.5) - south of player.
-  const portal = engine.world.createEntity();
-  transforms.attach(portal, 0, 1.5, 0);
-  sprites.attach(portal, portalAtlas, 0);
-  interactables.attach(portal, {
-    kind: 'portal',
-    prompt: 'Enter Iron Reach',
-    payload: 'iron_reach',
-    radius: 0.8,
   });
 
   // System order:
@@ -358,10 +303,10 @@ class ZoneTransitionTickSystem implements System {
     stats.textContent =
       'engine     ' + LOOM_ENGINE_VERSION + '\n' +
       'frame      ' + t.frame + '   elapsed ' + t.elapsed.toFixed(1) + 's\n' +
-      'zone       ' + zoneCat.name + ' [' + zoneCat.knot + ']' + fading + '\n' +
+      'zone       ' + zoneCat.name + ' [' + zoneCat.knot + ']' + fading + '   (v1: only zone)\n' +
       'player     pos=(' + px.toFixed(2) + ',' + py.toFixed(2) + ')\n' +
       'last NPC   ' + (last.entityIndex >= 0 ? last.kind + ' / ' + last.payload : '(none)') + '\n' +
-      'controls   WASD/arrows = move   click NPC or stand near + E/Enter to interact';
+      'controls   WASD/arrows = move   click Misha or stand near + E/Enter to talk';
 
     schedule();
   }
