@@ -34,6 +34,15 @@ import { PursuePool, POOL_PURSUE } from './components/pursue.js';
 import { DeathLog, RESOURCE_DEATH_LOG } from './systems/damage-system.js';
 import { RangedAttackPool, POOL_RANGED } from './components/ranged-attack.js';
 import { ProjectilePool, POOL_PROJECTILE } from './vfx/projectile-pool.js';
+import { InteractablePool, POOL_INTERACTABLE } from './components/interactable.js';
+import {
+  createZoneState,
+  RESOURCE_ZONE_STATE,
+} from './zone/zone-state.js';
+import {
+  createLastInteraction,
+  RESOURCE_LAST_INTERACTION,
+} from './systems/interaction-system.js';
 import {
   createVeilBudgetResource,
   RESOURCE_VEIL_BUDGET,
@@ -160,7 +169,10 @@ export class Engine {
     world.registerPool(POOL_PURSUE, new PursuePool());
     world.registerPool(POOL_RANGED, new RangedAttackPool());
     world.registerPool(POOL_PROJECTILE, new ProjectilePool());
+    world.registerPool(POOL_INTERACTABLE, new InteractablePool());
     world.resources.set(RESOURCE_DEATH_LOG, new DeathLog());
+    world.resources.set(RESOURCE_ZONE_STATE, createZoneState());
+    world.resources.set(RESOURCE_LAST_INTERACTION, createLastInteraction());
 
     // Systems are NOT pre-registered. Callers add their own systems
     // explicitly. The Phase 5 idiomatic order is:

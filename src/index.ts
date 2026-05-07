@@ -4,7 +4,7 @@
 // SpritePool, SpriteRenderSystem, and the high-level Engine facade
 // that wires everything together with sane defaults.
 
-export const LOOM_ENGINE_VERSION = '0.7.0-phase7';
+export const LOOM_ENGINE_VERSION = '0.8.0-phase8';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -315,3 +315,40 @@ export { RangedAttackSystem } from './systems/ranged-attack-system.js';
 export { ProjectileRenderSystem } from './systems/projectile-render-system.js';
 export type { MobArchetype, MobCatalogEntry } from './combat/mob-catalog.js';
 export { MOB_CATALOG, spawnMob } from './combat/mob-catalog.js';
+
+// Phase 8: Zone + interaction (ARPG hub-and-spoke).
+export type {
+  ZoneId,
+  TransitionKind,
+  ZoneStateResource,
+} from './zone/zone-state.js';
+export {
+  createZoneState,
+  beginTransition,
+  tickTransition,
+  isTransitioning,
+  RESOURCE_ZONE_STATE,
+} from './zone/zone-state.js';
+export type {
+  ZoneCatalogEntry,
+  ZoneTilePalette,
+} from './zone/zone-catalog.js';
+export { ZONE_CATALOG } from './zone/zone-catalog.js';
+export type {
+  InteractableKind,
+  InteractableConfig,
+} from './components/interactable.js';
+export {
+  InteractablePool,
+  POOL_INTERACTABLE,
+  INTERACTABLE_FLAG_ACTIVE,
+} from './components/interactable.js';
+export type {
+  LastInteractionResource,
+  InteractionSystemOptions,
+} from './systems/interaction-system.js';
+export {
+  InteractionSystem,
+  createLastInteraction,
+  RESOURCE_LAST_INTERACTION,
+} from './systems/interaction-system.js';

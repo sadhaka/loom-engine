@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Loom Engine - Phase 8 ARPG First Slice</title>
+  <style>
+    html, body { margin: 0; padding: 0; background: #14110d; color: #e8d8b6; font: 13px/1.4 sans-serif; }
+    .wrap { max-width: 960px; margin: 0 auto; padding: 16px; }
+    canvas { display: block; image-rendering: pixelated; image-rendering: crisp-edges; background: #000; border: 1px solid #2a241a; cursor: crosshair; }
+    .stats { margin-top: 8px; font-family: ui-monospace, Consolas, monospace; color: #b6a17a; white-space: pre; }
+    h1 { margin: 0 0 12px; font-size: 14px; color: #d6c694; letter-spacing: 0.05em; text-transform: uppercase; }
+    p { margin: 4px 0; color: #8a7c5e; }
+    a { color: #d6c694; }
+    #dialog { position: relative; margin-top: 8px; padding: 10px 14px; background: #2a241a; border: 1px solid #6a5e44; color: #e8d8b6; min-height: 28px; font-style: italic; display: none; }
+    #dialog.show { display: block; }
+    #dialog .speaker { font-style: normal; color: #d6c694; font-weight: bold; margin-right: 6px; }
+    #dialog .close { position: absolute; right: 6px; top: 4px; cursor: pointer; color: #8a7c5e; font-style: normal; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Loom Engine - Phase 8 ARPG First Slice</h1>
+    <p>Lastlight Plaza hub. The knight starts here. Misha Dev stands at the gate. WASD/arrows to walk. Click on Misha (or stand near him and press <code>E</code> / <code>Enter</code>) to talk. The portal at the south of the Plaza takes you to Iron Reach (Strknot starter zone). Each zone has its own tile palette + ambient music level. <a href="./combat.html">combat slice</a> | <a href="./index.html">director demo</a></p>
+    <canvas id="stage" width="640" height="400"></canvas>
+    <div id="dialog"><span class="close" id="dialog-close">close</span><span class="speaker" id="dialog-speaker">Misha Dev</span><span id="dialog-line">...</span></div>
+    <div class="stats" id="stats">booting...</div>
+  </div>
+  <script type="module" src="./arpg.js"></script>
+</body>
+</html>
