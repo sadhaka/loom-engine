@@ -356,14 +356,29 @@ serving the last successful build but go stale), check
 
 ## License
 
-[MIT](./LICENSE). Copyright (c) 2026 Misha Mitiev.
+Versions 0.11.0 and later are licensed under the
+[Business Source License 1.1](./LICENSE) ("BUSL-1.1").
+Copyright (c) 2026 Misha Mitiev.
 
-You can use the engine in commercial and non-commercial work without
-royalties. Attribution is appreciated but not required by the license.
-The patent-defensible novelty claims (see [Patent strategy](#patent-strategy))
-are about specific architectural patterns documented in PRIOR-ART.md;
-they are independent of the source-code license and do not constrain
-typical engine reuse.
+- **Free for use** below USD $1,000,000 annual gross revenue from any
+  product, game, or service that incorporates this engine. Personal
+  projects, learning, prototyping, and indie games well under that
+  threshold all qualify.
+- **Commercial license required** above the threshold. Contact
+  `licensor@theworldtable.ai`. Standard terms include a 5% royalty on
+  excess revenue; lump-sum buyouts and equity-for-license arrangements
+  are negotiable. See
+  [COMMERCIAL_LICENSE_TERMS.md](./COMMERCIAL_LICENSE_TERMS.md).
+- **Auto-converts to Apache 2.0** on **2030-05-08** (4-year window per
+  BUSL spec). After that date, all 0.11.0+ versions become permissive.
+- **Patent strategy**: novelty claims documented in PRIOR-ART.md are
+  independent of the source-code license and apply to all versions
+  regardless of license phase.
+
+Version 0.10.0 (the only previously-published release) remains
+permanently licensed under MIT for backwards compatibility. Projects
+pinned to `0.10.0` are unaffected by the license change but will not
+receive future updates without accepting BUSL-1.1.
 
 ## Publishing
 

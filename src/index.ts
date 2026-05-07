@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.10.1';
+export const LOOM_ENGINE_VERSION = '0.11.0';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';

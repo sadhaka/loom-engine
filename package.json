@@ -1,6 +1,6 @@
 {
   "name": "@sadhaka/loom-engine",
-  "version": "0.10.1",
+  "version": "0.11.0",
   "description": "Browser-first 2D / 2.5D game engine. Canvas2D, ECS, render-graph stages, Director-bridge SSE integration. Built from scratch in TypeScript for TheWorldTable.ai.",
   "type": "module",
   "main": "./dist/index.js",
@@ -52,6 +52,6 @@
     "typedoc-plugin-markdown": "^4.11.0",
     "typescript": "^5.4.0"
   },
-  "license": "MIT",
+  "license": "BUSL-1.1",
   "author": "Misha Mitiev"
 }
