@@ -47,8 +47,11 @@ import {
   LOOM_ENGINE_VERSION,
 } from '../src/index.js';
 
-test('engine version is the Phase 9.1 perf sentinel', () => {
-  assert.equal(LOOM_ENGINE_VERSION, '0.10.0-perf-9-1');
+test('engine version constant agrees with package.json', () => {
+  // Audit L-01 (0.10.0): the constant drifted from package.json after
+  // the productization bump. Pin both together; bump in the same
+  // commit when cutting a release.
+  assert.equal(LOOM_ENGINE_VERSION, '0.10.1');
 });
 
 test('math: clamp + lerp + approxEq', () => {

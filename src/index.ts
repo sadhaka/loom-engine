@@ -4,7 +4,12 @@
 // SpritePool, SpriteRenderSystem, and the high-level Engine facade
 // that wires everything together with sane defaults.
 
-export const LOOM_ENGINE_VERSION = '0.10.0-perf-9-1';
+// Keep this string in agreement with package.json.version. Bump both
+// in the same commit when cutting a release. Audit L-01 (0.10.0):
+// the previous suffix `-perf-9-1` lingered after package.json was
+// bumped to 0.10.0, surfacing as a drift bug in
+// engine.LOOM_ENGINE_VERSION-based diagnostics.
+export const LOOM_ENGINE_VERSION = '0.10.1';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
