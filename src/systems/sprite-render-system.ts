@@ -35,6 +35,15 @@ export class SpriteRenderSystem implements System {
   // when entity count grows past it.
   private sortBuffer: SortEntry[] = [];
 
+  // Scratch tint object reused across all tinted-sprite draws this
+  // frame. Phase 9.1: replaces a per-tinted-sprite allocation with
+  // one mutate-and-pass. drawSprite reads ColorRGBA fields by name
+  // and does not retain the reference past the call, so reuse is
+  // safe and avoids ~N tint-object allocations per frame.
+  private scratchTint: { r: number; g: number; b: number; a: number } = {
+    r: 1, g: 1, b: 1, a: 1,
+  };
+
   update(world: World, _dt: number): void {
     const transforms = world.getPool<TransformPool>(POOL_TRANSFORM);
     const sprites = world.getPool<SpritePool>(POOL_SPRITE);
@@ -98,12 +107,12 @@ export class SpriteRenderSystem implements System {
       const z = transforms.z[i] ?? 0;
       const sFlags = sprites.flags[i] ?? 0;
       if ((sFlags & SPRITE_FLAG_TINTED) !== 0) {
-        device.drawSprite(x, y, z, atlas, frame, {
-          r: sprites.tintR[i] ?? 1,
-          g: sprites.tintG[i] ?? 1,
-          b: sprites.tintB[i] ?? 1,
-          a: sprites.tintA[i] ?? 1,
-        });
+        const tint = this.scratchTint;
+        tint.r = sprites.tintR[i] ?? 1;
+        tint.g = sprites.tintG[i] ?? 1;
+        tint.b = sprites.tintB[i] ?? 1;
+        tint.a = sprites.tintA[i] ?? 1;
+        device.drawSprite(x, y, z, atlas, frame, tint);
       } else {
         device.drawSprite(x, y, z, atlas, frame);
       }

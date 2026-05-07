@@ -1,6 +1,6 @@
 {
   "name": "@theworldtable/loom-engine",
-  "version": "0.9.0-phase8.4",
+  "version": "0.10.0-perf-9-1",
   "description": "Custom 2D / 2.5D game engine for TheWorldTable.ai. Canvas2D primary, ECS, render-graph stages, Director-bridge integration.",
   "private": true,
   "type": "module",

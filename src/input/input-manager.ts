@@ -84,6 +84,13 @@ export class InputManager {
   private currentTouchesStarted: TouchPoint[] = [];
   private currentTouchesEnded: TouchPoint[] = [];
 
+  // Phase 9.1: cached snapshot + cached touches array, mutated in
+  // place each frame so RESOURCE_INPUT readers don't trigger an
+  // allocation per tick. The fields below alias the manager's own
+  // collections; the snapshot's identity is stable across frames.
+  private cachedTouchesArray: TouchPoint[] = [];
+  private cachedSnapshot: InputSnapshot;
+
   // Bound listener refs so dispose() can detach them cleanly.
   private boundKeyDown = this.onKeyDown.bind(this);
   private boundKeyUp = this.onKeyUp.bind(this);
@@ -102,6 +109,24 @@ export class InputManager {
   private canvas: HTMLCanvasElement | null = null;
   private targetWindow: Window | null = null;
   private attached: boolean = false;
+
+  constructor() {
+    // Build a stable cached snapshot once. snapshot() returns this
+    // same reference each frame, having mutated only the fields that
+    // change. Phase 9.1 alloc-churn fix.
+    this.cachedSnapshot = {
+      keysHeld: this.keysHeld,
+      keysPressedThisFrame: this.currentKeysPressed,
+      keysReleasedThisFrame: this.currentKeysReleased,
+      pointer: this.pointer,
+      pointerPressedThisFrame: 0,
+      pointerReleasedThisFrame: 0,
+      wheelDeltaThisFrame: 0,
+      touches: this.cachedTouchesArray,
+      touchesStartedThisFrame: this.currentTouchesStarted,
+      touchesEndedThisFrame: this.currentTouchesEnded,
+    };
+  }
 
   // Attach DOM listeners. Keyboard goes on window so the canvas
   // doesn't need focus to receive arrow keys. Pointer + wheel go on
@@ -154,40 +179,76 @@ export class InputManager {
 
   // Promote accumulated state to per-frame buffers and reset
   // accumulators. Called once per tick by InputSystem in PHASE_INPUT.
+  //
+  // Phase 9.1 alloc-churn fix: ping-pong the accumulator/current pair
+  // and clear in place rather than allocating fresh Sets and arrays
+  // each tick. The snapshot's identity is stable across frames; only
+  // its contained collections change. Consumers must not retain a
+  // reference across frames (documented at the top of this module).
   beginFrame(): void {
+    // Swap accumulator <-> current. After the swap, the old "current"
+    // (which is now the accumulator) gets cleared in place to be the
+    // collection for the next tick's events.
+    const swapPressed = this.currentKeysPressed;
     this.currentKeysPressed = this.keysPressedAccum;
+    this.keysPressedAccum = swapPressed;
+    swapPressed.clear();
+
+    const swapReleased = this.currentKeysReleased;
     this.currentKeysReleased = this.keysReleasedAccum;
+    this.keysReleasedAccum = swapReleased;
+    swapReleased.clear();
+
     this.currentPointerPressed = this.pointerPressedAccum;
     this.currentPointerReleased = this.pointerReleasedAccum;
     this.currentWheelDelta = this.wheelDeltaAccum;
-    this.currentTouchesStarted = this.touchesStartedAccum;
-    this.currentTouchesEnded = this.touchesEndedAccum;
-
-    this.keysPressedAccum = new Set();
-    this.keysReleasedAccum = new Set();
     this.pointerPressedAccum = 0;
     this.pointerReleasedAccum = 0;
     this.wheelDeltaAccum = 0;
-    this.touchesStartedAccum = [];
-    this.touchesEndedAccum = [];
+
+    const swapStarted = this.currentTouchesStarted;
+    this.currentTouchesStarted = this.touchesStartedAccum;
+    this.touchesStartedAccum = swapStarted;
+    swapStarted.length = 0;
+
+    const swapEnded = this.currentTouchesEnded;
+    this.currentTouchesEnded = this.touchesEndedAccum;
+    this.touchesEndedAccum = swapEnded;
+    swapEnded.length = 0;
   }
 
-  // Build the immutable snapshot that systems read. Cheap; reuses
-  // internal references where possible (the Set wrapping keysHeld is
-  // exposed as ReadonlySet).
+  // Build the immutable snapshot that systems read. Phase 9.1: returns
+  // a cached snapshot object, mutating only the fields that change so
+  // RESOURCE_INPUT updates are zero-alloc per frame. The touches array
+  // is rebuilt in place into the cached array (no Array.from).
   snapshot(): InputSnapshot {
-    return {
-      keysHeld: this.keysHeld,
-      keysPressedThisFrame: this.currentKeysPressed,
-      keysReleasedThisFrame: this.currentKeysReleased,
-      pointer: this.pointer,
-      pointerPressedThisFrame: this.currentPointerPressed,
-      pointerReleasedThisFrame: this.currentPointerReleased,
-      wheelDeltaThisFrame: this.currentWheelDelta,
-      touches: Array.from(this.activeTouches.values()),
-      touchesStartedThisFrame: this.currentTouchesStarted,
-      touchesEndedThisFrame: this.currentTouchesEnded,
+    const snap = this.cachedSnapshot as {
+      keysHeld: ReadonlySet<string>;
+      keysPressedThisFrame: ReadonlySet<string>;
+      keysReleasedThisFrame: ReadonlySet<string>;
+      pointer: Readonly<PointerSnapshot>;
+      pointerPressedThisFrame: number;
+      pointerReleasedThisFrame: number;
+      wheelDeltaThisFrame: number;
+      touches: ReadonlyArray<TouchPoint>;
+      touchesStartedThisFrame: ReadonlyArray<TouchPoint>;
+      touchesEndedThisFrame: ReadonlyArray<TouchPoint>;
     };
+    snap.keysPressedThisFrame = this.currentKeysPressed;
+    snap.keysReleasedThisFrame = this.currentKeysReleased;
+    snap.pointerPressedThisFrame = this.currentPointerPressed;
+    snap.pointerReleasedThisFrame = this.currentPointerReleased;
+    snap.wheelDeltaThisFrame = this.currentWheelDelta;
+    snap.touchesStartedThisFrame = this.currentTouchesStarted;
+    snap.touchesEndedThisFrame = this.currentTouchesEnded;
+
+    // Rebuild touches array in place from the active-touches map.
+    const touchesArr = this.cachedTouchesArray;
+    touchesArr.length = 0;
+    for (const tp of this.activeTouches.values()) {
+      touchesArr.push(tp);
+    }
+    return this.cachedSnapshot;
   }
 
   // ---------- Test / synthetic injection helpers ----------
