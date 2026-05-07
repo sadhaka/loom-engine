@@ -7,7 +7,64 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
-## 0.10.1 - 2026-05-08
+## 0.11.0 - 2026-05-08
+
+**License pivot to BUSL 1.1** (Phase 12.4). The engine moves from MIT
+to the [Business Source License 1.1](./LICENSE) starting with this
+version. 0.10.0 (the only previously-published release) remains
+permanently MIT for backwards compatibility; pinned consumers are
+unaffected.
+
+### License terms
+
+- **Free** for use below USD $1,000,000 annual gross revenue from any
+  product, game, or service that incorporates the engine.
+- **Commercial license** required above the threshold. Standard 5%
+  royalty on excess revenue; lump-sum and equity-for-license
+  alternatives negotiable. See
+  [COMMERCIAL_LICENSE_TERMS.md](./COMMERCIAL_LICENSE_TERMS.md).
+- **Auto-converts to Apache 2.0** on **2030-05-08** (4-year window per
+  BUSL spec).
+- **Contact**: `licensor@theworldtable.ai`
+
+### Why
+
+The engine is novel work product (see PRIOR-ART.md for the patent
+strategy scope). MIT was chosen for the 0.10.0 productization
+milestone to minimize friction for early evaluators; 0.11.0 captures
+commercial value as the engine matures toward broader adoption while
+keeping the threshold high enough that hobbyists, students, indies,
+and prototypes pay nothing.
+
+### Changed
+
+- `LICENSE` replaced with BUSL 1.1 (parameters block + standard
+  terms).
+- `package.json` `license` field: `MIT` -> `BUSL-1.1` (recognized
+  SPDX identifier).
+- `package.json` `version`: `0.10.1` -> `0.11.0`.
+- `LOOM_ENGINE_VERSION` constant in `src/index.ts`: `0.10.1` ->
+  `0.11.0`.
+- `README.md` License section rewritten with revenue threshold,
+  conversion date, and commercial-contact details.
+
+### Added
+
+- `COMMERCIAL_LICENSE_TERMS.md` outlining standard royalty terms,
+  negotiable alternatives (lump-sum, equity-for-license, OSS waivers),
+  and the 0.10.0 MIT grandfathering clause.
+
+### Carried forward from 0.10.1 polish (12.3, never published to npm)
+
+- `exports` map in `package.json` includes `./package.json` for tools
+  that introspect via `require('@sadhaka/loom-engine/package.json')`.
+- Publish workflow uses `npm publish --access public --provenance`
+  for free supply-chain attestation.
+- README documents the `withCredentials: true` default in
+  `SSEDirectorBridge` + `fetchImpl` override hooks for cross-origin
+  consumers.
+
+## 0.10.1 - 2026-05-08 (NEVER PUBLISHED)
 
 **Audit polish** (Phase 12.3) - patch release closing the five
 0.10.1-scoped findings from the 12.2 supply-chain audit. Source is
