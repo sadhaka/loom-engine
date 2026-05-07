@@ -61,3 +61,42 @@ export function createTimeResource(): TimeResource {
 export const RESOURCE_TIME = 'time';
 export const RESOURCE_CAMERA = 'camera';
 export const RESOURCE_DEVICE = 'device';
+
+// VeilBudget - the novelty hook tying renderer cost to the user's
+// monthly Veil Essence economy (per LOOM-ENGINE-SPEC.md Section 3
+// patent claim). The Director-bridge updates this each tick from
+// backend state (per-character monthly cap, current spend rate,
+// minute-of-hour throttle). Render systems READ it before issuing
+// expensive work:
+//   - Particle systems clamp maxParticles to budget.particleBudget
+//   - VFX shader effects gate post-passes on budget.shaderBudget
+//   - Director-driven encounter density scales to budget.eventBudget
+//
+// The default budget allows generous defaults so the engine works
+// standalone without a Director attached. The Director-bridge in
+// Phase 6 will overwrite these with real values.
+export interface VeilBudgetResource {
+  // Max simultaneous live particles. ParticleSimulationSystem
+  // doesn't reference this directly; ParticlePool.setMaxParticles
+  // does, called by an external coordinator (in v1, the demo /
+  // ARPG; in v2+, the Director-bridge).
+  particleBudget: number;
+  // Reserved for Phase 4+: max post-process passes per frame.
+  shaderBudget: number;
+  // Reserved for Phase 6: encounter event ingest rate (events/sec).
+  eventBudget: number;
+  // Diagnostic: last frame the Director updated this budget. -1 if
+  // never updated (engine standalone or demo).
+  lastUpdatedFrame: number;
+}
+
+export function createVeilBudgetResource(): VeilBudgetResource {
+  return {
+    particleBudget: 4096,
+    shaderBudget: 8,
+    eventBudget: 256,
+    lastUpdatedFrame: -1,
+  };
+}
+
+export const RESOURCE_VEIL_BUDGET = 'veil_budget';

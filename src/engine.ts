@@ -25,6 +25,14 @@ import { TransformPool } from './components/transform.js';
 import { SpritePool } from './components/sprite.js';
 import { AnimationStatePool } from './animation/animation-state-pool.js';
 import { POOL_ANIMATION } from './systems/animation-system.js';
+import { ParticlePool } from './vfx/particle-pool.js';
+import { ParticleEmitterPool } from './components/particle-emitter.js';
+import { POOL_PARTICLE } from './systems/particle-simulation-system.js';
+import { POOL_EMITTER } from './systems/particle-emitter-system.js';
+import {
+  createVeilBudgetResource,
+  RESOURCE_VEIL_BUDGET,
+} from './resources.js';
 import {
   RESOURCE_TIME,
   RESOURCE_CAMERA,
@@ -71,11 +79,14 @@ export class Engine {
     world.resources.set(RESOURCE_TIME, time);
     world.resources.set(RESOURCE_CAMERA, camera);
     world.resources.set(RESOURCE_DEVICE, device);
+    world.resources.set(RESOURCE_VEIL_BUDGET, createVeilBudgetResource());
 
     // Pools
     world.registerPool(POOL_TRANSFORM, new TransformPool());
     world.registerPool(POOL_SPRITE, new SpritePool());
     world.registerPool(POOL_ANIMATION, new AnimationStatePool());
+    world.registerPool(POOL_PARTICLE, new ParticlePool());
+    world.registerPool(POOL_EMITTER, new ParticleEmitterPool());
 
     // Systems are NOT pre-registered. Callers add their own render
     // and game logic systems explicitly, in the order they want.

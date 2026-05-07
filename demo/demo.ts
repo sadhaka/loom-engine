@@ -18,6 +18,8 @@ import {
   POOL_TRANSFORM,
   POOL_SPRITE,
   POOL_ANIMATION,
+  POOL_PARTICLE,
+  POOL_EMITTER,
   ISO_TILE_WIDTH,
   ISO_TILE_HEIGHT,
   TransformPool,
@@ -25,13 +27,20 @@ import {
   AnimationStatePool,
   AnimationSystem,
   SpriteRenderSystem,
+  ParticlePool,
+  ParticleEmitterPool,
+  ParticleSimulationSystem,
+  ParticleEmitterSystem,
+  ParticleRenderSystem,
   RESOURCE_DEVICE,
   RESOURCE_CAMERA,
   RESOURCE_TIME,
   SYSTEM_PHASE_LOGIC,
+  SYSTEM_PHASE_PHYSICS,
   SYSTEM_PHASE_ANIMATION,
   SYSTEM_PHASE_RENDER,
   loadSpriteSheet,
+  hexToRgba,
   type LoadedSpriteSheet,
   type System,
   type World,
@@ -138,12 +147,46 @@ class TileRenderSystem implements System {
   // not declare clips, so 'default' is what we play.
   animations.play(knight, knightSheet.manifest, 'default');
 
-  // Phase order: Hover (logic) -> animation system advances frames
-  // (animation) -> tiles + sprites draw (render).
+  // Phase 4: violet/teal sparkle emitter attached to the knight. The
+  // emitter spawns 30 particles/sec in an upward cone, additive
+  // blended for a soft glow. Veil-weaver palette: hot purple -> cool
+  // cyan as particles age.
+  const emitters = engine.world.requirePool<ParticleEmitterPool>(POOL_EMITTER);
+  emitters.attach(knight, {
+    rate: 30,
+    particleLife: 1.2,
+    speedMin: 0.6,
+    speedMax: 1.4,
+    dirX: 0,
+    dirY: 0,
+    dirZ: 1,                  // upward in iso world (Z is height)
+    coneRadians: Math.PI / 4,  // 45 degree half-angle cone
+    ax: 0,
+    ay: 0,
+    az: -0.8,                  // gravity pulls back down
+    startSize: 6,
+    endSize: 1,
+    startColor: hexToRgba(0xc88cff, 1.0),   // violet
+    endColor: hexToRgba(0x6effff, 0),        // teal fade
+    additive: true,
+  });
+
+  // Phase order:
+  //   LOGIC      hover bobs the knight, emitter system spawns
+  //              this tick's particles
+  //   PHYSICS    particle simulation advances life + integrates
+  //              velocity / acceleration
+  //   ANIMATION  knight sprite frame steps
+  //   RENDER     tiles, sprites, particles (in this order so
+  //              particles draw above sprites)
   engine.world.addSystem(new HoverSystem(knight, 0.1, 1.5, 0.2), SYSTEM_PHASE_LOGIC);
+  engine.world.addSystem(new ParticleEmitterSystem(), SYSTEM_PHASE_LOGIC);
+  engine.world.addSystem(new ParticleSimulationSystem(), SYSTEM_PHASE_PHYSICS);
   engine.world.addSystem(new AnimationSystem(), SYSTEM_PHASE_ANIMATION);
   engine.world.addSystem(new TileRenderSystem(tileAtlas, 2), SYSTEM_PHASE_RENDER);
   engine.world.addSystem(new SpriteRenderSystem(), SYSTEM_PHASE_RENDER);
+  engine.world.addSystem(new ParticleRenderSystem(), SYSTEM_PHASE_RENDER);
+  const particles = engine.world.requirePool<ParticlePool>(POOL_PARTICLE);
 
   // Frame loop with the parallel session's hidden-tab fallback so the
   // preview keeps animating when not focused.
@@ -171,6 +214,7 @@ class TileRenderSystem implements System {
       'entities   ' + engine.world.countEntities() + '   systems ' + engine.world.countSystems() + '\n' +
       'sheet      ' + knightSheet.manifest.name + '   clips ' + knightSheet.manifest.clips.length + '\n' +
       'playing    ' + (activeClip || '(none)') + '   frame idx ' + sprites.frame[0 + (knight & 0x00ffffff)] + '\n' +
+      'particles  ' + particles.getLiveCount() + ' live  cap ' + particles.getMaxParticles() + '\n' +
       'camera     center=(' + engine.camera.centerX.toFixed(2) + ',' + engine.camera.centerY.toFixed(2) + ') zoom=' + engine.camera.zoom.toFixed(2);
 
     schedule();

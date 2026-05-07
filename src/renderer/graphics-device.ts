@@ -84,6 +84,20 @@ export interface IGraphicsDevice {
     style: TextStyle,
   ): void;
 
+  // VFX particle. Drawn as an iso-projected disc at (worldX, worldY,
+  // worldZ) with the given pixel size and rgba color. additive=true
+  // uses 'lighter' compositing for glow; false uses standard alpha
+  // blend. Texturing for particles is a Phase 5+ extension; v1
+  // particles are code-painted gradient discs.
+  drawParticle(
+    worldX: number,
+    worldY: number,
+    worldZ: number,
+    size: number,
+    color: Readonly<ColorRGBA>,
+    additive: boolean,
+  ): void;
+
   // Diagnostic. Returns the count of draw calls submitted this frame.
   // Reset on beginFrame.
   getDrawCallCount(): number;

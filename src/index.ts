@@ -4,7 +4,7 @@
 // SpritePool, SpriteRenderSystem, and the high-level Engine facade
 // that wires everything together with sane defaults.
 
-export const LOOM_ENGINE_VERSION = '0.3.0-phase3';
+export const LOOM_ENGINE_VERSION = '0.4.0-phase4';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -73,13 +73,15 @@ export {
   SYSTEM_PHASE_POST_RENDER,
   SYSTEM_PHASES_IN_ORDER,
 } from './system.js';
-export type { TimeResource } from './resources.js';
+export type { TimeResource, VeilBudgetResource } from './resources.js';
 export {
   ResourceRegistry,
   createTimeResource,
+  createVeilBudgetResource,
   RESOURCE_TIME,
   RESOURCE_CAMERA,
   RESOURCE_DEVICE,
+  RESOURCE_VEIL_BUDGET,
 } from './resources.js';
 
 // Default systems
@@ -155,3 +157,29 @@ export {
   ANIMATION_FLAG_FINISHED,
 } from './animation/animation-state-pool.js';
 export { AnimationSystem, POOL_ANIMATION } from './systems/animation-system.js';
+
+// VFX (Phase 4): particle pool, per-entity emitter component, and
+// the three-system pipeline (emit -> simulate -> render). Render
+// budget is gated by the VeilBudgetResource so the Director can
+// throttle expensive scenes without engine code branching.
+export type { ParticleSpawn } from './vfx/particle-pool.js';
+export {
+  ParticlePool,
+  PARTICLE_FLAG_ALIVE,
+  PARTICLE_FLAG_ADDITIVE,
+} from './vfx/particle-pool.js';
+export type { EmitterConfig } from './components/particle-emitter.js';
+export {
+  ParticleEmitterPool,
+  EMITTER_FLAG_ACTIVE,
+  EMITTER_FLAG_ADDITIVE,
+} from './components/particle-emitter.js';
+export {
+  ParticleSimulationSystem,
+  POOL_PARTICLE,
+} from './systems/particle-simulation-system.js';
+export {
+  ParticleEmitterSystem,
+  POOL_EMITTER,
+} from './systems/particle-emitter-system.js';
+export { ParticleRenderSystem } from './systems/particle-render-system.js';

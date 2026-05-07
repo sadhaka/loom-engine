@@ -202,6 +202,46 @@ export class Canvas2DDevice implements IGraphicsDevice {
     this.drawCallCount++;
   }
 
+  drawParticle(
+    worldX: number,
+    worldY: number,
+    worldZ: number,
+    size: number,
+    color: Readonly<ColorRGBA>,
+    additive: boolean,
+  ): void {
+    const cam = this.camera;
+    if (!cam) return;
+    if (size <= 0 || color.a <= 0) return;
+
+    // Iso projection same as drawSprite: world (x,y,z) -> iso (sx,sy)
+    // -> screen via camera.
+    const isoX = (worldX - worldY) * ISO_HALF_W;
+    const isoY = (worldX + worldY) * ISO_HALF_H - worldZ * ISO_Z_SCALE;
+    worldToScreen(cam, isoX, isoY, SCRATCH_VEC2);
+    const sx = SCRATCH_VEC2.x;
+    const sy = SCRATCH_VEC2.y;
+    const r = (size / 2) * cam.zoom;
+
+    this.ctx.save();
+    if (additive) {
+      this.ctx.globalCompositeOperation = 'lighter';
+    }
+    // Radial gradient from solid center to transparent edge gives
+    // the soft particle look at zero shader cost. For pixel-art
+    // particles a hard-edged fillStyle would also work; gradient
+    // composes better with additive blending.
+    const grad = this.ctx.createRadialGradient(sx, sy, 0, sx, sy, r);
+    grad.addColorStop(0, rgbaToCssString(color));
+    grad.addColorStop(1, rgbaToCssString({ r: color.r, g: color.g, b: color.b, a: 0 }));
+    this.ctx.fillStyle = grad;
+    this.ctx.beginPath();
+    this.ctx.arc(sx, sy, r, 0, Math.PI * 2);
+    this.ctx.fill();
+    this.ctx.restore();
+    this.drawCallCount++;
+  }
+
   getDrawCallCount(): number {
     return this.drawCallCount;
   }

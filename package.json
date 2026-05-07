@@ -18,7 +18,7 @@
     "build:all": "npm run build && npm run build:demo",
     "watch": "tsc --watch",
     "clean": "rm -rf dist demo/*.js demo/*.js.map",
-    "test": "tsx --test tests/smoke.test.ts tests/world.test.ts tests/asset-loader.test.ts tests/animation.test.ts"
+    "test": "tsx --test tests/smoke.test.ts tests/world.test.ts tests/asset-loader.test.ts tests/animation.test.ts tests/vfx.test.ts"
   },
   "devDependencies": {
     "typescript": "^5.4.0",
