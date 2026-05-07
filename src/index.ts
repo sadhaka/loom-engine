@@ -4,7 +4,7 @@
 // SpritePool, SpriteRenderSystem, and the high-level Engine facade
 // that wires everything together with sane defaults.
 
-export const LOOM_ENGINE_VERSION = '0.6.0-phase6';
+export const LOOM_ENGINE_VERSION = '0.7.0-phase7';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -265,3 +265,28 @@ export {
   RESOURCE_DIRECTOR_LOG,
   createDirectorEventLog,
 } from './director/director-system.js';
+
+// Combat (Phase 7): health, damage, simple AI, attack. Engine-side
+// primitives that the actual Survivor port will use. The full
+// Survivor wave engine sits on top of these in subsequent sessions.
+export {
+  HealthPool,
+  POOL_HEALTH,
+  HEALTH_FLAG_ACTIVE,
+  HEALTH_FLAG_DEAD,
+  HEALTH_FLAG_INVULNERABLE,
+} from './components/health.js';
+export {
+  PursuePool,
+  POOL_PURSUE,
+  PURSUE_FLAG_ACTIVE,
+} from './components/pursue.js';
+export type { KillEvent } from './systems/damage-system.js';
+export {
+  DamageSystem,
+  DeathLog,
+  RESOURCE_DEATH_LOG,
+} from './systems/damage-system.js';
+export { PursueSystem } from './systems/pursue-system.js';
+export type { AttackSystemOptions } from './systems/attack-system.js';
+export { AttackSystem } from './systems/attack-system.js';

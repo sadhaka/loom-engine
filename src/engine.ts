@@ -29,6 +29,9 @@ import { ParticlePool } from './vfx/particle-pool.js';
 import { ParticleEmitterPool } from './components/particle-emitter.js';
 import { POOL_PARTICLE } from './systems/particle-simulation-system.js';
 import { POOL_EMITTER } from './systems/particle-emitter-system.js';
+import { HealthPool, POOL_HEALTH } from './components/health.js';
+import { PursuePool, POOL_PURSUE } from './components/pursue.js';
+import { DeathLog, RESOURCE_DEATH_LOG } from './systems/damage-system.js';
 import {
   createVeilBudgetResource,
   RESOURCE_VEIL_BUDGET,
@@ -151,6 +154,9 @@ export class Engine {
     world.registerPool(POOL_ANIMATION, new AnimationStatePool());
     world.registerPool(POOL_PARTICLE, new ParticlePool());
     world.registerPool(POOL_EMITTER, new ParticleEmitterPool());
+    world.registerPool(POOL_HEALTH, new HealthPool());
+    world.registerPool(POOL_PURSUE, new PursuePool());
+    world.resources.set(RESOURCE_DEATH_LOG, new DeathLog());
 
     // Systems are NOT pre-registered. Callers add their own systems
     // explicitly. The Phase 5 idiomatic order is:
