@@ -1,19 +1,22 @@
-// Loom Engine - Phase 2 demo (ECS-driven).
+// Loom Engine - Phase 2 demo (ECS-driven, asset-loaded knight).
 //
-// Same visual output as Phase 1: 5x5 iso tile diamond + a hovering
-// iron-red knight sprite. But everything is now driven through the
-// ECS pipeline:
+// Scene: 5x5 iso tile diamond + a hovering, walking weaver-knight
+// driven through the ECS pipeline:
 //
+//   - The tile atlas stays procedural (terrain doesn't ship as art
+//     yet; that's a Phase 7 / world-builder concern)
+//   - The knight sprite sheet is LOADED from assets/knight/walk.json
+//     via the new sprite-sheet-loader. PNG + JSON manifest pair.
 //   - The knight is an entity with Transform + Sprite components
-//   - A custom HoverSystem (PHASE_LOGIC) bobs the knight's Z
-//   - A custom TileRenderSystem (PHASE_RENDER) draws the ground
-//   - The built-in SpriteRenderSystem (PHASE_RENDER) draws sprites
+//   - HoverSystem (PHASE_LOGIC) bobs the knight's Z
+//   - WalkCycleSystem (PHASE_LOGIC) steps the sprite frame from
+//     the manifest's per-frame durations
+//   - TileRenderSystem (PHASE_RENDER) draws the ground tiles
+//   - SpriteRenderSystem (PHASE_RENDER) draws sprites
 //   - Engine.tick(now) advances all of them
 //
-// Tiles aren't entities yet (terrain doesn't need ECS at this
-// scale); they live in a pure render system that walks a fixed
-// grid. Phase 3+ might promote them to entities if dynamic terrain
-// becomes a thing.
+// The HTML host is `demo/index.html`; relative path to the asset
+// from there is `../assets/knight/walk.json`.
 
 import {
   LOOM_ENGINE_VERSION,
@@ -30,7 +33,10 @@ import {
   RESOURCE_TIME,
   SYSTEM_PHASE_LOGIC,
   SYSTEM_PHASE_RENDER,
-  COLOR_KNOT_STR,
+  loadSpriteSheet,
+  computeFrameIndex,
+  type SpriteSheetManifest,
+  type LoadedSpriteSheet,
   type System,
   type World,
   type IGraphicsDevice,
@@ -43,7 +49,7 @@ import {
 const canvas = document.getElementById('stage') as HTMLCanvasElement;
 const stats = document.getElementById('stats') as HTMLDivElement;
 
-// ---------- Procedural atlases ----------
+// ---------- Procedural tile atlas (terrain stays code-only) ----------
 
 function makeTileAtlas(): HTMLCanvasElement {
   const c = document.createElement('canvas');
@@ -67,25 +73,6 @@ function makeTileAtlas(): HTMLCanvasElement {
   ctx.lineTo(ISO_TILE_WIDTH / 2, ISO_TILE_HEIGHT - 1);
   ctx.strokeStyle = '#7a6a48';
   ctx.stroke();
-  return c;
-}
-
-function makeSpriteAtlas(): HTMLCanvasElement {
-  const c = document.createElement('canvas');
-  c.width = 16;
-  c.height = 32;
-  const ctx = c.getContext('2d')!;
-  ctx.fillStyle = '#b04a24';
-  ctx.fillRect(5, 14, 6, 12);
-  ctx.fillStyle = '#d8b878';
-  ctx.fillRect(6, 6, 4, 6);
-  ctx.fillStyle = '#7a3416';
-  ctx.fillRect(5, 4, 6, 3);
-  ctx.fillStyle = '#3a2616';
-  ctx.fillRect(5, 26, 2, 5);
-  ctx.fillRect(9, 26, 2, 5);
-  ctx.fillStyle = '#c8c0a8';
-  ctx.fillRect(12, 14, 1, 12);
   return c;
 }
 
@@ -121,32 +108,56 @@ class TileRenderSystem implements System {
   }
 }
 
+// Advances an entity's sprite frame from a sheet manifest each tick.
+// Uses computeFrameIndex which honors per-frame duration_ms; falls
+// back to manifest.fps if the manifest is uniform.
+class WalkCycleSystem implements System {
+  readonly name: string = 'demo-walk-cycle';
+  private startMs: number = -1;
+  constructor(private entity: EntityId, private manifest: SpriteSheetManifest) {}
+  update(world: World, _dt: number): void {
+    const now = performance.now();
+    if (this.startMs < 0) this.startMs = now;
+    const sprites = world.requirePool<SpritePool>(POOL_SPRITE);
+    sprites.setFrame(this.entity, computeFrameIndex(this.manifest, now, this.startMs));
+  }
+}
+
 // ---------- Engine boot ----------
 
 const engine = Engine.create({ canvas });
 
-// Atlases.
+// Tile atlas (procedural, code-painted).
 const tileAtlas = engine.device.registerAtlas({
   image: makeTileAtlas(),
   frames: [{ x: 0, y: 0, w: ISO_TILE_WIDTH, h: ISO_TILE_HEIGHT }],
   name: 'demo-tile',
 });
-const spriteAtlas = engine.device.registerAtlas({
-  image: makeSpriteAtlas(),
-  frames: [{ x: 0, y: 0, w: 16, h: 32 }],
-  name: 'demo-knight',
-});
 
-// One knight entity at world origin.
+// Knight atlas - LOADED from disk via the sprite-sheet pipeline.
+// Top-level await is fine here; the host script tag is type=module.
+let knightSheet: LoadedSpriteSheet;
+try {
+  knightSheet = await loadSpriteSheet('../assets/knight/walk.json');
+} catch (err) {
+  const msg = err instanceof Error ? err.message : String(err);
+  stats.textContent = 'asset load failed:\n' + msg;
+  throw err;
+}
+const knightAtlas = engine.device.registerAtlas(knightSheet.atlas);
+
+// One knight entity at world origin. No tint - the loaded asset has
+// its own baked palette (Veil-weaver violet/teal).
 const transforms = engine.world.requirePool<TransformPool>(POOL_TRANSFORM);
 const sprites = engine.world.requirePool<SpritePool>(POOL_SPRITE);
 const knight = engine.world.createEntity();
 transforms.attach(knight, 0, 0, 0.2);
-sprites.attach(knight, spriteAtlas, 0, COLOR_KNOT_STR);
+sprites.attach(knight, knightAtlas, 0);
 
-// Systems: hover (logic) -> tiles (render) -> sprites (render).
+// Systems: hover + walk-cycle (logic) -> tiles + sprites (render).
 // Within a phase, registration order = run order.
 engine.world.addSystem(new HoverSystem(knight, 0.1, 1.5, 0.2), SYSTEM_PHASE_LOGIC);
+engine.world.addSystem(new WalkCycleSystem(knight, knightSheet.manifest), SYSTEM_PHASE_LOGIC);
 engine.world.addSystem(new TileRenderSystem(tileAtlas, 2), SYSTEM_PHASE_RENDER);
 engine.world.addSystem(new SpriteRenderSystem(), SYSTEM_PHASE_RENDER);
 
@@ -173,6 +184,7 @@ function tick(now: number): void {
     'draw calls ' + engine.device.getDrawCallCount() + ' (per frame)\n' +
     'frame      ' + t.frame + '   elapsed ' + t.elapsed.toFixed(2) + 's\n' +
     'entities   ' + engine.world.countEntities() + '   systems ' + engine.world.countSystems() + '\n' +
+    'sheet      ' + knightSheet.manifest.name + '   frames ' + knightSheet.manifest.frames.length + '   fps ' + knightSheet.manifest.fps + '\n' +
     'camera     center=(' + engine.camera.centerX.toFixed(2) + ',' + engine.camera.centerY.toFixed(2) + ') zoom=' + engine.camera.zoom.toFixed(2);
 
   requestAnimationFrame(tick);
