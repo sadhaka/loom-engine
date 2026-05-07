@@ -42,6 +42,13 @@ export interface SSEDirectorBridgeOptions {
   // Optional injection point for headless tests of the bridge itself.
   // Production code never sets this.
   eventSourceFactory?: (url: string) => EventSource;
+  // Optional starting Last-Event-ID. Set by the application after a
+  // snapshot recovery flow so that any events <= initialLastEventId
+  // arriving on the new SSE connection are silently deduped (treated
+  // as past replays). Without this, post-snapshot reconnects would
+  // re-apply state already covered by the snapshot.
+  // Per LOOM-DIRECTOR-PROTOCOL.md §3.11 / Phase 6.5 contract.
+  initialLastEventId?: number;
 }
 
 export class SSEDirectorBridge implements IDirectorBridge {
@@ -75,6 +82,9 @@ export class SSEDirectorBridge implements IDirectorBridge {
     this.characterId = opts.characterId;
     this.fps = opts.fps ?? 60;
     this.dropP2 = opts.dropP2 ?? true;
+    if (typeof opts.initialLastEventId === 'number' && opts.initialLastEventId > 0) {
+      this.statsValue.lastEventId = opts.initialLastEventId;
+    }
     if (opts.eventSourceFactory) {
       this.eventSourceFactory = opts.eventSourceFactory;
     } else {

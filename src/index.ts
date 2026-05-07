@@ -257,6 +257,14 @@ export {
 export { MockDirectorBridge } from './director/mock-director-bridge.js';
 export type { SSEDirectorBridgeOptions } from './director/sse-director-bridge.js';
 export { SSEDirectorBridge } from './director/sse-director-bridge.js';
+export type {
+  SnapshotResponse,
+  SnapshotRecoveryOptions,
+} from './director/snapshot-recovery.js';
+export {
+  SnapshotRecoveryHelper,
+  SnapshotFetchError,
+} from './director/snapshot-recovery.js';
 export type { KnotPaletteRgba } from './director/knot-context-resource.js';
 export { KnotContextResource } from './director/knot-context-resource.js';
 export type { DirectorEventLog } from './director/director-system.js';
