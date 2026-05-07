@@ -14,9 +14,13 @@ full design specification lives in the main repo at
 
 API reference (TypeDoc) - generated from the public surface in
 [`src/index.ts`](./src/index.ts) on every push to `main`:
-**https://sadhaka.github.io/loom-engine/**
+**https://loom-engine.pages.dev/**
 
 Build it locally with `npm run docs` (writes to `./docs/`).
+
+See [Docs deploy](#docs-deploy) for the hosting chain and one-time
+activation steps (Cloudflare Pages, since GitHub Pages is unavailable
+on private repos for free user plans).
 
 ## Quickstart
 
@@ -231,6 +235,48 @@ Run via `npm test`. Each suite is fully node-based; no DOM dependency.
 Browser-only paths (Canvas2DDevice rasterization, AudioContext
 unlock, DOM event listeners) are exercised via the demo's preview
 verification, not unit tests.
+
+## Docs deploy
+
+The TypeDoc site at **https://loom-engine.pages.dev/** is served by
+Cloudflare Pages from the `gh-pages` branch of this repo. The chain:
+
+1. Push to `main` triggers `.github/workflows/docs.yml`
+2. Workflow runs `npm ci`, `npm test`, `npm run docs:ci`, then publishes
+   `./docs-build/` to the `gh-pages` branch via `peaceiris/actions-gh-pages`
+3. Cloudflare Pages watches the `gh-pages` branch and auto-deploys on
+   every push, typically within 1-2 min
+
+GitHub Pages itself is **not** used: the repo is private and free user
+plans do not include Pages on private repos. The 422 error from the
+Pages create API is the canonical signal: `"Your current plan does not
+support GitHub Pages for this repository."`
+
+### Re-creating the deploy from scratch
+
+If the Cloudflare Pages project is ever deleted or the repo is forked
+to a new owner, re-activate as follows:
+
+1. Cloudflare dashboard -> **Workers & Pages** -> **Create** -> **Pages** ->
+   **Connect to Git**
+2. Authorize Cloudflare on the GitHub account that owns the repo
+   (only the engine repo needs to be granted access)
+3. Select `loom-engine`, name the project `loom-engine` (default URL
+   becomes `loom-engine.pages.dev`)
+4. **Production branch**: `gh-pages`
+5. **Build command**: leave empty (the gh-pages branch is already a
+   built static site)
+6. **Build output directory**: `/` (root)
+7. Save and deploy. First deploy reads whatever is currently on
+   `gh-pages`; subsequent deploys auto-trigger on push to that branch
+8. Optional: assign a custom domain (e.g. `engine.theworldtable.ai`)
+   under the project's **Custom domains** tab. CF DNS for
+   `theworldtable.ai` is already on the same account, so this is a
+   one-click CNAME add
+
+If the workflow ever stops updating `gh-pages` (CF Pages will keep
+serving the last successful build but go stale), check
+`gh run list --repo sadhaka/loom-engine --workflow=docs.yml`.
 
 ## License
 

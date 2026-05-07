@@ -1,12 +1,18 @@
-name: Deploy TypeDoc to GitHub Pages
+name: Deploy TypeDoc to gh-pages branch
 
-# Phase 9.3: build the public-API reference from src/index.ts and
-# publish it to the gh-pages branch on every push to main.
+# Phase 9.3 + 11A.2: build the public-API reference from src/index.ts
+# and publish it to the gh-pages branch on every push to main.
+# Cloudflare Pages serves the gh-pages branch at loom-engine.pages.dev
+# (GitHub Pages itself is unavailable: private repo on free user plan).
 #
 # - npm run docs:ci writes a clean tree to ./docs-build/
 # - peaceiris/actions-gh-pages publishes that tree to gh-pages
+# - Cloudflare Pages auto-deploys on every gh-pages push (1-2 min)
 # - workflow_dispatch lets us re-deploy from the Actions UI on demand
 # - PRs only build (no deploy) so we catch typedoc warnings before merge
+#
+# See README.md "Docs deploy" section for the activation steps if the
+# Cloudflare Pages project is ever re-created.
 
 on:
   push:
