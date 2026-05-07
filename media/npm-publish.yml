@@ -82,6 +82,14 @@ jobs:
           echo "NPM_CONFIG_USERCONFIG=" >> $GITHUB_ENV
           echo "[clear-auth] cleared .npmrc + NODE_AUTH_TOKEN; npm publish will use OIDC"
 
+      - name: Update npm to latest (for Trusted Publishing OIDC)
+        # Node 20 ships with npm 10.x. Trusted Publishing OIDC auth
+        # requires npm 11.5.1+. Without this, npm publish errors with
+        # ENEEDAUTH because it does not negotiate OIDC at all.
+        run: |
+          npm install -g npm@latest
+          npm --version
+
       - name: Install dependencies
         run: npm ci
 
