@@ -1,0 +1,37 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": ["src/index.ts"],
+  "entryPointStrategy": "resolve",
+  "tsconfig": "./tsconfig.json",
+  "out": "docs",
+  "readme": "README.md",
+  "name": "Loom Engine",
+  "theme": "default",
+  "includeVersion": true,
+  "hideGenerator": false,
+  "githubPages": true,
+  "categorizeByGroup": true,
+  "navigationLinks": {
+    "GitHub": "https://github.com/sadhaka/loom-engine",
+    "TheWorldTable.ai": "https://theworldtable.ai"
+  },
+  "excludePrivate": true,
+  "excludeProtected": false,
+  "excludeInternal": true,
+  "excludeReferences": false,
+  "exclude": [
+    "tests/**",
+    "demo/**",
+    "tools/**",
+    "dist/**",
+    "node_modules/**",
+    "**/*.test.ts"
+  ],
+  "sort": ["source-order"],
+  "treatWarningsAsErrors": false,
+  "validation": {
+    "notExported": false,
+    "invalidLink": true,
+    "notDocumented": false
+  }
+}

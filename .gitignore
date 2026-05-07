@@ -7,6 +7,11 @@ demo/*.js.map
 demo/*.d.ts
 demo/*.d.ts.map
 
+# TypeDoc output (Phase 9.3) - HTML site is generated, never tracked.
+# `npm run docs` writes here; `npm run docs:ci` writes to docs-build/.
+docs/
+docs-build/
+
 # Dependencies
 node_modules/
 
