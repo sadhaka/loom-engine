@@ -1,6 +1,6 @@
 {
   "name": "@theworldtable/loom-engine",
-  "version": "0.0.0-spec",
+  "version": "0.1.0-phase1",
   "description": "Custom 2D / 2.5D game engine for TheWorldTable.ai. Canvas2D primary, ECS, render-graph stages, Director-bridge integration.",
   "private": true,
   "type": "module",
@@ -14,12 +14,15 @@
   },
   "scripts": {
     "build": "tsc",
+    "build:demo": "tsc -p tsconfig.demo.json",
+    "build:all": "npm run build && npm run build:demo",
     "watch": "tsc --watch",
-    "clean": "rm -rf dist",
-    "test": "node --test tests/"
+    "clean": "rm -rf dist demo/*.js demo/*.js.map",
+    "test": "node --test --import=tsx tests/"
   },
   "devDependencies": {
-    "typescript": "^5.4.0"
+    "typescript": "^5.4.0",
+    "tsx": "^4.19.0"
   },
   "license": "UNLICENSED",
   "author": "TheWorldTable.ai"
