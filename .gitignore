@@ -27,3 +27,6 @@ npm-debug.log*
 # Test artifacts
 coverage/
 .nyc_output/
+
+# Temporary commit message files (use git -F to avoid heredoc quote issues)
+.commit-msg-*.txt
