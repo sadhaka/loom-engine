@@ -7,6 +7,75 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.10.0 - 2026-05-08
+
+**Productization milestone** (Phase 11B.3) - first public npm
+release under MIT. Package is `@sadhaka/loom-engine`. Pre-alpha:
+no semver stability guarantee until 1.0.
+
+This entry also backfills the changelog gap between 0.5.0-phase5
+and 0.10.0 — the work shipped in commits but did not get its own
+versioned entries.
+
+### Changed
+
+- License switched from `UNLICENSED` (private) to **MIT**. Copyright
+  Misha Mitiev 2026. See [LICENSE](./LICENSE).
+- Package name renamed from `@theworldtable/loom-engine` (private,
+  internal) to `@sadhaka/loom-engine` (public, scoped).
+- `package.json`: dropped `private: true`, added `files`, `keywords`,
+  `repository`, `homepage`, `bugs`, `prepublishOnly`. Version
+  suffix `-perf-9-1` dropped — productization releases ship clean
+  semver.
+- `.npmignore` added; only `dist/`, `LICENSE`, `README.md`, and
+  `package.json` ship in the tarball.
+- `README.md`: Install + License + Publishing sections, updated
+  status table, refreshed test coverage breakdown.
+
+### Added (productization scaffolding)
+
+- [`.github/workflows/npm-publish.yml`](./.github/workflows/npm-publish.yml)
+  - tag-triggered publish (`v*` on `main`). Runs tests + build,
+  then `npm publish --access public` with `NPM_TOKEN` secret.
+
+### Added (backfill since 0.5.0-phase5)
+
+The following landed between 0.5.0-phase5 and this release:
+
+- **Phase 6** - Director-bridge: SSE event-stream subscription with
+  `eventSourceFactory` hook for testability, scene-state derivation
+  from event projections, `SnapshotRecoveryHelper` for reconnect
+  resync.
+- **Phase 7** - Survivor combat layer ported onto Loom Engine:
+  projectile pool, hit resolution, damage application, knockback.
+- **Phase 8** - 2.5D ARPG hub-and-spoke per LOOM-CLASS-SYSTEM-SPEC:
+  plaza narrator support, knot-agnostic spawn, encounter scheduling.
+- **Phase 8.4** - mobile + touch input: virtual D-pad, tap-to-walk,
+  multi-touch arbitration, pointer-coalescing for canvas DPR math.
+- **Phase 9.1** - perf pass: alloc-churn fixes across hot paths
+  (transform iteration, particle simulation, sprite sort buffer),
+  bench harness in `tools/`.
+- **Phase 9.3** - TypeDoc public-API site at
+  [loom-engine.pages.dev](https://loom-engine.pages.dev/),
+  auto-deployed from `gh-pages` branch via the docs workflow.
+- **Phase 11A.2** - docs hosting migrated from GitHub Pages
+  (unavailable on free plan for private repos) to Cloudflare Pages.
+
+### Tests
+
+- 208 / 208 pass via `tsx --test` on Node 24. Twelve test files
+  covering smoke, world, asset-loader, animation, vfx,
+  audio-input, director, combat, projectile, arpg,
+  snapshot-recovery, touch-input.
+
+### Manual final-gate to publish
+
+`npm login` (account `sadhaka`) → `npm publish --dry-run` to verify
+tarball contents → `npm publish --access public`. The `--access public`
+flag is required because npm scopes default to private. From this
+release forward, push a `v0.10.0`-style tag on `main` and the
+GitHub Actions workflow handles publish automatically.
+
 ## 0.5.0-phase5 - 2026-05-07
 
 [Spec phase 5](../docker/LOOM-ENGINE-SPEC.md) - audio bus + input
