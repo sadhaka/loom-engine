@@ -1,0 +1,24 @@
+# Build output
+dist/
+*.tsbuildinfo
+
+# Dependencies
+node_modules/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Local env
+.env
+.env.local
+*.log
+npm-debug.log*
+
+# Test artifacts
+coverage/
+.nyc_output/
