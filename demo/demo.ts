@@ -123,71 +123,90 @@ class WalkCycleSystem implements System {
   }
 }
 
-// ---------- Engine boot ----------
+// ---------- Engine boot (async IIFE; demo.js stays browser-portable
+// without relying on top-level await semantics) ----------
 
-const engine = Engine.create({ canvas });
+(async function boot(): Promise<void> {
+  stats.textContent = 'booting... (load assets)';
 
-// Tile atlas (procedural, code-painted).
-const tileAtlas = engine.device.registerAtlas({
-  image: makeTileAtlas(),
-  frames: [{ x: 0, y: 0, w: ISO_TILE_WIDTH, h: ISO_TILE_HEIGHT }],
-  name: 'demo-tile',
-});
+  const engine = Engine.create({ canvas });
 
-// Knight atlas - LOADED from disk via the sprite-sheet pipeline.
-// Top-level await is fine here; the host script tag is type=module.
-let knightSheet: LoadedSpriteSheet;
-try {
-  knightSheet = await loadSpriteSheet('../assets/knight/walk.json');
-} catch (err) {
-  const msg = err instanceof Error ? err.message : String(err);
-  stats.textContent = 'asset load failed:\n' + msg;
-  throw err;
-}
-const knightAtlas = engine.device.registerAtlas(knightSheet.atlas);
+  // Tile atlas (procedural, code-painted).
+  const tileAtlas = engine.device.registerAtlas({
+    image: makeTileAtlas(),
+    frames: [{ x: 0, y: 0, w: ISO_TILE_WIDTH, h: ISO_TILE_HEIGHT }],
+    name: 'demo-tile',
+  });
 
-// One knight entity at world origin. No tint - the loaded asset has
-// its own baked palette (Veil-weaver violet/teal).
-const transforms = engine.world.requirePool<TransformPool>(POOL_TRANSFORM);
-const sprites = engine.world.requirePool<SpritePool>(POOL_SPRITE);
-const knight = engine.world.createEntity();
-transforms.attach(knight, 0, 0, 0.2);
-sprites.attach(knight, knightAtlas, 0);
+  // Knight atlas - LOADED from disk via the sprite-sheet pipeline.
+  let knightSheet: LoadedSpriteSheet;
+  try {
+    knightSheet = await loadSpriteSheet('../assets/knight/walk.json');
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    stats.textContent = 'asset load failed:\n' + msg;
+    throw err;
+  }
+  const knightAtlas = engine.device.registerAtlas(knightSheet.atlas);
 
-// Systems: hover + walk-cycle (logic) -> tiles + sprites (render).
-// Within a phase, registration order = run order.
-engine.world.addSystem(new HoverSystem(knight, 0.1, 1.5, 0.2), SYSTEM_PHASE_LOGIC);
-engine.world.addSystem(new WalkCycleSystem(knight, knightSheet.manifest), SYSTEM_PHASE_LOGIC);
-engine.world.addSystem(new TileRenderSystem(tileAtlas, 2), SYSTEM_PHASE_RENDER);
-engine.world.addSystem(new SpriteRenderSystem(), SYSTEM_PHASE_RENDER);
+  // One knight entity at world origin. No tint - the loaded asset has
+  // its own baked palette (Veil-weaver violet/teal).
+  const transforms = engine.world.requirePool<TransformPool>(POOL_TRANSFORM);
+  const sprites = engine.world.requirePool<SpritePool>(POOL_SPRITE);
+  const knight = engine.world.createEntity();
+  transforms.attach(knight, 0, 0, 0.2);
+  sprites.attach(knight, knightAtlas, 0);
 
-// ---------- Frame loop ----------
+  // Systems: hover + walk-cycle (logic) -> tiles + sprites (render).
+  // Within a phase, registration order = run order.
+  engine.world.addSystem(new HoverSystem(knight, 0.1, 1.5, 0.2), SYSTEM_PHASE_LOGIC);
+  engine.world.addSystem(new WalkCycleSystem(knight, knightSheet.manifest), SYSTEM_PHASE_LOGIC);
+  engine.world.addSystem(new TileRenderSystem(tileAtlas, 2), SYSTEM_PHASE_RENDER);
+  engine.world.addSystem(new SpriteRenderSystem(), SYSTEM_PHASE_RENDER);
 
-let frameCount = 0;
-let lastFpsAt = performance.now();
-let lastFps = 0;
+  // Frame loop. Schedule via rAF when the tab is visible (smooth, vsync-aligned)
+  // and fall back to setTimeout when hidden so the preview / background tabs
+  // still animate. Browsers throttle or pause rAF in hidden tabs - that breaks
+  // any headless / iframe preview flow that doesn't have focus.
+  let frameCount = 0;
+  let lastFpsAt = performance.now();
+  let lastFps = 0;
 
-function tick(now: number): void {
-  engine.tick(now);
+  function tick(now: number): void {
+    engine.tick(now);
 
-  frameCount++;
-  if (now - lastFpsAt >= 500) {
-    lastFps = Math.round((frameCount * 1000) / (now - lastFpsAt));
-    frameCount = 0;
-    lastFpsAt = now;
+    frameCount++;
+    if (now - lastFpsAt >= 500) {
+      lastFps = Math.round((frameCount * 1000) / (now - lastFpsAt));
+      frameCount = 0;
+      lastFpsAt = now;
+    }
+
+    const t = engine.world.resources.require<TimeResource>(RESOURCE_TIME);
+    stats.textContent =
+      'engine     ' + LOOM_ENGINE_VERSION + '\n' +
+      'fps        ' + lastFps + '\n' +
+      'draw calls ' + engine.device.getDrawCallCount() + ' (per frame)\n' +
+      'frame      ' + t.frame + '   elapsed ' + t.elapsed.toFixed(2) + 's\n' +
+      'entities   ' + engine.world.countEntities() + '   systems ' + engine.world.countSystems() + '\n' +
+      'sheet      ' + knightSheet.manifest.name + '   frames ' + knightSheet.manifest.frames.length + '   fps ' + knightSheet.manifest.fps + '\n' +
+      'camera     center=(' + engine.camera.centerX.toFixed(2) + ',' + engine.camera.centerY.toFixed(2) + ') zoom=' + engine.camera.zoom.toFixed(2);
+
+    schedule();
   }
 
-  const t = engine.world.resources.require<TimeResource>(RESOURCE_TIME);
-  stats.textContent =
-    'engine     ' + LOOM_ENGINE_VERSION + '\n' +
-    'fps        ' + lastFps + '\n' +
-    'draw calls ' + engine.device.getDrawCallCount() + ' (per frame)\n' +
-    'frame      ' + t.frame + '   elapsed ' + t.elapsed.toFixed(2) + 's\n' +
-    'entities   ' + engine.world.countEntities() + '   systems ' + engine.world.countSystems() + '\n' +
-    'sheet      ' + knightSheet.manifest.name + '   frames ' + knightSheet.manifest.frames.length + '   fps ' + knightSheet.manifest.fps + '\n' +
-    'camera     center=(' + engine.camera.centerX.toFixed(2) + ',' + engine.camera.centerY.toFixed(2) + ') zoom=' + engine.camera.zoom.toFixed(2);
+  function schedule(): void {
+    if (document.hidden) {
+      setTimeout(() => tick(performance.now()), 16);
+    } else {
+      requestAnimationFrame(tick);
+    }
+  }
 
-  requestAnimationFrame(tick);
-}
-
-requestAnimationFrame(tick);
+  // Run one immediate tick so the scene paints even if the tab is
+  // hidden and the first scheduled frame is delayed.
+  tick(performance.now());
+})().catch((err) => {
+  const msg = err instanceof Error ? err.message + '\n' + (err.stack ?? '') : String(err);
+  stats.textContent = 'boot failed:\n' + msg;
+});
