@@ -4,7 +4,7 @@
 // SpritePool, SpriteRenderSystem, and the high-level Engine facade
 // that wires everything together with sane defaults.
 
-export const LOOM_ENGINE_VERSION = '0.9.0-phase8.4';
+export const LOOM_ENGINE_VERSION = '0.10.0-perf-9-1';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
