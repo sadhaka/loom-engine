@@ -187,6 +187,88 @@ ECS) implemented from scratch.
 
 ---
 
+## Sprite-sheet / asset-manifest inspirations
+
+### Aseprite "JSON-Array" sprite-sheet export
+- **Source**: https://aseprite.org/docs/cli/#sheet (public docs;
+  Aseprite is paid software but the export format is documented and
+  the JSON output itself is plain data, not copyrightable as a
+  "format spec" - interoperability is explicit per Sega v. Accolade
+  et al.)
+- **Date read**: 2026-05-07
+- **Took**: The shape "frames is a list of {filename/name, frame:
+  {x,y,w,h}, duration}". This is the ergonomic that lets a single
+  PNG carry an N-frame walk cycle plus per-frame timing without an
+  external animation file. Loom Engine's manifest uses the same
+  three pieces (name + rect + duration_ms) at each frame.
+- **Declined**:
+  - Aseprite's `frames` as an OBJECT keyed by filename. We use a
+    plain array because the engine consumes by index (atlas frame
+    handle is an integer). Filename keys are author-side
+    convenience, not runtime data.
+  - The `meta` block (image dimensions, scale, app version,
+    spritesheet hash). Loom Engine does not need these - the
+    runtime reads the actual image via the decoder, not via
+    metadata. Scale/version are author-tool concerns.
+  - Per-tag animation ranges. Aseprite supports named animation
+    tags (e.g. "walk", "idle") that index frame sub-ranges. The
+    Loom Engine v1 manifest is one sheet = one animation; multiple
+    animations = multiple manifest files. Cleaner mental model for
+    Phase 2; the tag concept can be revisited in Phase 7+ if asset
+    bundling becomes a packaging concern.
+- **Notes**: Aseprite's JSON output is documented for
+  interoperability. We do not import or extend their parser; we
+  define a small superset on our own terms, citing their shape as
+  prior art. Anyone with an Aseprite export pipeline will recognize
+  the shape, which is the point.
+
+### TexturePacker JSON-Array format
+- **Source**: https://www.codeandweb.com/texturepacker (paid tool;
+  format docs public). Same interoperability stance as Aseprite -
+  the JSON export shape is documented for engines to consume.
+- **Date read**: 2026-05-07
+- **Took**: The pattern "image filename is sibling-relative to the
+  manifest path". Loom Engine's loader resolves `manifest.image`
+  against the manifest URL via the standard URL constructor, which
+  matches TexturePacker's "image is right next to the data file"
+  convention.
+- **Declined**:
+  - TexturePacker's `rotated` flag (per-frame rotation when packed
+    diagonally to save atlas space). Premature optimization for
+    Phase 2 - our atlases are hand-laid horizontal strips, not
+    bin-packed.
+  - The `trimmed` / `spriteSourceSize` pair (per-frame trim rect
+    distinct from the source-image rect). Useful for tightly-packed
+    atlases where transparent borders are stripped, but again - not
+    relevant when frames are hand-aligned in a strip. v1 ships
+    without trim metadata; if/when we add a real packer in Phase
+    7+, the manifest gains an optional `trim` field rather than
+    forcing every author to think about it now.
+  - The `multipack` / `relatedMultiPacks` pointer chain. Loom Engine
+    has no multi-image atlases yet.
+- **Notes**: We named the manifest field `image` (singular)
+  matching TexturePacker, not `meta.image` (Aseprite's nesting).
+  Less indirection, easier to hand-edit.
+
+### Phaser 3 "Atlas JSON" loader
+- **Source**: https://phaser.io/ (public OSS, MIT) -
+  https://github.com/phaserjs/phaser
+- **Date read**: 2026-05-07
+- **Took**: The two-promise pattern: fetch the JSON, then fetch the
+  PNG resolved against the manifest URL, then resolve. Phaser's
+  `load.atlas(key, png, json)` does this internally; our
+  `loadSpriteSheet(manifestUrl)` is the same shape with an
+  inverted entry point (the manifest references the image, rather
+  than the caller passing both paths).
+- **Declined**: Phaser's full Loader/Cache/Scene plumbing.
+  IGraphicsDevice.registerAtlas takes a one-shot descriptor; we do
+  not need a per-scene cache layer at the engine level.
+- **Notes**: MIT-licensed. We do not import Phaser. Architectural
+  shape inspiration only; the loader implementation is ~300 lines
+  of straight-line TS.
+
+---
+
 ## Audio inspirations
 
 ### Web Audio API (W3C)
