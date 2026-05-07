@@ -69,6 +69,58 @@ function tick(now) {
 requestAnimationFrame(tick);
 ```
 
+## Configuration
+
+### Director-bridge credentials (security note)
+
+`SSEDirectorBridge` and `SnapshotRecoveryHelper` send credentials with
+their network requests by default. The default `eventSourceFactory`
+constructs `new EventSource(url, { withCredentials: true })` and
+`SnapshotRecoveryHelper` calls `fetch(url, { credentials: 'include' })`.
+This is the right default for the embedded TheWorldTable.ai
+same-origin use case (cookies + auth headers flow with the request
+to the same origin), but **a third-party consumer pointing the bridge
+at a URL configured from user input could end up sending their own
+site's credentials cross-origin** (the browser still requires the
+target server to opt in via `Access-Control-Allow-Credentials: true`
+plus a specific `Access-Control-Allow-Origin`, so this is not a
+one-sided SSRF; it requires attacker control of the target server's
+CORS policy).
+
+If you do not want credentials to flow with director-bridge requests,
+override the seams the engine already exposes - no engine code change
+needed:
+
+```ts
+import {
+  SSEDirectorBridge,
+  SnapshotRecoveryHelper,
+} from '@sadhaka/loom-engine';
+
+// Credential-free SSE subscription.
+var bridge = new SSEDirectorBridge({
+  baseUrl: directorUrl,
+  characterId: characterId,
+  eventSourceFactory: function(u) {
+    return new EventSource(u, { withCredentials: false });
+  },
+});
+
+// Credential-free snapshot recovery.
+var recovery = new SnapshotRecoveryHelper({
+  baseUrl: snapshotUrl,
+  characterId: characterId,
+  fetchImpl: function(input, init) {
+    var safeInit = Object.assign({}, init, { credentials: 'omit' });
+    return fetch(input, safeInit);
+  },
+});
+```
+
+Audited as Low-severity finding L-02 in
+[`SECURITY-AUDIT-0.10.0.md`](./SECURITY-AUDIT-0.10.0.md). The
+override hooks have always existed; 0.10.1 documents them.
+
 ## Status
 
 **Pre-alpha, productized as of 0.10.0** (Phase 11B.3 - npm publish

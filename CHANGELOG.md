@@ -7,6 +7,60 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.10.1 - 2026-05-08
+
+**Audit polish** (Phase 12.3) - patch release closing the five
+0.10.1-scoped findings from the 12.2 supply-chain audit. Source is
+otherwise unchanged from 0.10.0; no public-API surface change. See
+[`SECURITY-AUDIT-0.10.0.md`](./SECURITY-AUDIT-0.10.0.md) for the full
+audit report.
+
+### Fixed
+
+- **L-01.** `LOOM_ENGINE_VERSION` constant in
+  [`src/index.ts`](./src/index.ts) now agrees with `package.json`.
+  The 0.10.0 release shipped with the lingering `-perf-9-1` dev
+  suffix on the constant; consumers running
+  `engine.LOOM_ENGINE_VERSION`-based diagnostics saw the drift.
+  Manual pre-bump checklist for now: when bumping `package.json`,
+  bump the constant in the same commit (gen-version automation
+  deferred to keep this patch small).
+- **L-04.** [`package.json`](./package.json) `exports` map now
+  exposes `./package.json`. Consumers can do
+  `require('@sadhaka/loom-engine/package.json')` for build
+  introspection / version checks; previously this errored with
+  `ERR_PACKAGE_PATH_NOT_EXPORTED`.
+
+### Added
+
+- **L-02.** `README.md` Configuration section documents the
+  `withCredentials: true` / `credentials: 'include'` defaults on
+  `SSEDirectorBridge` and `SnapshotRecoveryHelper`, with a worked
+  example showing the `eventSourceFactory` / `fetchImpl` overrides
+  for credential-free deployments. Override seams already existed;
+  0.10.1 documents them.
+
+### Changed
+
+- **L-05.** [`.github/workflows/npm-publish.yml`](./.github/workflows/npm-publish.yml)
+  publish step now passes `--provenance`. The `id-token: write`
+  permission was already granted; only the flag was missing. From
+  this release on, the npm package page shows a build-provenance
+  attestation linking the tarball to the exact GitHub workflow run
+  that produced it.
+- **L-07.** Tag flow exercised. The historical 0.10.0 commit
+  (`b497d6d`) is tagged `v0.10.0` retroactively (workflow detects
+  same-version-already-published and skips publish - documented
+  expected behaviour). 0.10.1 is the first version published via the
+  CI tag-trigger path instead of a manual `npm publish`.
+
+### Deferred to 0.11.0
+
+L-03 (snapshot envelope validation), L-06 (npm trusted-publishing
+migration to drop the long-lived `NPM_TOKEN`), and I-01 (`#private`
+field migration) are minor-bump material per the audit and ship in
+the next pre-1.0 hardening pass.
+
 ## 0.10.0 - 2026-05-08
 
 **Productization milestone** (Phase 11B.3) - first public npm
