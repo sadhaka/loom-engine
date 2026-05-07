@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Loom Engine - Phase 4 Demo (VFX)</title>
+  <title>Loom Engine - Phase 6 Demo (Director)</title>
   <style>
     html, body { margin: 0; padding: 0; background: #14110d; color: #e8d8b6; font: 13px/1.4 sans-serif; }
     .wrap { max-width: 960px; margin: 0 auto; padding: 16px; }
@@ -14,8 +14,8 @@
 </head>
 <body>
   <div class="wrap">
-    <h1>Loom Engine - Phase 4 Demo (VFX)</h1>
-    <p>VFX framework added: ParticlePool, per-entity ParticleEmitter component, three-system pipeline (emit -> simulate -> render). Knight wears a violet-to-teal additive sparkle cone with cone-sampled directions, gravity, and life-driven fade. ParticlePool capped by VeilBudgetResource - the patent-defensible novelty hook for Director-driven render budget. No three.js, no PIXI. Canvas2D additive blend.</p>
+    <h1>Loom Engine - Phase 6 Demo (Director)</h1>
+    <p>Director-bridge wired end-to-end. MockDirectorBridge cycles knot palettes (str / dex / int / center) every 6s with a 600ms crossfade, and tier shifts (green / amber / red) every 12s. DirectorSystem mutates VeilBudget; VeilBudgetSystem propagates same-tick to ParticlePool (4096 -> 205 cap on red) and AudioBus. The patent-defensible novelty loop is closed live. No three.js, no PIXI. Canvas2D + pre-baked particle disc.</p>
     <canvas id="stage" width="640" height="400"></canvas>
     <div class="stats" id="stats">booting...</div>
   </div>
