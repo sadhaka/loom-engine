@@ -10,6 +10,49 @@ This is a sibling repository to the main TheWorldTable.ai project at
 full design specification lives in the main repo at
 [../docker/LOOM-ENGINE-SPEC.md](../docker/LOOM-ENGINE-SPEC.md).
 
+## Documentation
+
+API reference (TypeDoc) - generated from the public surface in
+[`src/index.ts`](./src/index.ts) on every push to `main`:
+**https://sadhaka.github.io/loom-engine/**
+
+Build it locally with `npm run docs` (writes to `./docs/`).
+
+## Quickstart
+
+```ts
+// 1. Install (private package, install from a checkout / git url)
+//    npm install @theworldtable/loom-engine
+import {
+  Engine,
+  SpriteRenderSystem,
+  InputSystem,
+  VeilBudgetSystem,
+  SYSTEM_PHASE_INPUT,
+  SYSTEM_PHASE_RENDER,
+} from '@theworldtable/loom-engine';
+
+// 2. Attach to a canvas. Engine.create wires Canvas2DDevice, World,
+//    TransformPool, SpritePool, Time + Camera resources, and the
+//    default SpriteRenderSystem in SYSTEM_PHASE_RENDER.
+var canvas = document.querySelector('canvas');
+var engine = Engine.create({ canvas: canvas });
+
+// 3. Register the systems your game needs. Order within a phase is
+//    deterministic; phases run INPUT -> LOGIC -> PHYSICS -> ANIMATION
+//    -> RENDER -> POST_RENDER per frame.
+engine.world.addSystem(new InputSystem(), SYSTEM_PHASE_INPUT);
+engine.world.addSystem(new VeilBudgetSystem(), SYSTEM_PHASE_INPUT);
+
+// 4. Drive the frame loop. engine.tick advances Time, beginFrame on
+//    the device, world.update across all phases, endFrame.
+function tick(now) {
+  engine.tick(now);
+  requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
+```
+
 ## Status
 
 **Phase 5 complete** (audio + input). Phases 0 through 5 of the
