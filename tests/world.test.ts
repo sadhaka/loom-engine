@@ -1,0 +1,292 @@
+// Loom Engine - Phase 2 ECS smoke test.
+//
+// Node-based, no DOM. Asserts World, ResourceRegistry, system
+// scheduling, SpritePool, and an end-to-end run with a synthetic
+// device. The Canvas2DDevice itself is browser-only and tested by
+// demo/index.html landing in the preview.
+
+import { test } from 'node:test';
+import { strict as assert } from 'node:assert';
+
+import {
+  // World + scheduling
+  World,
+  POOL_TRANSFORM,
+  POOL_SPRITE,
+  ResourceRegistry,
+  createTimeResource,
+  RESOURCE_TIME,
+  RESOURCE_CAMERA,
+  RESOURCE_DEVICE,
+  SYSTEM_PHASE_INPUT,
+  SYSTEM_PHASE_LOGIC,
+  SYSTEM_PHASE_RENDER,
+  SYSTEM_PHASE_POST_RENDER,
+  // Components
+  TransformPool,
+  SpritePool,
+  SPRITE_FLAG_ACTIVE,
+  SPRITE_FLAG_TINTED,
+  approxEq,
+  // Systems
+  SpriteRenderSystem,
+  // Misc
+  entityIndex,
+  COLOR_KNOT_INT,
+  type System,
+  type EntityId,
+  type IGraphicsDevice,
+  type CameraView,
+  type AtlasDescriptor,
+  type AtlasHandle,
+  type ColorRGBA,
+  type TimeResource,
+} from '../src/index.js';
+
+// ----- Synthetic device for capture-and-assert -----
+
+interface CapturedDraw {
+  kind: 'sprite' | 'tile' | 'text';
+  x: number;
+  y: number;
+  z: number;
+  atlas: AtlasHandle;
+  frame: number;
+  tinted: boolean;
+}
+
+class FakeDevice implements IGraphicsDevice {
+  readonly canvas: HTMLCanvasElement = {} as HTMLCanvasElement;
+  readonly viewportWidth: number = 640;
+  readonly viewportHeight: number = 400;
+  drawCalls: CapturedDraw[] = [];
+  cameraSet: number = 0;
+  beginFrames: number = 0;
+  endFrames: number = 0;
+
+  beginFrame(): void { this.beginFrames++; this.drawCalls = []; }
+  endFrame(): void { this.endFrames++; }
+  setCamera(_c: Readonly<CameraView>): void { this.cameraSet++; }
+  registerAtlas(_d: AtlasDescriptor): AtlasHandle { return 0; }
+  releaseAtlas(_h: AtlasHandle): void {}
+  drawSprite(x: number, y: number, z: number, atlas: AtlasHandle, frame: number, tint?: Readonly<ColorRGBA>): void {
+    this.drawCalls.push({ kind: 'sprite', x, y, z, atlas, frame, tinted: !!tint });
+  }
+  drawTile(x: number, y: number, atlas: AtlasHandle, frame: number): void {
+    this.drawCalls.push({ kind: 'tile', x, y, z: 0, atlas, frame, tinted: false });
+  }
+  drawText(_x: number, _y: number, _t: string, _s: { font: string; fill: ColorRGBA }): void {}
+  getDrawCallCount(): number { return this.drawCalls.length; }
+}
+
+// ----- ResourceRegistry -----
+
+test('resources: set/get/require/has/remove', () => {
+  const r = new ResourceRegistry();
+  assert.equal(r.has('a'), false);
+  assert.equal(r.get('a'), undefined);
+  r.set('a', 42);
+  assert.equal(r.get<number>('a'), 42);
+  assert.equal(r.require<number>('a'), 42);
+  assert.equal(r.has('a'), true);
+  assert.equal(r.remove('a'), true);
+  assert.equal(r.has('a'), false);
+});
+
+test('resources: require throws on missing', () => {
+  const r = new ResourceRegistry();
+  assert.throws(() => r.require('missing'), /not registered/);
+});
+
+// ----- World -----
+
+test('world: registers and retrieves pools', () => {
+  const w = new World();
+  const t = new TransformPool();
+  w.registerPool(POOL_TRANSFORM, t);
+  assert.equal(w.getPool(POOL_TRANSFORM), t);
+  assert.equal(w.requirePool(POOL_TRANSFORM), t);
+});
+
+test('world: requirePool throws on missing', () => {
+  const w = new World();
+  assert.throws(() => w.requirePool('missing'), /not registered/);
+});
+
+test('world: systems run in phase order', () => {
+  const w = new World();
+  const callOrder: string[] = [];
+  const sysFactory = (name: string): System => ({
+    name,
+    update: () => callOrder.push(name),
+  });
+  w.addSystem(sysFactory('post-render-a'), SYSTEM_PHASE_POST_RENDER);
+  w.addSystem(sysFactory('input-a'), SYSTEM_PHASE_INPUT);
+  w.addSystem(sysFactory('logic-a'), SYSTEM_PHASE_LOGIC);
+  w.addSystem(sysFactory('render-a'), SYSTEM_PHASE_RENDER);
+  w.addSystem(sysFactory('logic-b'), SYSTEM_PHASE_LOGIC);
+  w.update(0.016);
+  assert.deepEqual(callOrder, ['input-a', 'logic-a', 'logic-b', 'render-a', 'post-render-a']);
+});
+
+test('world: createEntity / destroyEntity through facade', () => {
+  const w = new World();
+  const e = w.createEntity();
+  assert.ok(w.entities.isAlive(e));
+  assert.equal(w.countEntities(), 1);
+  assert.ok(w.destroyEntity(e));
+  assert.equal(w.countEntities(), 0);
+});
+
+test('world: countSystems totals across phases', () => {
+  const w = new World();
+  const noop: System = { name: 'noop', update: () => {} };
+  w.addSystem(noop, SYSTEM_PHASE_INPUT);
+  w.addSystem(noop, SYSTEM_PHASE_LOGIC);
+  w.addSystem(noop, SYSTEM_PHASE_LOGIC);
+  assert.equal(w.countSystems(), 3);
+  assert.equal(w.countSystemsInPhase(SYSTEM_PHASE_LOGIC), 2);
+});
+
+// ----- SpritePool -----
+
+test('sprite pool: attach with tint sets ACTIVE+TINTED', () => {
+  const pool = new SpritePool();
+  const w = new World();
+  const e = w.createEntity();
+  pool.attach(e, 0, 0, COLOR_KNOT_INT);
+  const i = entityIndex(e);
+  assert.equal(pool.atlas[i], 0);
+  assert.equal(pool.frame[i], 0);
+  assert.ok(pool.isActive(e));
+  assert.equal((pool.flags[i] ?? 0) & SPRITE_FLAG_ACTIVE, SPRITE_FLAG_ACTIVE);
+  assert.equal((pool.flags[i] ?? 0) & SPRITE_FLAG_TINTED, SPRITE_FLAG_TINTED);
+  assert.ok(approxEq(pool.tintR[i] ?? 0, COLOR_KNOT_INT.r, 1e-6), 'tintR within Float32 precision of source');
+});
+
+test('sprite pool: attach without tint clears TINTED', () => {
+  const pool = new SpritePool();
+  const w = new World();
+  const e = w.createEntity();
+  pool.attach(e, 7, 3);
+  const i = entityIndex(e);
+  assert.equal(pool.atlas[i], 7);
+  assert.equal(pool.frame[i], 3);
+  assert.equal((pool.flags[i] ?? 0) & SPRITE_FLAG_TINTED, 0);
+  assert.equal(pool.tintR[i], 1);
+});
+
+test('sprite pool: setFrame, clearTint, detach', () => {
+  const pool = new SpritePool();
+  const w = new World();
+  const e = w.createEntity();
+  pool.attach(e, 0, 0, COLOR_KNOT_INT);
+  const i = entityIndex(e);
+  pool.setFrame(e, 4);
+  assert.equal(pool.frame[i], 4);
+  pool.clearTint(e);
+  assert.equal((pool.flags[i] ?? 0) & SPRITE_FLAG_TINTED, 0);
+  assert.equal(pool.tintR[i], 1);
+  pool.detach(e);
+  assert.equal(pool.atlas[i], -1);
+  assert.ok(!pool.isActive(e));
+});
+
+// ----- SpriteRenderSystem end-to-end -----
+
+test('sprite render: submits one draw per active sprite, sorted by depth', () => {
+  const w = new World();
+  const tp = new TransformPool();
+  const sp = new SpritePool();
+  w.registerPool(POOL_TRANSFORM, tp);
+  w.registerPool(POOL_SPRITE, sp);
+  const device = new FakeDevice();
+  w.resources.set(RESOURCE_DEVICE, device);
+  w.resources.set(RESOURCE_CAMERA, { centerX: 0, centerY: 0, zoom: 1, rotation: 0, viewportWidth: 640, viewportHeight: 400 });
+  w.resources.set(RESOURCE_TIME, createTimeResource());
+
+  const front = w.createEntity();   // x+y = 4 (drawn last)
+  const back = w.createEntity();    // x+y = 0 (drawn first)
+  const mid = w.createEntity();     // x+y = 2
+  tp.attach(front, 2, 2, 0);
+  tp.attach(back, 0, 0, 0);
+  tp.attach(mid, 1, 1, 0);
+  sp.attach(front, 0, 0);
+  sp.attach(back, 0, 0);
+  sp.attach(mid, 0, 0);
+
+  w.addSystem(new SpriteRenderSystem(), SYSTEM_PHASE_RENDER);
+  device.beginFrame();
+  w.update(0);
+
+  assert.equal(device.drawCalls.length, 3);
+  const calls = device.drawCalls;
+  assert.equal(calls[0]?.x, 0);   // back
+  assert.equal(calls[0]?.y, 0);
+  assert.equal(calls[1]?.x, 1);   // mid
+  assert.equal(calls[2]?.x, 2);   // front
+});
+
+test('sprite render: skips entities without a sprite', () => {
+  const w = new World();
+  const tp = new TransformPool();
+  const sp = new SpritePool();
+  w.registerPool(POOL_TRANSFORM, tp);
+  w.registerPool(POOL_SPRITE, sp);
+  const device = new FakeDevice();
+  w.resources.set(RESOURCE_DEVICE, device);
+  w.resources.set(RESOURCE_CAMERA, { centerX: 0, centerY: 0, zoom: 1, rotation: 0, viewportWidth: 640, viewportHeight: 400 });
+  w.resources.set(RESOURCE_TIME, createTimeResource());
+
+  // Two entities, only one with a sprite.
+  const a = w.createEntity();
+  const b = w.createEntity();
+  tp.attach(a, 0, 0, 0);
+  tp.attach(b, 1, 1, 0);
+  sp.attach(a, 0, 0);
+
+  w.addSystem(new SpriteRenderSystem(), SYSTEM_PHASE_RENDER);
+  device.beginFrame();
+  w.update(0);
+  assert.equal(device.drawCalls.length, 1);
+});
+
+test('sprite render: skips invisible transforms', () => {
+  const w = new World();
+  const tp = new TransformPool();
+  const sp = new SpritePool();
+  w.registerPool(POOL_TRANSFORM, tp);
+  w.registerPool(POOL_SPRITE, sp);
+  const device = new FakeDevice();
+  w.resources.set(RESOURCE_DEVICE, device);
+  w.resources.set(RESOURCE_CAMERA, { centerX: 0, centerY: 0, zoom: 1, rotation: 0, viewportWidth: 640, viewportHeight: 400 });
+
+  const e: EntityId = w.createEntity();
+  tp.attach(e, 0, 0, 0);
+  sp.attach(e, 0, 0);
+  tp.setVisible(e, false);
+
+  w.addSystem(new SpriteRenderSystem(), SYSTEM_PHASE_RENDER);
+  device.beginFrame();
+  w.update(0);
+  assert.equal(device.drawCalls.length, 0);
+});
+
+// ----- Time + tick math -----
+
+test('time resource: advances on update via a custom system', () => {
+  const w = new World();
+  const time = createTimeResource();
+  w.resources.set(RESOURCE_TIME, time);
+  let ticked = 0;
+  const sys: System = {
+    name: 'tick-counter',
+    update: (_w, dt) => { ticked++; time.elapsed += dt; time.frame += 1; },
+  };
+  w.addSystem(sys, SYSTEM_PHASE_LOGIC);
+  w.update(0.016);
+  w.update(0.016);
+  assert.equal(ticked, 2);
+  assert.ok(Math.abs(time.elapsed - 0.032) < 1e-9);
+  assert.equal(time.frame, 2);
+});

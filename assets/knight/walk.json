@@ -1,0 +1,43 @@
+{
+  "name": "knight-walk",
+  "image": "walk.png",
+  "frames": [
+    {
+      "x": 0,
+      "y": 0,
+      "w": 16,
+      "h": 32,
+      "name": "walk_pass_a",
+      "duration_ms": 140
+    },
+    {
+      "x": 16,
+      "y": 0,
+      "w": 16,
+      "h": 32,
+      "name": "walk_right",
+      "duration_ms": 140
+    },
+    {
+      "x": 32,
+      "y": 0,
+      "w": 16,
+      "h": 32,
+      "name": "walk_pass_b",
+      "duration_ms": 140
+    },
+    {
+      "x": 48,
+      "y": 0,
+      "w": 16,
+      "h": 32,
+      "name": "walk_left",
+      "duration_ms": 140
+    }
+  ],
+  "anchor": {
+    "x": 8,
+    "y": 32
+  },
+  "fps": 8
+}
