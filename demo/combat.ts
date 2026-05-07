@@ -20,12 +20,20 @@ import {
   POOL_ANIMATION,
   POOL_HEALTH,
   POOL_PURSUE,
+  POOL_PROJECTILE,
+  POOL_RANGED,
   ISO_TILE_WIDTH,
   ISO_TILE_HEIGHT,
   TransformPool,
   SpritePool,
   HealthPool,
   PursuePool,
+  ProjectilePool,
+  ProjectileSystem,
+  ProjectileRenderSystem,
+  RangedAttackSystem,
+  spawnMob,
+  type MobArchetype,
   AnimationStatePool,
   AnimationSystem,
   SpriteRenderSystem,
@@ -127,8 +135,9 @@ class TileRenderSystem implements System {
   }
 }
 
-// Spawns a wave of N enemies at the edges of the floor when fewer
-// than N are alive. Used to keep the demo busy after kills.
+// Spawns a wave of mixed mob archetypes. Uses MobCatalog + spawnMob
+// so the demo exercises all 3 mob types: warrior (melee), archer
+// (ranged + arrows), caster (ranged homing bolts).
 class WaveSpawnerSystem implements System {
   readonly name: string = 'wave-spawner';
   private waveCount: number = 0;
@@ -142,12 +151,8 @@ class WaveSpawnerSystem implements System {
     return this.waveCount;
   }
   update(world: World, _dt: number): void {
-    const transforms = world.requirePool<TransformPool>(POOL_TRANSFORM);
-    const sprites = world.requirePool<SpritePool>(POOL_SPRITE);
-    const health = world.requirePool<HealthPool>(POOL_HEALTH);
     const pursuit = world.requirePool<PursuePool>(POOL_PURSUE);
 
-    // Count live enemies (entities with active Pursue + Health alive).
     const playerIdx = (this.player as number) & 0x00ffffff;
     const hwm = pursuit.getHighWaterMark();
     let live = 0;
@@ -157,18 +162,17 @@ class WaveSpawnerSystem implements System {
     }
     if (live >= this.targetEnemyCount) return;
 
-    // Spawn missing enemies. Pick random edge-of-floor positions.
+    // Wave composition: 2 warriors + 1 archer + 1 caster cycling.
+    // Position around the player at edge-of-floor.
+    const types: MobArchetype[] = ['skel_warrior', 'skel_archer', 'skel_warrior', 'skel_caster'];
     const need = this.targetEnemyCount - live;
     for (let k = 0; k < need; k++) {
-      const e = world.createEntity();
+      const t = types[(this.waveCount * this.targetEnemyCount + k + live) % types.length];
       const angle = Math.random() * Math.PI * 2;
-      const r = this.radius - 0.5;
+      const r = this.radius - 0.3;
       const ex = Math.cos(angle) * r;
       const ey = Math.sin(angle) * r;
-      transforms.attach(e, ex, ey, 0);
-      sprites.attach(e, this.enemyAtlas, 0, hexToRgba(0xffffff));
-      health.attach(e, 50);
-      pursuit.attach(e, this.player, 0.8, 0.5, 5, 1000);
+      spawnMob(world, t ?? 'skel_warrior', ex, ey, this.player, this.enemyAtlas);
     }
     this.waveCount++;
   }
@@ -281,15 +285,18 @@ class DeathFxSystem implements System {
   engine.world.addSystem(new InputSystem(), SYSTEM_PHASE_INPUT);
   engine.world.addSystem(attack, SYSTEM_PHASE_LOGIC);
   engine.world.addSystem(new PursueSystem(), SYSTEM_PHASE_LOGIC);
+  engine.world.addSystem(new RangedAttackSystem(), SYSTEM_PHASE_LOGIC);
   engine.world.addSystem(waveSpawner, SYSTEM_PHASE_LOGIC);
   engine.world.addSystem(new DeathFxSystem(), SYSTEM_PHASE_LOGIC);
   engine.world.addSystem(new DamageSystem(), SYSTEM_PHASE_LOGIC);
   engine.world.addSystem(new ParticleEmitterSystem(), SYSTEM_PHASE_LOGIC);
+  engine.world.addSystem(new ProjectileSystem(), SYSTEM_PHASE_PHYSICS);
   engine.world.addSystem(new ParticleSimulationSystem(), SYSTEM_PHASE_PHYSICS);
   engine.world.addSystem(new AnimationSystem(), SYSTEM_PHASE_ANIMATION);
   engine.world.addSystem(new TileRenderSystem(tileAtlas, 2), SYSTEM_PHASE_RENDER);
   engine.world.addSystem(new SpriteRenderSystem(), SYSTEM_PHASE_RENDER);
   engine.world.addSystem(new ParticleRenderSystem(), SYSTEM_PHASE_RENDER);
+  engine.world.addSystem(new ProjectileRenderSystem(), SYSTEM_PHASE_RENDER);
 
   let frameCount = 0;
   let lastFpsAt = performance.now();
@@ -321,14 +328,18 @@ class DeathFxSystem implements System {
       if ((pursuit.flags[i] ?? 0) & 1) alive++;
     }
 
+    const projectiles = engine.world.requirePool<ProjectilePool>(POOL_PROJECTILE);
+    const liveProjectiles = projectiles.getLiveCount();
     stats.textContent =
       'engine     ' + LOOM_ENGINE_VERSION + '\n' +
       'fps        ' + lastFps + '\n' +
       'frame      ' + t.frame + '   elapsed ' + t.elapsed.toFixed(1) + 's\n' +
       'player     hp=' + playerHp.toFixed(0) + '/' + playerMax.toFixed(0) + (health.isAlive(knight) ? ' alive' : ' DEAD') + '\n' +
       'enemies    ' + alive + ' alive   wave=' + waveSpawner.getWaveCount() + '   kills=' + deathLog.totalKills + '\n' +
+      'projectiles ' + liveProjectiles + ' in flight\n' +
       'attack     range=1.5 dmg=25' + lastHit + '\n' +
-      'controls   click on/near enemy to attack   enemies pursue automatically + deal 5 dmg/sec contact';
+      'mix        warrior (melee) + archer (arrows) + caster (homing bolt)\n' +
+      'controls   click on/near enemy to attack';
 
     schedule();
   }

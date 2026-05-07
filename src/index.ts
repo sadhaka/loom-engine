@@ -290,3 +290,28 @@ export {
 export { PursueSystem } from './systems/pursue-system.js';
 export type { AttackSystemOptions } from './systems/attack-system.js';
 export { AttackSystem } from './systems/attack-system.js';
+
+// Combat (Phase 7 deeper port): ranged attacks + projectiles + mob
+// catalog. The Survivor port can now spawn 3 archetypes
+// (skel_warrior melee, skel_archer ranged, skel_caster homing) by
+// calling spawnMob(world, type, x, y, target, atlas).
+export type { ProjectileSpawn } from './vfx/projectile-pool.js';
+export {
+  ProjectilePool,
+  POOL_PROJECTILE,
+  PROJECTILE_FLAG_ALIVE,
+  PROJECTILE_FLAG_HOMING,
+  PROJECTILE_FLAG_PIERCE,
+} from './vfx/projectile-pool.js';
+export type { RangedAttackConfig } from './components/ranged-attack.js';
+export {
+  RangedAttackPool,
+  POOL_RANGED,
+  RANGED_FLAG_ACTIVE,
+  RANGED_FLAG_HOMING,
+} from './components/ranged-attack.js';
+export { ProjectileSystem } from './systems/projectile-system.js';
+export { RangedAttackSystem } from './systems/ranged-attack-system.js';
+export { ProjectileRenderSystem } from './systems/projectile-render-system.js';
+export type { MobArchetype, MobCatalogEntry } from './combat/mob-catalog.js';
+export { MOB_CATALOG, spawnMob } from './combat/mob-catalog.js';

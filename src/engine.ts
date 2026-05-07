@@ -32,6 +32,8 @@ import { POOL_EMITTER } from './systems/particle-emitter-system.js';
 import { HealthPool, POOL_HEALTH } from './components/health.js';
 import { PursuePool, POOL_PURSUE } from './components/pursue.js';
 import { DeathLog, RESOURCE_DEATH_LOG } from './systems/damage-system.js';
+import { RangedAttackPool, POOL_RANGED } from './components/ranged-attack.js';
+import { ProjectilePool, POOL_PROJECTILE } from './vfx/projectile-pool.js';
 import {
   createVeilBudgetResource,
   RESOURCE_VEIL_BUDGET,
@@ -156,6 +158,8 @@ export class Engine {
     world.registerPool(POOL_EMITTER, new ParticleEmitterPool());
     world.registerPool(POOL_HEALTH, new HealthPool());
     world.registerPool(POOL_PURSUE, new PursuePool());
+    world.registerPool(POOL_RANGED, new RangedAttackPool());
+    world.registerPool(POOL_PROJECTILE, new ProjectilePool());
     world.resources.set(RESOURCE_DEATH_LOG, new DeathLog());
 
     // Systems are NOT pre-registered. Callers add their own systems
