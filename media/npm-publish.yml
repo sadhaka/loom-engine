@@ -7,9 +7,18 @@ name: Publish to npm
 # `npm publish --access public` (scopes default to private; flag
 # required for public release).
 #
-# One-time setup: add an `NPM_TOKEN` repo secret with an automation
-# token from npmjs.com. The token's owner must be the `sadhaka` user
-# or have publish rights on the `@sadhaka` scope.
+# Auth: Trusted Publishing via OIDC (no NPM_TOKEN secret needed).
+# One-time setup on npmjs.com:
+#   1. https://www.npmjs.com/package/@sadhaka/loom-engine/access
+#   2. Trusted Publishers -> Add Trusted Publisher
+#   3. Provider: GitHub Actions
+#      Owner: sadhaka
+#      Repository: loom-engine
+#      Workflow filename: npm-publish.yml
+#      Environment: (leave blank)
+# The workflow then exchanges its short-lived GitHub OIDC token for
+# npm publish rights at runtime - no long-lived token to leak.
+# Closes 12.2 audit finding L-06.
 #
 # Manual fallback: from a local checkout,
 #   npm login                       (one-time, account: sadhaka)
@@ -75,14 +84,17 @@ jobs:
           fi
           echo "Version match: $PKG_VERSION"
 
+      # Trusted Publishing via OIDC (no NPM_TOKEN secret needed).
+      # npm CLI v9.5+ (Node 20+ ships npm 10.x) auto-detects the
+      # GitHub Actions OIDC token when NPM_TOKEN is absent and the
+      # workflow has id-token: write permission (granted above).
+      # One-time npm-side setup: package settings -> Trusted Publishers
+      # -> add this repo + workflow filename. See L-06 from
+      # SECURITY-AUDIT-0.10.0.md.
       - name: Publish to npm (dry-run)
         if: github.event.inputs.dry_run == 'true'
         run: npm publish --access public --provenance --dry-run
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish to npm
         if: github.event.inputs.dry_run != 'true'
         run: npm publish --access public --provenance
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
