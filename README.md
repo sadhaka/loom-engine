@@ -1,14 +1,26 @@
 # Loom Engine
 
-Custom 2D / 2.5D game engine for [TheWorldTable.ai](https://theworldtable.ai).
+Browser-first 2D / 2.5D game engine for [TheWorldTable.ai](https://theworldtable.ai).
 Canvas2D primary backend, ECS, render-graph stages, Director-bridge
-integration. No external engine reuse - built from scratch in TypeScript.
+SSE integration. No external engine reuse - built from scratch in
+TypeScript.
 
-This is a sibling repository to the main TheWorldTable.ai project at
-`D:\Thailand Family\docker\`. It has its own git history and remote
-([sadhaka/loom-engine](https://github.com/sadhaka/loom-engine)). The
-full design specification lives in the main repo at
-[../docker/LOOM-ENGINE-SPEC.md](../docker/LOOM-ENGINE-SPEC.md).
+Repo: [sadhaka/loom-engine](https://github.com/sadhaka/loom-engine).
+API docs: [loom-engine.pages.dev](https://loom-engine.pages.dev/).
+The design spec (`LOOM-ENGINE-SPEC.md`) lives in the consuming
+TheWorldTable.ai repo and is the canonical source for phase
+plans and architectural decisions.
+
+## Install
+
+```sh
+npm install @sadhaka/loom-engine
+```
+
+Pre-alpha. ESM-only, browser-first. TypeScript types ship in the
+package (`dist/index.d.ts`). Node 18+ for the build toolchain;
+the runtime targets evergreen browsers (Canvas2D + Web Audio +
+EventSource).
 
 ## Documentation
 
@@ -25,8 +37,8 @@ on private repos for free user plans).
 ## Quickstart
 
 ```ts
-// 1. Install (private package, install from a checkout / git url)
-//    npm install @theworldtable/loom-engine
+// 1. Install
+//    npm install @sadhaka/loom-engine
 import {
   Engine,
   SpriteRenderSystem,
@@ -34,7 +46,7 @@ import {
   VeilBudgetSystem,
   SYSTEM_PHASE_INPUT,
   SYSTEM_PHASE_RENDER,
-} from '@theworldtable/loom-engine';
+} from '@sadhaka/loom-engine';
 
 // 2. Attach to a canvas. Engine.create wires Canvas2DDevice, World,
 //    TransformPool, SpritePool, Time + Camera resources, and the
@@ -59,9 +71,11 @@ requestAnimationFrame(tick);
 
 ## Status
 
-**Phase 5 complete** (audio + input). Phases 0 through 5 of the
-spec roadmap are in place; Phase 6 (Director-bridge) waits on
-backend SSE endpoint per LOOM-DIRECTOR-PROTOCOL.md.
+**Pre-alpha, productized as of 0.10.0** (Phase 11B.3 - npm publish
+under MIT). Phases 0 through 9.3 + 11A.2 are shipped; the engine
+runs the public TheWorldTable.ai pre-alpha. Productization is a
+fund-raising and distribution decision, not a stability claim - the
+public API surface will evolve until 1.0.
 
 | Phase | Status | Surface |
 |---|---|---|
@@ -71,10 +85,13 @@ backend SSE endpoint per LOOM-DIRECTOR-PROTOCOL.md.
 | 3 | shipped | clip-aware sprite-sheet manifests, AnimationStatePool, AnimationSystem |
 | 4 | shipped | particle pool, emitter component, three-system VFX pipeline, additive blend |
 | 5 | shipped | Web Audio bus mixer with VE-budget gating, unified keyboard / mouse / touch input |
-| 6 | pending | Director-bridge: SSE event-stream subscription, scene-state derivation |
-| 7 | pending | port the existing Survivor combat layer onto Loom Engine |
-| 8 | pending | 2.5D ARPG hub-and-spoke per LOOM-CLASS-SYSTEM-SPEC |
-| 9+ | pending | polish, perf pass, post-funding 3D extension, productization |
+| 6 | shipped | Director-bridge: SSE event-stream subscription, eventSourceFactory hook, snapshot-recovery |
+| 7 | shipped | Survivor combat layer (projectile pool, hit resolution, damage application) ported onto Loom Engine |
+| 8 | shipped | 2.5D ARPG hub-and-spoke per LOOM-CLASS-SYSTEM-SPEC, plaza narrator, mobile + touch input (virtual D-pad, tap-to-walk) |
+| 9.1 | shipped | perf pass: alloc-churn fixes + bench harness |
+| 9.3 | shipped | TypeDoc public-API site with auto-deploy |
+| 11A.2 | shipped | docs hosting migrated to Cloudflare Pages |
+| 11B.3 | shipped | MIT license + npm publish posture (this release) |
 
 See [LOOM-ENGINE-SPEC.md](../docker/LOOM-ENGINE-SPEC.md) Section 7
 for the full phase plan with effort estimates.
@@ -190,7 +207,7 @@ import {
   COLOR_KNOT_STR, COLOR_KNOT_DEX, COLOR_KNOT_INT, COLOR_KNOT_CENTER,
   // Iso
   tileToIso, worldToIso, isoToTile, isoDepthKey,
-} from '@theworldtable/loom-engine';
+} from '@sadhaka/loom-engine';
 
 const engine = Engine.create({ canvas });
 engine.world.addSystem(new InputSystem(), SYSTEM_PHASE_INPUT);
@@ -222,14 +239,21 @@ audit trail any future productization or patent dispute would lean on.
 
 ## Test coverage
 
-102 / 102 tests pass on Node 24 via `tsx --test`. Coverage by area:
+208 / 208 tests pass on Node 24 via `tsx --test`. Coverage spans
+all twelve test files in `tests/`:
 
-- math, color, entity, transform, iso, camera (Phase 1): 20 tests
-- world, system scheduling, sprite pool, sprite render, time (Phase 2): 14 tests
-- asset loader, sprite-sheet manifest, frame stepper (Phase 2 sibling): 15 tests
-- animation clip math, state pool, animation system end-to-end (Phase 3): 16 tests
-- particle pool, emitter pool, simulation, emitter system, veil budget (Phase 4): 19 tests
-- audio bus + ducking, input manager, input system, veil budget propagation (Phase 5): 18 tests
+- `smoke.test.ts` - public API barrel, version stamp
+- `world.test.ts` - ECS world, system scheduling, sprite pool, sprite render, time
+- `asset-loader.test.ts` - sprite-sheet manifest, frame stepper, error discriminator
+- `animation.test.ts` - animation clip math, state pool, AnimationSystem end-to-end
+- `vfx.test.ts` - particle pool, emitter pool, simulation, emitter system, veil budget
+- `audio-input.test.ts` - audio bus + ducking, input manager, input system, budget propagation
+- `director.test.ts` - SSE bridge, eventSourceFactory hook, scene-state derivation
+- `combat.test.ts` - hit resolution, damage application, knockback
+- `projectile.test.ts` - projectile pool, lifetime, collision
+- `arpg.test.ts` - ARPG hub-and-spoke, plaza narrator, encounter scheduling
+- `snapshot-recovery.test.ts` - SnapshotRecoveryHelper for Director reconnect
+- `touch-input.test.ts` - virtual D-pad, tap-to-walk, multi-touch arbitration
 
 Run via `npm test`. Each suite is fully node-based; no DOM dependency.
 Browser-only paths (Canvas2DDevice rasterization, AudioContext
@@ -280,12 +304,41 @@ serving the last successful build but go stale), check
 
 ## License
 
-Private / unlicensed. Productization decision deferred to post-Phase 9
-per spec Section 10 O7.
+[MIT](./LICENSE). Copyright (c) 2026 Misha Mitiev.
+
+You can use the engine in commercial and non-commercial work without
+royalties. Attribution is appreciated but not required by the license.
+The patent-defensible novelty claims (see [Patent strategy](#patent-strategy))
+are about specific architectural patterns documented in PRIOR-ART.md;
+they are independent of the source-code license and do not constrain
+typical engine reuse.
+
+## Publishing
+
+Tagged releases publish to npm via
+[`.github/workflows/npm-publish.yml`](./.github/workflows/npm-publish.yml).
+The workflow runs `npm test` and `npm run build`, then
+`npm publish --access public`, when a tag matching `v*` is pushed to
+`main`. It needs the `NPM_TOKEN` repo secret to authenticate.
+
+Manual publish from a local checkout:
+
+```sh
+npm login                       # one-time, npm account named sadhaka
+npm test                        # 208/208 must pass
+npm run build                   # tsc -> dist/
+npm publish --dry-run           # inspect tarball contents first
+npm publish --access public     # scoped packages default to private; flag is required
+```
+
+`prepublishOnly` in `package.json` re-runs `npm test && npm run build`
+before any publish, so the dry-run and the final publish always rebuild
+from a clean source tree.
 
 ## Contributing
 
 This is a single-author project (Misha Mitiev) for TheWorldTable.ai.
-Pull requests from outside contributors are not accepted at this stage.
-External productization (open-source release, asset-store sale, or
-SaaS offering) is a post-Phase 9 decision.
+The MIT license permits forking and modification; pull requests are
+welcome but not actively triaged - the canonical roadmap is the spec
+file (`LOOM-ENGINE-SPEC.md` in the parent repo) and capacity is
+limited. For bug reports, file an issue with a minimal repro.

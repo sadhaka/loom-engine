@@ -1,0 +1,88 @@
+name: Publish to npm
+
+# Phase 11B.3: tag-triggered publish to npm.
+#
+# Trigger: a tag matching `v*` (e.g. `v0.10.0`) pushed to `main`.
+# The workflow runs the test suite and full TS build, then
+# `npm publish --access public` (scopes default to private; flag
+# required for public release).
+#
+# One-time setup: add an `NPM_TOKEN` repo secret with an automation
+# token from npmjs.com. The token's owner must be the `sadhaka` user
+# or have publish rights on the `@sadhaka` scope.
+#
+# Manual fallback: from a local checkout,
+#   npm login                       (one-time, account: sadhaka)
+#   npm test
+#   npm run build
+#   npm publish --dry-run           (verify tarball)
+#   npm publish --access public
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Run npm publish --dry-run only (no actual publish)'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: npm-publish-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+          cache: 'npm'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      - name: Verify version matches tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          if [ "$PKG_VERSION" != "$TAG_VERSION" ]; then
+            echo "package.json version ($PKG_VERSION) does not match tag ($TAG_VERSION)"
+            exit 1
+          fi
+          echo "Version match: $PKG_VERSION"
+
+      - name: Publish to npm (dry-run)
+        if: github.event.inputs.dry_run == 'true'
+        run: npm publish --access public --dry-run
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish to npm
+        if: github.event.inputs.dry_run != 'true'
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

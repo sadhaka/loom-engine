@@ -1,0 +1,26 @@
+# Only ship dist/ + LICENSE + README.md.
+# Everything else is excluded — see package.json `files` for the explicit allowlist.
+
+src/
+tests/
+tools/
+demo/
+assets/
+docs/
+docs-build/
+node_modules/
+
+*.test.ts
+*.tsbuildinfo
+
+.github/
+.claude/
+.gitignore
+.commit-msg-*.txt
+
+tsconfig.json
+tsconfig.demo.json
+typedoc.json
+
+CHANGELOG.md
+PRIOR-ART.md
