@@ -28,15 +28,23 @@ concurrency:
   group: pages-${{ github.ref }}
   cancel-in-progress: true
 
+# peaceiris/actions-gh-pages has no Node 24 release as of v4.0.0 (last
+# release 2024-04-08, default branch action.yml still pins node20).
+# This env forces GitHub's runner to host JS actions on Node 24 even
+# when their action.yml declares node20, clearing the June 2026
+# deprecation cliff. Remove once peaceiris ships a Node 24 release.
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '20'
           cache: 'npm'
