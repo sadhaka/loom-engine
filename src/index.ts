@@ -4,7 +4,7 @@
 // SpritePool, SpriteRenderSystem, and the high-level Engine facade
 // that wires everything together with sane defaults.
 
-export const LOOM_ENGINE_VERSION = '0.8.0-phase8';
+export const LOOM_ENGINE_VERSION = '0.9.0-phase8.4';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -207,6 +207,23 @@ export {
 } from './input/input-manager.js';
 export { InputSystem } from './systems/input-system.js';
 export { VeilBudgetSystem } from './systems/veil-budget-system.js';
+
+// Phase 8.4: mobile + touch input. VirtualDpad mounts a 4-button DOM
+// overlay that injects WASD into InputManager when pressed (so any
+// existing key-driven movement system works unchanged on phones).
+// TapToWalkSystem watches the InputSnapshot for single-tap canvas
+// gestures and publishes a world-tile target on RESOURCE_TAP_WALK.
+export type { DpadDirection, VirtualDpadOptions } from './input/virtual-dpad.js';
+export { VirtualDpad } from './input/virtual-dpad.js';
+export type {
+  TapWalkTargetResource,
+  TapToWalkSystemOptions,
+} from './input/tap-to-walk.js';
+export {
+  TapToWalkSystem,
+  RESOURCE_TAP_WALK,
+  createTapWalkTarget,
+} from './input/tap-to-walk.js';
 
 // Director (Phase 6): event-stream bridge to the Loom backend.
 // Consumes events per LOOM-DIRECTOR-PROTOCOL.md and mutates engine

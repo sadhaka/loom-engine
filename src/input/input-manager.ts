@@ -224,6 +224,26 @@ export class InputManager {
     this.pointer.buttons &= ~buttonsBit;
   }
 
+  // Inject a synthetic touchstart for tests / virtual-input adapters.
+  // Coordinates are in canvas-internal pixel space (same space as the
+  // real touch listener produces after DPR scaling).
+  injectTouchStart(id: number, x: number, y: number): void {
+    const tp: TouchPoint = { id, x, y };
+    this.activeTouches.set(id, tp);
+    this.touchesStartedAccum.push(tp);
+  }
+
+  injectTouchMove(id: number, x: number, y: number): void {
+    const tp: TouchPoint = { id, x, y };
+    this.activeTouches.set(id, tp);
+  }
+
+  injectTouchEnd(id: number, x: number, y: number): void {
+    const tp: TouchPoint = { id, x, y };
+    this.activeTouches.delete(id);
+    this.touchesEndedAccum.push(tp);
+  }
+
   // ---------- DOM listener implementations ----------
 
   private onKeyDown(e: KeyboardEvent): void {

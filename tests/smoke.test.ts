@@ -47,8 +47,8 @@ import {
   LOOM_ENGINE_VERSION,
 } from '../src/index.js';
 
-test('engine version is the Phase 8 sentinel', () => {
-  assert.equal(LOOM_ENGINE_VERSION, '0.8.0-phase8');
+test('engine version is the Phase 8.4 sentinel', () => {
+  assert.equal(LOOM_ENGINE_VERSION, '0.9.0-phase8.4');
 });
 
 test('math: clamp + lerp + approxEq', () => {

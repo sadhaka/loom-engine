@@ -54,6 +54,10 @@ import {
   RESOURCE_INPUT,
 } from './input/input-manager.js';
 import {
+  createTapWalkTarget,
+  RESOURCE_TAP_WALK,
+} from './input/tap-to-walk.js';
+import {
   RESOURCE_KNOT_CONTEXT,
 } from './director/director-bridge.js';
 import { KnotContextResource } from './director/knot-context-resource.js';
@@ -149,6 +153,7 @@ export class Engine {
     world.resources.set(RESOURCE_VEIL_BUDGET, createVeilBudgetResource());
     world.resources.set(RESOURCE_INPUT_MANAGER, input);
     world.resources.set(RESOURCE_INPUT, input.snapshot());
+    world.resources.set(RESOURCE_TAP_WALK, createTapWalkTarget());
     if (audio) world.resources.set(RESOURCE_AUDIO_BUS, audio);
 
     // Director defaults. RESOURCE_DIRECTOR_BRIDGE is intentionally

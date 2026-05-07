@@ -1,6 +1,6 @@
 {
   "name": "@theworldtable/loom-engine",
-  "version": "0.1.0-phase1",
+  "version": "0.9.0-phase8.4",
   "description": "Custom 2D / 2.5D game engine for TheWorldTable.ai. Canvas2D primary, ECS, render-graph stages, Director-bridge integration.",
   "private": true,
   "type": "module",
@@ -18,7 +18,7 @@
     "build:all": "npm run build && npm run build:demo",
     "watch": "tsc --watch",
     "clean": "rm -rf dist demo/*.js demo/*.js.map",
-    "test": "tsx --test tests/smoke.test.ts tests/world.test.ts tests/asset-loader.test.ts tests/animation.test.ts tests/vfx.test.ts tests/audio-input.test.ts tests/director.test.ts tests/combat.test.ts tests/projectile.test.ts tests/arpg.test.ts tests/snapshot-recovery.test.ts"
+    "test": "tsx --test tests/smoke.test.ts tests/world.test.ts tests/asset-loader.test.ts tests/animation.test.ts tests/vfx.test.ts tests/audio-input.test.ts tests/director.test.ts tests/combat.test.ts tests/projectile.test.ts tests/arpg.test.ts tests/snapshot-recovery.test.ts tests/touch-input.test.ts"
   },
   "devDependencies": {
     "typescript": "^5.4.0",
