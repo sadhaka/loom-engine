@@ -63,12 +63,24 @@ jobs:
           node-version: '20'
           cache: 'npm'
           registry-url: 'https://registry.npmjs.org'
-          # Explicitly clear auth-token. setup-node@v6's default is
-          # ${{ github.token }} on github.com, which gets written into
-          # .npmrc and consumed by npm publish - sending a GitHub token
-          # to npm 404s every time. Empty string disables that path so
-          # npm CLI falls back to OIDC for Trusted Publishing.
-          auth-token: ''
+
+      # setup-node@v6 silently injects github.token into NODE_AUTH_TOKEN
+      # and writes .npmrc with `_authToken=${NODE_AUTH_TOKEN}`. npm
+      # publish then sends the GitHub token to npm, which 404s because
+      # it is not a valid npm credential. We must wipe both so the npm
+      # CLI falls back to OIDC for Trusted Publishing. The `auth-token`
+      # input that supposedly disables this in older setup-node
+      # versions is not recognized by v6 (causes "Unexpected input"
+      # warning); explicit cleanup is the only working path.
+      - name: Force OIDC by clearing setup-node auth artifacts
+        run: |
+          if [ -n "$NPM_CONFIG_USERCONFIG" ] && [ -f "$NPM_CONFIG_USERCONFIG" ]; then
+            rm -f "$NPM_CONFIG_USERCONFIG"
+          fi
+          rm -f ~/.npmrc
+          echo "NODE_AUTH_TOKEN=" >> $GITHUB_ENV
+          echo "NPM_CONFIG_USERCONFIG=" >> $GITHUB_ENV
+          echo "[clear-auth] cleared .npmrc + NODE_AUTH_TOKEN; npm publish will use OIDC"
 
       - name: Install dependencies
         run: npm ci
