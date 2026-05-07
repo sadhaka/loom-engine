@@ -4,7 +4,7 @@
 // SpritePool, SpriteRenderSystem, and the high-level Engine facade
 // that wires everything together with sane defaults.
 
-export const LOOM_ENGINE_VERSION = '0.2.0-phase2';
+export const LOOM_ENGINE_VERSION = '0.3.0-phase3';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -137,3 +137,21 @@ export {
   computeFrameIndex,
   SpriteSheetLoadError,
 } from './asset/sprite-sheet-loader.js';
+
+// Animation (Phase 3): named clips, per-entity state, and the
+// AnimationSystem that advances them. Manifests now carry an
+// optional clips[] field; loaders synthesize a 'default' clip
+// when absent for backward compat with Phase 2 manifests.
+export type { AnimationClip } from './animation/animation-clip.js';
+export {
+  synthesizeDefaultClip,
+  clipDurationMs,
+  frameInClipAt,
+  manifestFrameIndex,
+} from './animation/animation-clip.js';
+export {
+  AnimationStatePool,
+  ANIMATION_FLAG_ACTIVE,
+  ANIMATION_FLAG_FINISHED,
+} from './animation/animation-state-pool.js';
+export { AnimationSystem, POOL_ANIMATION } from './systems/animation-system.js';

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Loom Engine - Phase 1 Demo</title>
+  <title>Loom Engine - Phase 3 Demo (Animation)</title>
   <style>
     html, body { margin: 0; padding: 0; background: #14110d; color: #e8d8b6; font: 13px/1.4 sans-serif; }
     .wrap { max-width: 960px; margin: 0 auto; padding: 16px; }
@@ -14,8 +14,8 @@
 </head>
 <body>
   <div class="wrap">
-    <h1>Loom Engine - Phase 2 Demo (ECS + Asset Pipeline)</h1>
-    <p>ECS-driven scene: one knight entity with Transform + Sprite components and four systems (Hover + WalkCycle in logic phase; Tile render + Sprite render in render phase). Tile atlas is procedural; the knight sprite sheet is loaded from <code>../assets/knight/walk.json</code> via the new sprite-sheet loader. No three.js, no PIXI. Canvas2D only.</p>
+    <h1>Loom Engine - Phase 3 Demo (Animation)</h1>
+    <p>Walk cycle now driven by the formal AnimationSystem in PHASE_ANIMATION. The knight has Transform + Sprite + AnimationState components; one call to <code>animations.play(knight, manifest, 'default')</code> on boot, the system advances the clip each tick. Manifests with no clips[] field get a synthesized 'default' clip for backward compat. No three.js, no PIXI. Canvas2D only.</p>
     <canvas id="stage" width="640" height="400"></canvas>
     <div class="stats" id="stats">booting...</div>
   </div>

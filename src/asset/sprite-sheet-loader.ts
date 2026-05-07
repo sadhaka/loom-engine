@@ -26,6 +26,7 @@
 import type {
   AtlasDescriptor,
 } from '../renderer/graphics-device.js';
+import type { AnimationClip } from '../animation/animation-clip.js';
 
 // Single frame within a sheet. Pixel-space rect inside the source
 // image. Optional name (for debugging + later animation lookup) and
@@ -55,6 +56,10 @@ export interface SpriteSheetManifest {
   frames: ReadonlyArray<SpriteFrame>;
   anchor: SpriteAnchor;
   fps: number;
+  // Optional named clips. If absent, the loader synthesizes a
+  // 'default' clip covering all frames in order. Phase 3 added this
+  // field; pre-Phase-3 manifests parse without modification.
+  clips: ReadonlyArray<AnimationClip>;
 }
 
 // Loaded sheet ready to feed registerAtlas. The `image` is a real
@@ -240,12 +245,90 @@ function validateManifest(raw: unknown, url: string): SpriteSheetManifest {
     fps = m['fps'];
   }
 
+  // Clips optional. When absent, synthesize a 'default' clip that
+  // walks all frames in order, looping. When present, validate that
+  // each clip has a non-empty frames[] of integer indices in range
+  // and a boolean loop flag.
+  let clips: AnimationClip[];
+  if (m['clips'] === undefined) {
+    const defaultFrames: number[] = [];
+    for (let i = 0; i < frames.length; i++) defaultFrames.push(i);
+    clips = [{ name: 'default', frames: defaultFrames, loop: true }];
+  } else {
+    if (!Array.isArray(m['clips'])) {
+      throw new SpriteSheetLoadError('invalid-manifest', url, 'clips must be an array when present');
+    }
+    clips = [];
+    for (let ci = 0; ci < m['clips'].length; ci++) {
+      const cRaw = m['clips'][ci];
+      if (!cRaw || typeof cRaw !== 'object') {
+        throw new SpriteSheetLoadError('invalid-manifest', url, `clips[${ci}] is not an object`);
+      }
+      const c = cRaw as Record<string, unknown>;
+      if (typeof c['name'] !== 'string' || c['name'].length === 0) {
+        throw new SpriteSheetLoadError('invalid-manifest', url, `clips[${ci}].name must be a non-empty string`);
+      }
+      if (!Array.isArray(c['frames']) || c['frames'].length === 0) {
+        throw new SpriteSheetLoadError('invalid-manifest', url, `clips[${ci}].frames must be a non-empty array`);
+      }
+      const clipFrames: number[] = [];
+      for (let fi = 0; fi < c['frames'].length; fi++) {
+        const v = c['frames'][fi];
+        if (typeof v !== 'number' || !Number.isInteger(v) || v < 0 || v >= frames.length) {
+          throw new SpriteSheetLoadError(
+            'invalid-manifest',
+            url,
+            `clips[${ci}].frames[${fi}] must be an integer in [0, ${frames.length})`,
+          );
+        }
+        clipFrames.push(v);
+      }
+      if (typeof c['loop'] !== 'boolean') {
+        throw new SpriteSheetLoadError('invalid-manifest', url, `clips[${ci}].loop must be boolean`);
+      }
+      const clip: AnimationClip = { name: c['name'], frames: clipFrames, loop: c['loop'] };
+      if (c['fps'] !== undefined) {
+        if (typeof c['fps'] !== 'number' || c['fps'] <= 0) {
+          throw new SpriteSheetLoadError('invalid-manifest', url, `clips[${ci}].fps must be a positive number when present`);
+        }
+        clip.fps = c['fps'];
+      }
+      if (c['durations_ms'] !== undefined) {
+        if (!Array.isArray(c['durations_ms']) || c['durations_ms'].length !== clipFrames.length) {
+          throw new SpriteSheetLoadError(
+            'invalid-manifest',
+            url,
+            `clips[${ci}].durations_ms must be an array of length ${clipFrames.length} when present`,
+          );
+        }
+        const durs: number[] = [];
+        for (let di = 0; di < c['durations_ms'].length; di++) {
+          const d = c['durations_ms'][di];
+          if (typeof d !== 'number' || d <= 0) {
+            throw new SpriteSheetLoadError(
+              'invalid-manifest',
+              url,
+              `clips[${ci}].durations_ms[${di}] must be a positive number`,
+            );
+          }
+          durs.push(d);
+        }
+        clip.durations_ms = durs;
+      }
+      clips.push(clip);
+    }
+    if (clips.length === 0) {
+      throw new SpriteSheetLoadError('invalid-manifest', url, 'clips must be non-empty when present');
+    }
+  }
+
   return {
     name: m['name'],
     image: m['image'],
     frames,
     anchor,
     fps,
+    clips,
   };
 }
 

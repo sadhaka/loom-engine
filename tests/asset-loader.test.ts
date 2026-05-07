@@ -91,6 +91,9 @@ const WALK_MANIFEST: SpriteSheetManifest = {
   ],
   anchor: { x: 8, y: 32 },
   fps: 8,
+  // Phase 3 added required clips[]; loader auto-synthesizes 'default'
+  // for manifests that don't declare clips, so tests reflect that.
+  clips: [{ name: 'default', frames: [0, 1, 2, 3], loop: true }],
 };
 
 const PNG_BYTES = new Uint8Array([

@@ -23,6 +23,8 @@ import { createCamera, type CameraView } from './renderer/camera.js';
 import { World, POOL_TRANSFORM, POOL_SPRITE } from './world.js';
 import { TransformPool } from './components/transform.js';
 import { SpritePool } from './components/sprite.js';
+import { AnimationStatePool } from './animation/animation-state-pool.js';
+import { POOL_ANIMATION } from './systems/animation-system.js';
 import {
   RESOURCE_TIME,
   RESOURCE_CAMERA,
@@ -73,6 +75,7 @@ export class Engine {
     // Pools
     world.registerPool(POOL_TRANSFORM, new TransformPool());
     world.registerPool(POOL_SPRITE, new SpritePool());
+    world.registerPool(POOL_ANIMATION, new AnimationStatePool());
 
     // Systems are NOT pre-registered. Callers add their own render
     // and game logic systems explicitly, in the order they want.
