@@ -149,6 +149,13 @@ const DATE_NOW_WHITELIST = [
   // need replay-tight clocks override now via ClientPluginRegistryOptions.
   'plugins/types.ts',           // PluginEntropy default seed fallback
   'plugins/client-registry.ts', // default opts.now + TTL helpers + reload cache-bust
+  // Phase 0.20 SSE bridge networking polish. Backoff scheduling and
+  // health-metric timestamps are out-of-tick (driven by network
+  // events); both bridges accept now/random injection seams via opts
+  // for deterministic tests but default to wall clock + Math.random
+  // for production use.
+  'director/sse-director-bridge.ts',     // health metric timestamps
+  'director/zone/sse-zone-bridge.ts',    // health metric timestamps + replay debounce
 ];
 
 function isWhitelisted(file: string, list: string[]): boolean {

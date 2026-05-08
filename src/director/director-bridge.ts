@@ -40,6 +40,15 @@ export interface DirectorBridgeStats {
   // Last server-reported drop counters from system.heartbeat.
   serverDropsP1: number;
   serverDropsP2: number;
+  // 0.20.0 health metrics. ms since epoch (Date.now()), 0 if not yet
+  // happened. totalConnects / totalDisconnects span the full lifetime
+  // of this bridge instance; currentReconnectAttempt is the running
+  // counter feeding the backoff schedule (resets on successful open).
+  lastConnectedAtMs: number;
+  lastDisconnectedAtMs: number;
+  totalConnectsCount: number;
+  totalDisconnectsCount: number;
+  currentReconnectAttempt: number;
 }
 
 export interface IDirectorBridge {

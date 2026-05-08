@@ -27,6 +27,11 @@ export class MockDirectorBridge implements IDirectorBridge {
     outOfOrderEvents: 0,
     serverDropsP1: 0,
     serverDropsP2: 0,
+    lastConnectedAtMs: 0,
+    lastDisconnectedAtMs: 0,
+    totalConnectsCount: 0,
+    totalDisconnectsCount: 0,
+    currentReconnectAttempt: 0,
   };
 
   start(): void {
