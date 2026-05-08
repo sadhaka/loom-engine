@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.50.0';
+export const LOOM_ENGINE_VERSION = '0.51.0';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -287,6 +287,9 @@ export type {
   LogRingBufferOptions,
   LogFilter,
 } from './runtime/log-ring-buffer.js';
+// 0.51.0 - generic finite state machine.
+export { StateMachine, RESOURCE_STATE_MACHINE } from './runtime/state-machine.js';
+export type { StateConfig, StateMachineOptions } from './runtime/state-machine.js';
 export {
   ResourceRegistry,
   createTimeResource,

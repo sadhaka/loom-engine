@@ -7,6 +7,66 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.51.0 - 2026-05-09
+
+**StateMachine - generic finite state machine.** Many engine
+subsystems already track states implicitly: zone bridge connection
+(idle / connecting / connected / reconnecting), boss lifecycle
+(offline / spawning / alive / dying / dead), HUD modes (game /
+menu / inventory / dialog), audio scenes. Each rolls its own enum
+and transition guard. StateMachine factors that out: register
+named states with onEnter / onExit / onUpdate callbacks plus
+optional valid-transition map; the FSM enforces invariants.
+
+### Added
+
+- `src/runtime/state-machine.ts` - `StateMachine` class:
+  - `StateMachine.create({ initial, states, transitions?,
+    fireInitialEnter?, onTransition? })`.
+  - `state()` / `is(name)` / `has(name)` / `stateNames()`.
+  - `transition(name)` - returns true on success, false if state
+    unknown / transition rejected / already there. Fires onExit
+    -> onEnter -> onTransition in order.
+  - `canTransition(name)` - dry-run check.
+  - `forceState(name)` - bypass guards (restore-from-save case);
+    no onEnter / onExit fire.
+  - `update(dtMs)` - calls current state's onUpdate.
+  - `dispose()` - locks subsequent ops.
+- `transitions` map is optional + acts as deny list. States
+  without an entry are unrestricted; states with `[]` are
+  terminal (cannot transition out except via forceState).
+- `fireInitialEnter: true` fires onEnter once at create time
+  with `from: null`.
+- Defensive: NaN / negative dt ignored; throwing onEnter / onExit
+  / onUpdate / onTransition isolated; transitions to current
+  state are no-ops.
+- `StateConfig`, `StateMachineOptions` types exported.
+- `RESOURCE_STATE_MACHINE` constant.
+
+### Tests
+
+1238 -> 1261 (23 new in tests/state-machine.test.ts):
+- RESOURCE_STATE_MACHINE stable string.
+- Requires initial state; initial must exist in states map.
+- Starts in initial state; fireInitialEnter fires once with
+  from=null; default does not fire.
+- Transition fires onExit -> onEnter; unknown state returns false;
+  same-state no-op.
+- transitions map enforces allowed targets; missing entry
+  unrestricted; no map at all unrestricted.
+- onTransition fires after success; not on rejected.
+- update fires onUpdate with dtMs; safe on state with no
+  onUpdate; NaN / negative ignored.
+- forceState bypasses transitions + onEnter/onExit; rejects
+  unknown.
+- Throwing callbacks isolated.
+- stateNames lists all; dispose locks ops.
+- Realistic example: boss lifecycle.
+
+### Backwards compatibility
+
+Pure addition. Engine consumers opt in.
+
 ## 0.50.0 - 2026-05-09
 
 **LogRingBuffer - severity-filtered, fixed-capacity log.** The
