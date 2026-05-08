@@ -8,7 +8,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.38.0';
+export const LOOM_ENGINE_VERSION = '0.39.0';
 export { vec2, vec3, rect, clamp, lerp, smoothstep, approxEq, rectContains, rectIntersects, visibleInView, } from './util/math.js';
 export { rgba, hexToRgba, rgbaToHexString, rgbaToCssString, colorLerp, COLOR_WHITE, COLOR_BLACK, COLOR_TRANSPARENT, COLOR_KNOT_STR, COLOR_KNOT_DEX, COLOR_KNOT_INT, COLOR_KNOT_CENTER, } from './util/color.js';
 export { EntityAllocator, NULL_ENTITY, entityIndex, entityGeneration, makeEntity, } from './entity.js';
@@ -53,6 +53,8 @@ export { FrameBudgetScheduler, RESOURCE_FRAME_BUDGET_SCHEDULER, } from './runtim
 export { FloatingText, RESOURCE_FLOATING_TEXT } from './runtime/floating-text.js';
 // 0.38.0 - persistent storage adapter (localStorage / in-memory key/value).
 export { PersistentStorage, MemoryStorageBackend, LocalStorageBackend, RESOURCE_PERSISTENT_STORAGE, } from './runtime/persistent-storage.js';
+// 0.39.0 - input chord recognizer (combo / sequence / doubleTap / hold).
+export { InputChord, RESOURCE_INPUT_CHORD } from './input/input-chord.js';
 export { ResourceRegistry, createTimeResource, createVeilBudgetResource, RESOURCE_TIME, RESOURCE_CAMERA, RESOURCE_DEVICE, RESOURCE_VEIL_BUDGET, } from './resources.js';
 // Default systems
 export { SpriteRenderSystem } from './systems/sprite-render-system.js';
