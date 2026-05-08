@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.21.0';
+export const LOOM_ENGINE_VERSION = '0.22.0';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -79,6 +79,17 @@ export {
   SYSTEM_PHASES_IN_ORDER,
 } from './system.js';
 export type { TimeResource, VeilBudgetResource, IManagedResource, LifecycleWorld } from './resources.js';
+// 0.22.0 - ECS perf primitives.
+export {
+  ComponentSignature,
+  componentMask,
+  COMPONENT_SIGNATURE_MAX_BIT,
+  RESOURCE_COMPONENT_SIGNATURE,
+} from './runtime/component-signature.js';
+export {
+  QueryCache,
+  RESOURCE_QUERY_CACHE,
+} from './runtime/query-cache.js';
 export {
   ResourceRegistry,
   createTimeResource,

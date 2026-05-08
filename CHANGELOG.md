@@ -7,6 +7,80 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.22.0 - 2026-05-08
+
+**ECS query primitives: ComponentSignature + QueryCache.** Lays the
+foundation for archetype-style queries without forcing a rewrite of
+the existing structure-of-arrays component pools. Opt-in: existing
+systems are unmodified; new systems can adopt the primitives where
+the perf win matters.
+
+### Why this scope (not full archetype storage)
+
+A true archetype rewrite reshuffles entities so all entities sharing
+a component combination live in a single packed table. The current
+SoA pools (TransformPool, SpritePool, etc.) are already cache-
+friendly within a pool; the cost they DON'T amortise is the
+multi-component intersection a system asks for every frame ("entities
+with both transform AND sprite"). ComponentSignature + QueryCache
+solve exactly that without touching the pool layout.
+
+A future v2 can layer archetype-based packing on top.
+
+### Added
+
+- `src/runtime/component-signature.ts` - `ComponentSignature` class.
+  Per-entity Uint32 bitmask; up to 32 component bits. Surface:
+  `setBit / clearBit / clearEntity / getMask / hasAll / hasAny /
+  collectMatching / version / capacity`. Capacity grows pow-2 on
+  demand. The version counter bumps on every actual mutation so a
+  consumer can detect "any change" cheaply.
+- `componentMask(...bits)` helper to build a bitmask from a list of
+  bit indices. Throws on out-of-range bits in development.
+- `RESOURCE_COMPONENT_SIGNATURE = 'loom.component_signature'`.
+- `src/runtime/query-cache.ts` - `QueryCache` class. Memoizes
+  signature queries by mask, invalidates on version bump. Surface:
+  `query(mask) / clear() / stats()`. FIFO eviction at maxEntries
+  (default 64) prevents long-running games from accumulating an
+  unbounded cache.
+- `RESOURCE_QUERY_CACHE = 'loom.query_cache'`.
+
+### Backwards compatibility
+
+Pure additions. Existing pools, systems, tests unchanged. Engine
+consumers opt in by:
+
+```ts
+import { ComponentSignature, QueryCache, componentMask } from '@sadhaka/loom-engine';
+
+const sig = new ComponentSignature();
+const cache = new QueryCache(sig);
+
+// Pool registers entity components on attach.
+sig.setBit(entityIdx, COMPONENT_BIT_TRANSFORM);
+sig.setBit(entityIdx, COMPONENT_BIT_SPRITE);
+
+// System queries.
+const matches = cache.query(componentMask(COMPONENT_BIT_TRANSFORM, COMPONENT_BIT_SPRITE));
+for (let i = 0; i < matches.length; i++) {
+  const idx = matches[i];
+  // ...
+}
+```
+
+### Tests
+
+631 -> 645 (14 new in tests/component-signature.test.ts):
+- setBit / clearBit / hasAll / hasAny / clearEntity round-trips.
+- setBit out of range throws.
+- Capacity grows pow-2 on demand; existing data preserved.
+- Version bumps only on actual mutations (idempotent set/clear no-op).
+- collectMatching returns sorted entity indices.
+- QueryCache hit/miss + reference identity on hit.
+- QueryCache invalidates on signature version bump.
+- Multiple masks cached independently; FIFO eviction at maxEntries.
+- clear() resets state.
+
 ## 0.21.0 - 2026-05-08
 
 **IManagedResource lifecycle hooks.** Resources owning external state
