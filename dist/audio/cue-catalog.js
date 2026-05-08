@@ -16,10 +16,12 @@
 // catalog tracks live SpatialSourceHandles per cue name and exposes
 // stopAll to kill them on a single command (e.g. "boss died, stop the
 // loop"). Non-spatial one-shots are not tracked - they end on their own.
-// Time source. Real implementation uses performance.now(); tests can
-// inject a deterministic clock by overriding this through the public
-// constructor seam later. v1 uses the global clock for simplicity.
-function nowMs() {
+// Default time source. Real implementation uses performance.now() /
+// Date.now(). For deterministic replays, callers pass a `now` override
+// through CueCatalog.create({ now }) - typically a closure that reads
+// TimeResource.elapsed * 1000 from the world. With no override the
+// catalog behaves like prior versions.
+function defaultNowMs() {
     if (typeof performance !== 'undefined' && typeof performance.now === 'function') {
         return performance.now();
     }
@@ -34,13 +36,16 @@ export class CueCatalog {
     // Live spatial source handles per cue name. Cleared on stopAll(name).
     // Non-spatial one-shots are NOT tracked - they end naturally.
     liveHandles = new Map();
-    constructor(audioBus, spatialBus, cache) {
+    nowMs;
+    constructor(audioBus, spatialBus, cache, now) {
         this.audioBus = audioBus;
         this.spatialBus = spatialBus;
         this.cache = cache;
+        this.nowMs = now;
     }
-    static create(audioBus, spatialBus, cache) {
-        return new CueCatalog(audioBus, spatialBus, cache);
+    static create(audioBus, spatialBus, cache, options) {
+        var now = options && typeof options.now === 'function' ? options.now : defaultNowMs;
+        return new CueCatalog(audioBus, spatialBus, cache, now);
     }
     register(name, def) {
         this.cues.set(name, def);
@@ -74,7 +79,7 @@ export class CueCatalog {
         // soon after the prior successful play.
         if (def.cooldownMs !== undefined && def.cooldownMs > 0) {
             var entry = this.cooldowns.get(name) ?? { lastPlayMs: -Infinity };
-            var t = nowMs();
+            var t = this.nowMs();
             if (t - entry.lastPlayMs < def.cooldownMs) {
                 return null;
             }
@@ -176,7 +181,7 @@ export class CueCatalog {
         setForName.clear();
     }
     markPlayed(name) {
-        this.cooldowns.set(name, { lastPlayMs: nowMs() });
+        this.cooldowns.set(name, { lastPlayMs: this.nowMs() });
     }
 }
 // Resource key for the world's resource registry. Engine consumers

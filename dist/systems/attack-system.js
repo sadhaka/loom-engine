@@ -20,7 +20,7 @@ import { POOL_TRANSFORM } from '../world.js';
 import { POOL_HEALTH } from '../components/health.js';
 import { POOL_PURSUE } from '../components/pursue.js';
 import { RESOURCE_INPUT, } from '../input/input-manager.js';
-import { RESOURCE_CAMERA } from '../resources.js';
+import { RESOURCE_CAMERA, RESOURCE_TIME, } from '../resources.js';
 import { isoToTile } from '../renderer/iso-projection.js';
 import { vec2 } from '../util/math.js';
 import { makeEntity } from '../entity.js';
@@ -83,7 +83,11 @@ export class AttackSystem {
         if (bestIdx < 0)
             return;
         const target = makeEntity(bestIdx, 0);
-        const now = typeof performance !== 'undefined' ? performance.now() : 0;
+        // Deterministic clock - TimeResource (engine-driven) instead of
+        // performance.now(). Same seed + same tick stream => same `now`,
+        // so trace replays observe identical applyDamage timestamps.
+        const time = world.resources.get(RESOURCE_TIME);
+        const now = time ? time.elapsed * 1000 : 0;
         const applied = health.applyDamage(target, this.opts.damage, now);
         if (applied > 0) {
             this.lastTargetIndex = bestIdx;

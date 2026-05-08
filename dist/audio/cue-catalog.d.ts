@@ -18,6 +18,9 @@ export type CuePlayOptions = Partial<PositionalPlayOptions> & {
     x?: number;
     y?: number;
 };
+export interface CueCatalogOptions {
+    now?: () => number;
+}
 export declare class CueCatalog {
     private audioBus;
     private spatialBus;
@@ -25,8 +28,9 @@ export declare class CueCatalog {
     private cues;
     private cooldowns;
     private liveHandles;
+    private nowMs;
     private constructor();
-    static create(audioBus: AudioBus, spatialBus: SpatialAudioBus, cache: AudioAssetCache): CueCatalog;
+    static create(audioBus: AudioBus, spatialBus: SpatialAudioBus, cache: AudioAssetCache, options?: CueCatalogOptions): CueCatalog;
     register(name: string, def: CueDefinition): void;
     unregister(name: string): void;
     has(name: string): boolean;

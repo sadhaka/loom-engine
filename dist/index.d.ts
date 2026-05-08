@@ -1,4 +1,4 @@
-export declare const LOOM_ENGINE_VERSION = "0.17.0";
+export declare const LOOM_ENGINE_VERSION = "0.18.0";
 export type { Vec2, Vec3, Rect } from './util/math.js';
 export { vec2, vec3, rect, clamp, lerp, smoothstep, approxEq, rectContains, rectIntersects, visibleInView, } from './util/math.js';
 export type { ColorRGBA } from './util/color.js';
@@ -50,7 +50,7 @@ export { SpatialAudioSystem } from './audio/spatial-audio-system.js';
 export { AudioAssetCache, createAudioAssetCache, RESOURCE_AUDIO_ASSET_CACHE, } from './audio/audio-asset-cache.js';
 export type { AudioAssetManifest } from './audio/audio-asset-loader.js';
 export { AudioAssetLoader } from './audio/audio-asset-loader.js';
-export type { CueDefinition, CuePlayOptions, } from './audio/cue-catalog.js';
+export type { CueDefinition, CuePlayOptions, CueCatalogOptions, } from './audio/cue-catalog.js';
 export { CueCatalog, RESOURCE_CUE_CATALOG, } from './audio/cue-catalog.js';
 export { MusicDirector, RESOURCE_MUSIC_DIRECTOR, } from './audio/music-director.js';
 export type { PointerSnapshot, TouchPoint, InputSnapshot, } from './input/input-manager.js';

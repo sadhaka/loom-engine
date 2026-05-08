@@ -86,7 +86,10 @@ export class DirectorSystem {
         const time = world.resources.get(RESOURCE_TIME);
         if (!bridge || !knotCtx || !log)
             return;
-        const nowMs = (time ? time.elapsed * 1000 : 0) + (typeof performance !== 'undefined' ? performance.now() : 0);
+        // Deterministic clock - TimeResource only. Same coordinate as
+        // ZoneEventSystem (which now also drops the performance.now()
+        // pollution) so beginFade / tickFade stay in sync across replays.
+        const nowMs = time ? time.elapsed * 1000 : 0;
         // 1. Drain queued events.
         const events = bridge.pollEvents();
         if (events.length > 0) {

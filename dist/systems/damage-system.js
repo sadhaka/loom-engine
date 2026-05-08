@@ -18,6 +18,7 @@ import { POOL_TRANSFORM, POOL_SPRITE } from '../world.js';
 import { POOL_EMITTER } from './particle-emitter-system.js';
 import { POOL_ANIMATION } from './animation-system.js';
 import { makeEntity } from '../entity.js';
+import { RESOURCE_TIME } from '../resources.js';
 export class DeathLog {
     // Newest first. Capped at MAX_KILLS to bound memory.
     recent = [];
@@ -37,7 +38,11 @@ export class DamageSystem {
         const animations = world.getPool(POOL_ANIMATION);
         const deathLog = world.resources.get(RESOURCE_DEATH_LOG);
         const hwm = health.getHighWaterMark();
-        const now = typeof performance !== 'undefined' ? performance.now() : 0;
+        // Deterministic clock - TimeResource instead of performance.now()
+        // so kill timestamps reproduce across HeadlessTicker runs with the
+        // same seed + tick stream.
+        const time = world.resources.get(RESOURCE_TIME);
+        const now = time ? time.elapsed * 1000 : 0;
         for (let i = 1; i < hwm; i++) {
             const f = health.flags[i] ?? 0;
             if ((f & HEALTH_FLAG_ACTIVE) === 0)

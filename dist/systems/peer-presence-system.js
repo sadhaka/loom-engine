@@ -91,7 +91,12 @@ export class PeerRenderSystem {
         if (!pool || !sprites || !device || !camera)
             return;
         device.setCamera(camera);
-        const nowMs = (time ? time.elapsed * 1000 : 0) + (typeof performance !== 'undefined' ? performance.now() : 0);
+        // Deterministic clock - TimeResource only. Earlier versions added
+        // performance.now() to mask Engine.tick callers that did not
+        // advance time; the HeadlessTicker advances it correctly. Adding
+        // wall-clock noise here was making peer interpolation diverge
+        // across replays.
+        const nowMs = time ? time.elapsed * 1000 : 0;
         const frame = time ? time.frame : -1;
         // Capture the values we need from each peer before drawing.
         // forEachRendered's view is reused; we have to read fields out
