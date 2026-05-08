@@ -1,4 +1,4 @@
-export declare const LOOM_ENGINE_VERSION = "0.20.1";
+export declare const LOOM_ENGINE_VERSION = "0.21.0";
 export type { Vec2, Vec3, Rect } from './util/math.js';
 export { vec2, vec3, rect, clamp, lerp, smoothstep, approxEq, rectContains, rectIntersects, visibleInView, } from './util/math.js';
 export type { ColorRGBA } from './util/color.js';
@@ -10,7 +10,7 @@ export { SpritePool, SPRITE_FLAG_ACTIVE, SPRITE_FLAG_TINTED, } from './component
 export { World, POOL_TRANSFORM, POOL_SPRITE } from './world.js';
 export type { System, SystemPhase } from './system.js';
 export { SYSTEM_PHASE_INPUT, SYSTEM_PHASE_LOGIC, SYSTEM_PHASE_PHYSICS, SYSTEM_PHASE_ANIMATION, SYSTEM_PHASE_RENDER, SYSTEM_PHASE_POST_RENDER, SYSTEM_PHASES_IN_ORDER, } from './system.js';
-export type { TimeResource, VeilBudgetResource } from './resources.js';
+export type { TimeResource, VeilBudgetResource, IManagedResource, LifecycleWorld } from './resources.js';
 export { ResourceRegistry, createTimeResource, createVeilBudgetResource, RESOURCE_TIME, RESOURCE_CAMERA, RESOURCE_DEVICE, RESOURCE_VEIL_BUDGET, } from './resources.js';
 export { SpriteRenderSystem } from './systems/sprite-render-system.js';
 export { Engine, registerBackend, isBackendRegistered } from './engine.js';

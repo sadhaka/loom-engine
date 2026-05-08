@@ -17,6 +17,7 @@ export declare class World {
     countSystemsInPhase(phase: SystemPhase): number;
     createEntity(): EntityId;
     destroyEntity(e: EntityId): boolean;
+    dispose(): void;
 }
 export declare const POOL_TRANSFORM = "transform";
 export declare const POOL_SPRITE = "sprite";

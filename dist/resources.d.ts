@@ -1,11 +1,24 @@
+export interface LifecycleWorld {
+    resources: ResourceRegistry;
+}
+export interface IManagedResource {
+    onAttach?(world: LifecycleWorld): void;
+    onDetach?(world: LifecycleWorld): void;
+    dispose?(): void;
+}
 export declare class ResourceRegistry {
     private resources;
+    private world;
+    bindWorld(world: LifecycleWorld): void;
     set<T>(key: string, value: T): void;
     get<T>(key: string): T | undefined;
     require<T>(key: string): T;
     has(key: string): boolean;
     remove(key: string): boolean;
     keys(): IterableIterator<string>;
+    attach<T>(key: string, value: T): void;
+    detach(key: string): boolean;
+    disposeAll(): void;
 }
 export interface TimeResource {
     elapsed: number;
