@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.52.0';
+export const LOOM_ENGINE_VERSION = '0.53.0';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -293,6 +293,9 @@ export type { StateConfig, StateMachineOptions } from './runtime/state-machine.j
 // 0.52.0 - per-key cooldown manager.
 export { CooldownManager, RESOURCE_COOLDOWN_MANAGER } from './runtime/cooldown-manager.js';
 export type { CooldownManagerOptions } from './runtime/cooldown-manager.js';
+// 0.53.0 - generic LRU cache.
+export { LRUCache, RESOURCE_LRU_CACHE } from './runtime/lru-cache.js';
+export type { LRUCacheOptions } from './runtime/lru-cache.js';
 export {
   ResourceRegistry,
   createTimeResource,

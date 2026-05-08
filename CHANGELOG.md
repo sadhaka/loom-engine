@@ -7,6 +7,51 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.53.0 - 2026-05-09
+
+**LRUCache - generic least-recently-used cache.** Decoded sprite
+atlases, expensive computation memos, last-N tile chunks,
+plugin-context lookups - all share the "keep up to N hot entries;
+evict the one I haven't touched recently" pattern. The standard
+JS Map is FIFO; LRUCache adds the access-order semantics.
+
+### Added
+
+- `src/runtime/lru-cache.ts` - generic `LRUCache<V>` class:
+  - `set(k, v)` / `get(k)` / `peek(k)` / `has(k)` / `delete(k)`.
+  - `set` returns the evicted entry on capacity overflow.
+  - `get` marks the key most-recently-used; `peek` does not.
+  - `clear()` empties without firing onEvict.
+  - `setCapacity(n)` resizes; shrinking evicts oldest first.
+  - `keys()` / `values()` in eviction order (oldest first).
+  - `stats()` returns size / capacity / hits / misses / evictions.
+  - `dispose()` locks subsequent ops.
+- Optional `onEvict(key, value)` callback fires for capacity-driven
+  eviction (NOT for explicit `delete` or `clear`). Throwing
+  isolated.
+- `LRUCacheOptions<V>` type exported.
+- `RESOURCE_LRU_CACHE` constant.
+
+### Tests
+
+1286 -> 1312 (26 new in tests/lru-cache.test.ts):
+- RESOURCE_LRU_CACHE stable string; default capacity 128.
+- set + get; update in place.
+- Capacity eviction; get promotes; set returns evicted entry.
+- peek does not promote; peek missing returns undefined.
+- delete + missing returns false; delete does NOT fire onEvict.
+- onEvict fires on capacity eviction; throwing isolated.
+- clear empties without firing onEvict.
+- setCapacity smaller evicts; larger does not; <= 0 ignored.
+- keys / values in eviction order; stats accurate.
+- dispose makes ops no-op.
+- Works with arbitrary value types.
+- Realistic asset-cache cleanup example; deterministic eviction.
+
+### Backwards compatibility
+
+Pure addition.
+
 ## 0.52.0 - 2026-05-09
 
 **CooldownManager - per-key cooldown tracking.** Skills, item-uses,
