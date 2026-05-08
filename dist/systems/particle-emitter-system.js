@@ -22,7 +22,14 @@
 import { POOL_TRANSFORM } from '../world.js';
 import { EMITTER_FLAG_ACTIVE } from '../components/particle-emitter.js';
 import { POOL_PARTICLE } from './particle-simulation-system.js';
+import { RESOURCE_ENTROPY, createEntropy, } from '../runtime/entropy.js';
 export const POOL_EMITTER = 'emitter';
+// Fallback entropy for worlds that did not register one. The engine's
+// own Engine.create always seeds RESOURCE_ENTROPY, but bare-bones
+// World instances in tests / mini-demos may skip it. We never call
+// Math.random() in src/ - that would break the seeded-replay
+// contract.
+const FALLBACK_ENTROPY = createEntropy(0xC0FFEE);
 // Sample a random unit direction inside a cone of half-angle
 // `coneHalf` around the axis (ax, ay, az). For coneHalf = 0 the
 // returned vector equals the axis. For coneHalf = PI it's a random
@@ -32,7 +39,7 @@ export const POOL_EMITTER = 'emitter';
 // azimuth theta in [0, 2*PI], and rotate that into the axis-aligned
 // frame. We use a small-angle approximation that's exact for our
 // 2.5D usage (the axis is mostly axis-aligned in iso space).
-function sampleConeDirection(ax, ay, az, coneHalf, out) {
+function sampleConeDirection(ax, ay, az, coneHalf, out, entropy) {
     if (coneHalf <= 0) {
         out.x = ax;
         out.y = ay;
@@ -40,11 +47,12 @@ function sampleConeDirection(ax, ay, az, coneHalf, out) {
         return;
     }
     // Random angle from axis (cosine-weighted for uniform sphere
-    // coverage as cone widens).
+    // coverage as cone widens). Routed through the seeded entropy
+    // resource so a replay produces the same particle directions.
     const cosLimit = Math.cos(coneHalf);
-    const cosAngle = cosLimit + (1 - cosLimit) * Math.random();
+    const cosAngle = cosLimit + (1 - cosLimit) * entropy.random();
     const sinAngle = Math.sqrt(Math.max(0, 1 - cosAngle * cosAngle));
-    const azimuth = Math.random() * Math.PI * 2;
+    const azimuth = entropy.random() * Math.PI * 2;
     // Build a local frame around the axis.
     const len = Math.sqrt(ax * ax + ay * ay + az * az) || 1;
     const aux = ax / len;
@@ -91,6 +99,12 @@ export class ParticleEmitterSystem {
         const particles = world.getPool(POOL_PARTICLE);
         if (!transforms || !emitters || !particles)
             return;
+        // Resolve entropy once per tick. Engine.create always registers
+        // one, but bare World instances may skip it - the fallback is a
+        // module-level deterministic stream so tests that exercise the
+        // emitter without wiring entropy still get reproducible output
+        // (just from a different seed).
+        const entropy = world.resources.get(RESOURCE_ENTROPY) ?? FALLBACK_ENTROPY;
         const hwm = Math.min(transforms.getHighWaterMark(), emitters.getHighWaterMark());
         for (let i = 1; i < hwm; i++) { // index 0 is NULL_ENTITY
             const flags = emitters.flags[i] ?? 0;
@@ -123,8 +137,8 @@ export class ParticleEmitterSystem {
             const startSize = emitters.startSize[i] ?? 4;
             const endSize = emitters.endSize[i] ?? startSize;
             for (let k = 0; k < total; k++) {
-                sampleConeDirection(dirX, dirY, dirZ, coneHalf, SCRATCH_DIR);
-                const speed = speedMin + Math.random() * (speedMax - speedMin);
+                sampleConeDirection(dirX, dirY, dirZ, coneHalf, SCRATCH_DIR, entropy);
+                const speed = speedMin + entropy.random() * (speedMax - speedMin);
                 const slot = particles.spawn({
                     x, y, z,
                     vx: SCRATCH_DIR.x * speed,

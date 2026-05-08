@@ -1,4 +1,4 @@
-export declare const LOOM_ENGINE_VERSION = "0.16.0";
+export declare const LOOM_ENGINE_VERSION = "0.17.0";
 export type { Vec2, Vec3, Rect } from './util/math.js';
 export { vec2, vec3, rect, clamp, lerp, smoothstep, approxEq, rectContains, rectIntersects, visibleInView, } from './util/math.js';
 export type { ColorRGBA } from './util/color.js';
@@ -15,6 +15,8 @@ export { ResourceRegistry, createTimeResource, createVeilBudgetResource, RESOURC
 export { SpriteRenderSystem } from './systems/sprite-render-system.js';
 export { Engine, registerBackend, isBackendRegistered } from './engine.js';
 export type { EngineOptions, DeviceFactory } from './engine.js';
+export type { IEntropy } from './runtime/entropy.js';
+export { Entropy, createEntropy, RESOURCE_ENTROPY, DEFAULT_ENTROPY_SEED, } from './runtime/entropy.js';
 export type { IGraphicsDevice, AtlasHandle, AtlasDescriptor, TextStyle, DeviceBackend, } from './renderer/graphics-device.js';
 export type { CameraView } from './renderer/camera.js';
 export { createCamera, getCameraViewRect, worldToScreen, screenToWorld, } from './renderer/camera.js';

@@ -7,6 +7,7 @@ export interface EngineOptions {
     canvas: HTMLCanvasElement;
     inputWindow?: Window | null;
     skipAudio?: boolean;
+    entropySeed?: number;
     backend?: DeviceBackend;
     device?: IGraphicsDevice;
 }

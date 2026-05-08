@@ -8,7 +8,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.16.0';
+export const LOOM_ENGINE_VERSION = '0.17.0';
 export { vec2, vec3, rect, clamp, lerp, smoothstep, approxEq, rectContains, rectIntersects, visibleInView, } from './util/math.js';
 export { rgba, hexToRgba, rgbaToHexString, rgbaToCssString, colorLerp, COLOR_WHITE, COLOR_BLACK, COLOR_TRANSPARENT, COLOR_KNOT_STR, COLOR_KNOT_DEX, COLOR_KNOT_INT, COLOR_KNOT_CENTER, } from './util/color.js';
 export { EntityAllocator, NULL_ENTITY, entityIndex, entityGeneration, makeEntity, } from './entity.js';
@@ -22,6 +22,7 @@ export { ResourceRegistry, createTimeResource, createVeilBudgetResource, RESOURC
 export { SpriteRenderSystem } from './systems/sprite-render-system.js';
 // Engine facade
 export { Engine, registerBackend, isBackendRegistered } from './engine.js';
+export { Entropy, createEntropy, RESOURCE_ENTROPY, DEFAULT_ENTROPY_SEED, } from './runtime/entropy.js';
 export { createCamera, getCameraViewRect, worldToScreen, screenToWorld, } from './renderer/camera.js';
 export { Canvas2DDevice, } from './renderer/canvas2d-device.js';
 // WebGL2 backend (Phase 14.1). Importing this symbol triggers the

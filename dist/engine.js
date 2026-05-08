@@ -44,6 +44,7 @@ import { KnotContextResource } from './director/knot-context-resource.js';
 import { RESOURCE_DIRECTOR_LOG, createDirectorEventLog, } from './director/director-system.js';
 import { RESOURCE_TIME, RESOURCE_CAMERA, RESOURCE_DEVICE, createTimeResource, } from './resources.js';
 import { clamp } from './util/math.js';
+import { createEntropy, RESOURCE_ENTROPY, DEFAULT_ENTROPY_SEED, } from './runtime/entropy.js';
 const backendRegistry = new Map();
 backendRegistry.set('canvas2d', (canvas) => new Canvas2DDevice(canvas));
 // Register a backend factory. Devices call this from their module
@@ -131,6 +132,11 @@ export class Engine {
         world.resources.set(RESOURCE_CAMERA, camera);
         world.resources.set(RESOURCE_DEVICE, device);
         world.resources.set(RESOURCE_VEIL_BUDGET, createVeilBudgetResource());
+        // Seeded entropy. The engine never calls Math.random() directly;
+        // any randomness goes through this resource so replays / save-state
+        // / network sync can reproduce the same stream.
+        const seed = typeof opts.entropySeed === 'number' ? opts.entropySeed : DEFAULT_ENTROPY_SEED;
+        world.resources.set(RESOURCE_ENTROPY, createEntropy(seed));
         world.resources.set(RESOURCE_INPUT_MANAGER, input);
         world.resources.set(RESOURCE_INPUT, input.snapshot());
         world.resources.set(RESOURCE_TAP_WALK, createTapWalkTarget());
