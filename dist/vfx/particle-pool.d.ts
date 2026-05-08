@@ -1,0 +1,61 @@
+import type { ColorRGBA } from '../util/color.js';
+export declare const PARTICLE_FLAG_ALIVE: number;
+export declare const PARTICLE_FLAG_ADDITIVE: number;
+export interface ParticleSpawn {
+    x: number;
+    y: number;
+    z: number;
+    vx?: number;
+    vy?: number;
+    vz?: number;
+    ax?: number;
+    ay?: number;
+    az?: number;
+    life: number;
+    size?: number;
+    endSize?: number;
+    color: Readonly<ColorRGBA>;
+    endColor?: Readonly<ColorRGBA>;
+    additive?: boolean;
+}
+export declare class ParticlePool {
+    x: Float32Array;
+    y: Float32Array;
+    z: Float32Array;
+    vx: Float32Array;
+    vy: Float32Array;
+    vz: Float32Array;
+    ax: Float32Array;
+    ay: Float32Array;
+    az: Float32Array;
+    life: Float32Array;
+    maxLife: Float32Array;
+    size: Float32Array;
+    endSize: Float32Array;
+    r0: Float32Array;
+    g0: Float32Array;
+    b0: Float32Array;
+    a0: Float32Array;
+    r1: Float32Array;
+    g1: Float32Array;
+    b1: Float32Array;
+    a1: Float32Array;
+    flags: Uint8Array;
+    private capacity;
+    private liveCount;
+    private freeList;
+    private highWaterMark;
+    private maxParticles;
+    constructor(initialCapacity?: number, maxParticles?: number);
+    setMaxParticles(n: number): void;
+    getMaxParticles(): number;
+    getLiveCount(): number;
+    getHighWaterMark(): number;
+    getCapacity(): number;
+    private ensureCapacity;
+    spawn(p: ParticleSpawn): number;
+    kill(i: number): void;
+    isAlive(i: number): boolean;
+    clear(): void;
+}
+//# sourceMappingURL=particle-pool.d.ts.map

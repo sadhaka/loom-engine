@@ -1,0 +1,1 @@
+{"version":3,"file":"projectile-system.d.ts","sourceRoot":"","sources":["../../src/systems/projectile-system.ts"],"names":[],"mappings":"AAkBA,OAAO,KAAK,EAAE,MAAM,EAAE,MAAM,cAAc,CAAC;AAC3C,OAAO,KAAK,EAAE,KAAK,EAAE,MAAM,aAAa,CAAC;AAOzC,qBAAa,gBAAiB,YAAW,MAAM;IAC7C,QAAQ,CAAC,IAAI,EAAE,MAAM,CAAgB;IAErC,MAAM,CAAC,KAAK,EAAE,KAAK,EAAE,EAAE,EAAE,MAAM,GAAG,IAAI;CA4FvC"}

@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Loom Engine - Examples Gallery</title>
+  <style>
+    html, body { margin: 0; padding: 0; background: #14110d; color: #e8d8b6; font: 14px/1.5 sans-serif; }
+    .wrap { max-width: 880px; margin: 0 auto; padding: 32px 16px; }
+    h1 { margin: 0 0 8px; font-size: 18px; color: #d6c694; letter-spacing: 0.05em; text-transform: uppercase; }
+    .lead { color: #8a7c5e; margin: 0 0 28px; max-width: 60ch; }
+    a { color: #d6c694; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+    .card {
+      background: #1d1812;
+      border: 1px solid #2a241a;
+      padding: 16px;
+      text-decoration: none;
+      color: #e8d8b6;
+      display: block;
+    }
+    .card:hover { border-color: #d6c694; background: #221c14; }
+    .card h2 { margin: 0 0 6px; font-size: 14px; color: #d6c694; letter-spacing: 0.04em; text-transform: uppercase; }
+    .card .tag { font-size: 11px; color: #8a7c5e; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
+    .card p { margin: 0; color: #b6a17a; font-size: 13px; line-height: 1.4; }
+    .section-h { color: #8a7c5e; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; margin: 28px 0 12px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Loom Engine - Examples</h1>
+    <p class="lead">A browser-first 2D / 2.5D engine in TypeScript: ECS, Canvas2D primary backend, render-graph stages, Director-bridge SSE integration. The mini examples below are each ~150 lines, copy-paste-ready, and import from <code>@sadhaka/loom-engine</code> via an importmap. Source on <a href="https://github.com/sadhaka/loom-engine">GitHub</a>; API docs at <a href="https://loom-engine.pages.dev">loom-engine.pages.dev</a>.</p>
+
+    <div class="section-h">Phase 14.2 starter examples</div>
+    <div class="grid">
+      <a class="card" href="./survivor-mini/">
+        <h2>Survivor Mini</h2>
+        <div class="tag">action / autobattler</div>
+        <p>Player at center auto-fires at the nearest mob; mobs spawn from random screen edges and pursue. Showcases ECS pools, MOB_CATALOG, projectile physics.</p>
+      </a>
+      <a class="card" href="./plaza-mini/">
+        <h2>Plaza Mini</h2>
+        <div class="tag">walking / iso / director</div>
+        <p>Walkable iso plaza with a mock Director bridge. Narrator overlay pulses every five seconds with a synthetic <code>narrator.line</code> event.</p>
+      </a>
+      <a class="card" href="./dialogue-mini/">
+        <h2>Dialogue Mini</h2>
+        <div class="tag">UI / state machine</div>
+        <p>Branching dialogue tree, no movement, no combat. Demonstrates that the same ECS / resource model that runs the action demos also fits a UI-only game.</p>
+      </a>
+    </div>
+
+    <div class="section-h">Reference demos</div>
+    <div class="grid">
+      <a class="card" href="./director.html">
+        <h2>Director Demo</h2>
+        <div class="tag">phase 6 / palette + tier loop</div>
+        <p>The Director-bridge novelty loop end-to-end: knot palette crossfades every 6s, VE tier shifts every 12s, audio + particle budgets gate same-tick.</p>
+      </a>
+      <a class="card" href="./combat.html">
+        <h2>Combat Slice</h2>
+        <div class="tag">phase 7 / health, pursue, projectiles</div>
+        <p>Knight at origin with three pursuing mobs. Click to attack; dead enemies are cleaned up by DamageSystem. All three mob archetypes spawned via spawnMob.</p>
+      </a>
+      <a class="card" href="./arpg.html">
+        <h2>ARPG First Slice</h2>
+        <div class="tag">phase 8 / zone + interaction</div>
+        <p>Lastlight Plaza with a single NPC. WASD to walk; press E or Enter near the NPC to talk. Demonstrates the zone state, transition tick, interaction system.</p>
+      </a>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,1 @@
+{"version":3,"file":"input-system.d.ts","sourceRoot":"","sources":["../../src/systems/input-system.ts"],"names":[],"mappings":"AAgBA,OAAO,KAAK,EAAE,MAAM,EAAE,MAAM,cAAc,CAAC;AAC3C,OAAO,KAAK,EAAE,KAAK,EAAE,MAAM,aAAa,CAAC;AAOzC,qBAAa,WAAY,YAAW,MAAM;IACxC,QAAQ,CAAC,IAAI,EAAE,MAAM,CAAW;IAEhC,MAAM,CAAC,KAAK,EAAE,KAAK,EAAE,GAAG,EAAE,MAAM,GAAG,IAAI;CAMxC"}

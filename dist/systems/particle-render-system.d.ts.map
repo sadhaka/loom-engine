@@ -1,0 +1,1 @@
+{"version":3,"file":"particle-render-system.d.ts","sourceRoot":"","sources":["../../src/systems/particle-render-system.ts"],"names":[],"mappings":"AAgBA,OAAO,KAAK,EAAE,MAAM,EAAE,MAAM,cAAc,CAAC;AAC3C,OAAO,KAAK,EAAE,KAAK,EAAE,MAAM,aAAa,CAAC;AAYzC,qBAAa,oBAAqB,YAAW,MAAM;IACjD,QAAQ,CAAC,IAAI,EAAE,MAAM,CAAqB;IAE1C,MAAM,CAAC,KAAK,EAAE,KAAK,EAAE,GAAG,EAAE,MAAM,GAAG,IAAI;CAwCxC"}

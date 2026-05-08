@@ -1,0 +1,1 @@
+{"version":3,"file":"projectile-render-system.d.ts","sourceRoot":"","sources":["../../src/systems/projectile-render-system.ts"],"names":[],"mappings":"AAQA,OAAO,KAAK,EAAE,MAAM,EAAE,MAAM,cAAc,CAAC;AAC3C,OAAO,KAAK,EAAE,KAAK,EAAE,MAAM,aAAa,CAAC;AAWzC,qBAAa,sBAAuB,YAAW,MAAM;IACnD,QAAQ,CAAC,IAAI,EAAE,MAAM,CAAuB;IAE5C,MAAM,CAAC,KAAK,EAAE,KAAK,EAAE,GAAG,EAAE,MAAM,GAAG,IAAI;CA0BxC"}

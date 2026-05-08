@@ -1,0 +1,62 @@
+import { type EntityId } from '../entity.js';
+import type { ColorRGBA } from '../util/color.js';
+export declare const EMITTER_FLAG_ACTIVE: number;
+export declare const EMITTER_FLAG_ADDITIVE: number;
+export interface EmitterConfig {
+    rate: number;
+    particleLife: number;
+    speedMin: number;
+    speedMax: number;
+    dirX: number;
+    dirY: number;
+    dirZ: number;
+    coneRadians: number;
+    ax: number;
+    ay: number;
+    az: number;
+    startSize: number;
+    endSize: number;
+    startColor: Readonly<ColorRGBA>;
+    endColor: Readonly<ColorRGBA>;
+    additive: boolean;
+}
+export declare class ParticleEmitterPool {
+    rate: Float32Array;
+    spawnCarry: Float32Array;
+    burstRemaining: Int32Array;
+    particleLife: Float32Array;
+    speedMin: Float32Array;
+    speedMax: Float32Array;
+    dirX: Float32Array;
+    dirY: Float32Array;
+    dirZ: Float32Array;
+    coneRadians: Float32Array;
+    ax: Float32Array;
+    ay: Float32Array;
+    az: Float32Array;
+    startSize: Float32Array;
+    endSize: Float32Array;
+    startR: Float32Array;
+    startG: Float32Array;
+    startB: Float32Array;
+    startA: Float32Array;
+    endR: Float32Array;
+    endG: Float32Array;
+    endB: Float32Array;
+    endA: Float32Array;
+    flags: Uint8Array;
+    private capacity;
+    private highWaterMark;
+    constructor(initialCapacity?: number);
+    private ensureCapacity;
+    attach(e: EntityId, cfg: EmitterConfig): void;
+    detach(e: EntityId): void;
+    setActive(e: EntityId, active: boolean): void;
+    setRate(e: EntityId, rate: number): void;
+    burst(e: EntityId, count: number): void;
+    isActive(e: EntityId): boolean;
+    isAdditive(e: EntityId): boolean;
+    getHighWaterMark(): number;
+    getCapacity(): number;
+}
+//# sourceMappingURL=particle-emitter.d.ts.map

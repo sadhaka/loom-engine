@@ -1,0 +1,1 @@
+{"version":3,"file":"ranged-attack-system.d.ts","sourceRoot":"","sources":["../../src/systems/ranged-attack-system.ts"],"names":[],"mappings":"AAcA,OAAO,KAAK,EAAE,MAAM,EAAE,MAAM,cAAc,CAAC;AAC3C,OAAO,KAAK,EAAE,KAAK,EAAE,MAAM,aAAa,CAAC;AAazC,qBAAa,kBAAmB,YAAW,MAAM;IAC/C,QAAQ,CAAC,IAAI,EAAE,MAAM,CAAmB;IAExC,MAAM,CAAC,KAAK,EAAE,KAAK,EAAE,GAAG,EAAE,MAAM,GAAG,IAAI;CA6ExC"}

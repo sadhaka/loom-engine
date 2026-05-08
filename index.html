@@ -1,4 +1,4 @@
-<!DOCTYPE html><html class="default" lang="en" data-base="./"><head><meta charset="utf-8"/><meta http-equiv="x-ua-compatible" content="IE=edge"/><title>Loom Engine - v0.11.0</title><meta name="description" content="Documentation for Loom Engine"/><meta name="viewport" content="width=device-width, initial-scale=1"/><link rel="stylesheet" href="assets/style.css"/><link rel="stylesheet" href="assets/highlight.css"/><script defer src="assets/main.js"></script><script async src="assets/icons.js" id="tsd-icons-script"></script><script async src="assets/search.js" id="tsd-search-script"></script><script async src="assets/navigation.js" id="tsd-nav-script"></script><script async src="assets/hierarchy.js" id="tsd-hierarchy-script"></script></head><body><script>document.documentElement.dataset.theme = localStorage.getItem("tsd-theme") || "os";document.body.style.display="none";setTimeout(() => window.app?app.showPage():document.body.style.removeProperty("display"),500)</script><header class="tsd-page-toolbar"><div class="tsd-toolbar-contents container"><a href="index.html" class="title">Loom Engine - v0.11.0</a><div id="tsd-toolbar-links"><a href="https://github.com/sadhaka/loom-engine">GitHub</a><a href="https://theworldtable.ai">TheWorldTable.ai</a></div><button id="tsd-search-trigger" class="tsd-widget" aria-label="Search"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><use href="assets/icons.svg#icon-search"></use></svg></button><dialog id="tsd-search" aria-label="Search"><input role="combobox" id="tsd-search-input" aria-controls="tsd-search-results" aria-autocomplete="list" aria-expanded="true" autocapitalize="off" autocomplete="off" placeholder="Search the docs" maxLength="100"/><ul role="listbox" id="tsd-search-results"></ul><div id="tsd-search-status" aria-live="polite" aria-atomic="true"><div>Preparing search index...</div></div></dialog><a href="#" class="tsd-widget menu" id="tsd-toolbar-menu-trigger" data-toggle="menu" aria-label="Menu"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><use href="assets/icons.svg#icon-menu"></use></svg></a></div></header><div class="container container-main"><div class="col-content"><div class="tsd-page-title"><h1>Loom Engine - v0.11.0</h1></div><div class="tsd-panel tsd-typography"><h1 id="loom-engine" class="tsd-anchor-link">Loom Engine<a href="#loom-engine" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h1>
+<!DOCTYPE html><html class="default" lang="en" data-base="./"><head><meta charset="utf-8"/><meta http-equiv="x-ua-compatible" content="IE=edge"/><title>Loom Engine - v0.12.0</title><meta name="description" content="Documentation for Loom Engine"/><meta name="viewport" content="width=device-width, initial-scale=1"/><link rel="stylesheet" href="assets/style.css"/><link rel="stylesheet" href="assets/highlight.css"/><script defer src="assets/main.js"></script><script async src="assets/icons.js" id="tsd-icons-script"></script><script async src="assets/search.js" id="tsd-search-script"></script><script async src="assets/navigation.js" id="tsd-nav-script"></script><script async src="assets/hierarchy.js" id="tsd-hierarchy-script"></script></head><body><script>document.documentElement.dataset.theme = localStorage.getItem("tsd-theme") || "os";document.body.style.display="none";setTimeout(() => window.app?app.showPage():document.body.style.removeProperty("display"),500)</script><header class="tsd-page-toolbar"><div class="tsd-toolbar-contents container"><a href="index.html" class="title">Loom Engine - v0.12.0</a><div id="tsd-toolbar-links"><a href="https://github.com/sadhaka/loom-engine">GitHub</a><a href="https://theworldtable.ai">TheWorldTable.ai</a></div><button id="tsd-search-trigger" class="tsd-widget" aria-label="Search"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><use href="assets/icons.svg#icon-search"></use></svg></button><dialog id="tsd-search" aria-label="Search"><input role="combobox" id="tsd-search-input" aria-controls="tsd-search-results" aria-autocomplete="list" aria-expanded="true" autocapitalize="off" autocomplete="off" placeholder="Search the docs" maxLength="100"/><ul role="listbox" id="tsd-search-results"></ul><div id="tsd-search-status" aria-live="polite" aria-atomic="true"><div>Preparing search index...</div></div></dialog><a href="#" class="tsd-widget menu" id="tsd-toolbar-menu-trigger" data-toggle="menu" aria-label="Menu"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><use href="assets/icons.svg#icon-menu"></use></svg></a></div></header><div class="container container-main"><div class="col-content"><div class="tsd-page-title"><h1>Loom Engine - v0.12.0</h1></div><div class="tsd-panel tsd-typography"><h1 id="loom-engine" class="tsd-anchor-link">Loom Engine<a href="#loom-engine" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h1>
 <p>Browser-first 2D / 2.5D game engine for <a href="https://theworldtable.ai">TheWorldTable.ai</a>.
 Canvas2D primary backend, ECS, render-graph stages, Director-bridge
 SSE integration. No external engine reuse - built from scratch in
@@ -132,19 +132,133 @@ public API surface will evolve until 1.0.</p>
 <td>shipped</td>
 <td>MIT license + npm publish posture (this release)</td>
 </tr>
+<tr>
+<td>12.4</td>
+<td>shipped</td>
+<td>License pivot from MIT to BUSL 1.1 with $1M revenue cap</td>
+</tr>
+<tr>
+<td>13.2</td>
+<td>shipped</td>
+<td>Engine hardening: 12.6 audit lows L-08..L-12 closed</td>
+</tr>
+<tr>
+<td>14.1</td>
+<td>shipped</td>
+<td>WebGL2 instanced sprite batcher (this release)</td>
+</tr>
 </tbody>
 </table>
 <p>See <a href="../docker/LOOM-ENGINE-SPEC.md">LOOM-ENGINE-SPEC.md</a> Section 7
 for the full phase plan with effort estimates.</p>
+<h2 id="renderer-backends" class="tsd-anchor-link">Renderer backends<a href="#renderer-backends" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p>Two backends ship behind the same <code>IGraphicsDevice</code> contract:</p>
+<table>
+<thead>
+<tr>
+<th>Backend</th>
+<th>Status</th>
+<th>When to use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>canvas2d</code></td>
+<td>default, stable</td>
+<td>Hundreds to ~2k sprites; broadest browser coverage</td>
+</tr>
+<tr>
+<td><code>webgl2</code></td>
+<td>0.12.0+, opt-in</td>
+<td>Thousands of sprites; instanced batching with atlas grouping</td>
+</tr>
+</tbody>
+</table>
+<p>Existing consumers do not need to change anything - <code>Engine.create({ canvas })</code>
+keeps the Canvas2D path it has always had, with byte-for-byte
+compatibility on every public API.</p>
+<h3 id="opt-into-webgl2" class="tsd-anchor-link">Opt into WebGL2<a href="#opt-into-webgl2" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<pre><code class="ts"><span class="hl-4">import</span><span class="hl-1"> { </span><span class="hl-5">Engine</span><span class="hl-1">, </span><span class="hl-5">WebGL2Device</span><span class="hl-1"> } </span><span class="hl-4">from</span><span class="hl-1"> </span><span class="hl-2">&#39;@sadhaka/loom-engine&#39;</span><span class="hl-1">;</span><br/><br/><span class="hl-3">// Importing WebGL2Device side-effect-registers the &#39;webgl2&#39; backend</span><br/><span class="hl-3">// factory. The string-based form then works:</span><br/><span class="hl-6">var</span><span class="hl-1"> </span><span class="hl-5">engine</span><span class="hl-1"> = </span><span class="hl-5">Engine</span><span class="hl-1">.</span><span class="hl-0">create</span><span class="hl-1">({ </span><span class="hl-5">canvas:</span><span class="hl-1"> </span><span class="hl-5">myCanvas</span><span class="hl-1">, </span><span class="hl-5">backend:</span><span class="hl-1"> </span><span class="hl-2">&#39;webgl2&#39;</span><span class="hl-1"> });</span>
+</code><button type="button">Copy</button></pre>
+
+<p>Or inject a pre-built device for absolute control over construction
+(useful when sharing the GL context with another renderer):</p>
+<pre><code class="ts"><span class="hl-4">import</span><span class="hl-1"> { </span><span class="hl-5">Engine</span><span class="hl-1">, </span><span class="hl-5">WebGL2Device</span><span class="hl-1"> } </span><span class="hl-4">from</span><span class="hl-1"> </span><span class="hl-2">&#39;@sadhaka/loom-engine&#39;</span><span class="hl-1">;</span><br/><br/><span class="hl-6">var</span><span class="hl-1"> </span><span class="hl-5">device</span><span class="hl-1"> = </span><span class="hl-6">new</span><span class="hl-1"> </span><span class="hl-0">WebGL2Device</span><span class="hl-1">(</span><span class="hl-5">myCanvas</span><span class="hl-1">);</span><br/><span class="hl-6">var</span><span class="hl-1"> </span><span class="hl-5">engine</span><span class="hl-1"> = </span><span class="hl-5">Engine</span><span class="hl-1">.</span><span class="hl-0">create</span><span class="hl-1">({ </span><span class="hl-5">canvas:</span><span class="hl-1"> </span><span class="hl-5">myCanvas</span><span class="hl-1">, </span><span class="hl-5">device:</span><span class="hl-1"> </span><span class="hl-5">device</span><span class="hl-1"> });</span>
+</code><button type="button">Copy</button></pre>
+
+<h3 id="how-batching-works" class="tsd-anchor-link">How batching works<a href="#how-batching-works" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Every <code>drawSprite</code> / <code>drawTile</code> / <code>drawParticle</code> / <code>drawText</code> call
+flows through <code>SpriteBatcher</code>, which accumulates per-instance data
+(screen-space origin + size, atlas UV rect, RGBA tint) into a single
+Float32Array. A flush triggers when the next call uses a different
+atlas or blend mode, and at <code>endFrame</code>. Each flush issues exactly
+one <code>drawArraysInstanced</code> for the batch.</p>
+<p>For maximum throughput, group draws by atlas at the system level
+(e.g. render all hamlet props from one atlas, all NPCs from another).
+The default <code>SpriteRenderSystem</code> already sorts globally by iso depth
+key; submission order within an atlas-bounded run is preserved
+through the batcher.</p>
+<h3 id="tree-shake-story" class="tsd-anchor-link">Tree-shake story<a href="#tree-shake-story" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p><code>engine.ts</code> deliberately does <strong>not</strong> statically import
+<code>WebGL2Device</code>. A consumer that only uses Canvas2D never pulls
+WebGL2-specific code into their bundle - the only way the WebGL2
+path enters the dependency graph is via an explicit
+<code>import { WebGL2Device }</code>, which also triggers backend registration
+through a <code>/*#__PURE__*/</code>-marked side effect.</p>
+<h3 id="webgl2-limits-fallback" class="tsd-anchor-link">WebGL2 limits + fallback<a href="#webgl2-limits-fallback" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ul>
+<li>WebGL2 contexts can be lost (GPU crash, long backgrounded tab,
+extension hijack). The device handles <code>webglcontextlost</code> /
+<code>webglcontextrestored</code> automatically: every atlas re-uploads from
+its cached source image; frames during the lost interval no-op.</li>
+<li>Browsers without WebGL2 (Safari &lt; 15, very old Chrome/Firefox)
+throw at <code>WebGL2Device</code> construction. Wrap the upgrade in a
+feature check and fall back to Canvas2D:<pre><code class="ts"><span class="hl-6">function</span><span class="hl-1"> </span><span class="hl-0">pickBackend</span><span class="hl-1">() {</span><br/><span class="hl-1">  </span><span class="hl-6">var</span><span class="hl-1"> </span><span class="hl-5">probe</span><span class="hl-1"> = </span><span class="hl-5">document</span><span class="hl-1">.</span><span class="hl-0">createElement</span><span class="hl-1">(</span><span class="hl-2">&#39;canvas&#39;</span><span class="hl-1">).</span><span class="hl-0">getContext</span><span class="hl-1">(</span><span class="hl-2">&#39;webgl2&#39;</span><span class="hl-1">);</span><br/><span class="hl-1">  </span><span class="hl-4">return</span><span class="hl-1"> </span><span class="hl-5">probe</span><span class="hl-1"> ? </span><span class="hl-2">&#39;webgl2&#39;</span><span class="hl-1"> : </span><span class="hl-2">&#39;canvas2d&#39;</span><span class="hl-1">;</span><br/><span class="hl-1">}</span><br/><span class="hl-6">var</span><span class="hl-1"> </span><span class="hl-5">engine</span><span class="hl-1"> = </span><span class="hl-5">Engine</span><span class="hl-1">.</span><span class="hl-0">create</span><span class="hl-1">({ </span><span class="hl-5">canvas:</span><span class="hl-1"> </span><span class="hl-5">myCanvas</span><span class="hl-1">, </span><span class="hl-5">backend:</span><span class="hl-1"> </span><span class="hl-0">pickBackend</span><span class="hl-1">() });</span>
+</code><button type="button">Copy</button></pre>
+
+</li>
+<li>Performance characterization lands in phase 14.3 (synthetic 5k+
+sprite bench, frame-time histograms, pareto-front against
+Canvas2D). Until then, treat WebGL2 as opt-in for scale-bound
+scenes only.</li>
+</ul>
 <h2 id="build" class="tsd-anchor-link">Build<a href="#build" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
 <pre><code class="sh"><span class="hl-0">npm</span><span class="hl-1"> </span><span class="hl-2">install</span><br/><span class="hl-0">npm</span><span class="hl-1"> </span><span class="hl-2">run</span><span class="hl-1"> </span><span class="hl-2">build</span><span class="hl-1">         </span><span class="hl-3"># tsc src/ -&gt; dist/</span><br/><span class="hl-0">npm</span><span class="hl-1"> </span><span class="hl-2">run</span><span class="hl-1"> </span><span class="hl-2">build:demo</span><span class="hl-1">    </span><span class="hl-3"># tsc demo/*.ts -&gt; demo/*.js</span><br/><span class="hl-0">npm</span><span class="hl-1"> </span><span class="hl-2">run</span><span class="hl-1"> </span><span class="hl-2">build:all</span><span class="hl-1">     </span><span class="hl-3"># both</span><br/><span class="hl-0">npm</span><span class="hl-1"> </span><span class="hl-2">run</span><span class="hl-1"> </span><span class="hl-2">watch</span><span class="hl-1">         </span><span class="hl-3"># rebuild src on change</span><br/><span class="hl-0">npm</span><span class="hl-1"> </span><span class="hl-2">run</span><span class="hl-1"> </span><span class="hl-2">test</span><span class="hl-1">          </span><span class="hl-3"># tsx tests/*.test.ts</span><br/><span class="hl-0">npm</span><span class="hl-1"> </span><span class="hl-2">run</span><span class="hl-1"> </span><span class="hl-2">clean</span><span class="hl-1">         </span><span class="hl-3"># remove dist + compiled demo</span>
 </code><button type="button">Copy</button></pre>
 
-<h2 id="run-the-demo" class="tsd-anchor-link">Run the demo<a href="#run-the-demo" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
-<pre><code class="sh"><span class="hl-0">npm</span><span class="hl-1"> </span><span class="hl-2">run</span><span class="hl-1"> </span><span class="hl-2">build:all</span><br/><span class="hl-0">python</span><span class="hl-1"> </span><span class="hl-6">-m</span><span class="hl-1"> </span><span class="hl-2">http.server</span><span class="hl-1"> </span><span class="hl-8">8765</span><br/><span class="hl-3"># browse http://localhost:8765/demo/index.html</span>
+<h2 id="run-the-demos" class="tsd-anchor-link">Run the demos<a href="#run-the-demos" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<pre><code class="sh"><span class="hl-0">npm</span><span class="hl-1"> </span><span class="hl-2">run</span><span class="hl-1"> </span><span class="hl-2">build:all</span><br/><span class="hl-0">python</span><span class="hl-1"> </span><span class="hl-6">-m</span><span class="hl-1"> </span><span class="hl-2">http.server</span><span class="hl-1"> </span><span class="hl-8">8765</span><br/><span class="hl-3"># browse http://localhost:8765/demo/</span>
 </code><button type="button">Copy</button></pre>
 
-<p>Controls:</p>
+<p><code>http://localhost:8765/demo/</code> is the gallery index. The same tree is
+published to <a href="https://loom-engine.pages.dev/demo/">loom-engine.pages.dev/demo/</a>
+on every push to <code>main</code>.</p>
+<h2 id="examples" class="tsd-anchor-link">Examples<a href="#examples" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p>Three minimal, copy-paste-ready starters live under <code>demo/</code>. Each is
+roughly 150 lines of TypeScript, imports from <code>@sadhaka/loom-engine</code>
+(resolved via <code>importmap</code> to the local engine bundle), and runs in
+the browser without a build step on the consumer side.</p>
+<ul>
+<li><strong><a href="media/survivor-mini">Survivor Mini</a></strong> - 100-line autobattler.
+Player at center auto-fires at the nearest mob; mobs spawn from
+random screen edges and pursue. Showcases ECS pools (Transform /
+Sprite / Health / Pursue / RangedAttack), <code>MOB_CATALOG</code>, projectile
+physics, system-phase ordering.</li>
+<li><strong><a href="media/plaza-mini">Plaza Mini</a></strong> - walkable iso plaza wired to
+a mock Director bridge. WASD to walk; the narrator overlay below
+the canvas pulses every five seconds with a synthetic
+<code>narrator.line</code> event drained from <code>MockDirectorBridge</code>. Demonstrates
+iso projection, input snapshot, the bridge / event-log / DOM-overlay
+boundary.</li>
+<li><strong><a href="media/dialogue-mini">Dialogue Mini</a></strong> - branching dialogue
+tree, no movement, no combat. Click a choice or press 1 / 2 / 3.
+Demonstrates that the same ECS / resource model that runs the action
+demos also fits a UI-only game: custom <code>Resource</code>, custom <code>System</code>
+reading both <code>InputSnapshot</code> and DOM events, DOM as the primary UI.</li>
+</ul>
+<p>The legacy reference demos (Phase 6 director, Phase 7 combat, Phase 8
+ARPG slice) stay accessible from the gallery index.</p>
+<p>Controls in the legacy director demo (<code>demo/director.html</code>):</p>
 <ul>
 <li><strong>Arrow keys / WASD</strong>: pan camera</li>
 <li><strong>Click</strong>: burst 24 particles + play SFX chirp (after first click, AudioContext unlocks)</li>
@@ -296,4 +410,4 @@ The MIT license permits forking and modification; pull requests are
 welcome but not actively triaged - the canonical roadmap is the spec
 file (<code>LOOM-ENGINE-SPEC.md</code> in the parent repo) and capacity is
 limited. For bug reports, file an issue with a minimal repro.</p>
-</div></div><div class="col-sidebar"><div class="page-menu"><div class="tsd-navigation settings"><details class="tsd-accordion"><summary class="tsd-accordion-summary"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="assets/icons.svg#icon-chevronDown"></use></svg><h3>Settings</h3></summary><div class="tsd-accordion-details"><div class="tsd-filter-visibility"><span class="settings-label">Member Visibility</span><ul id="tsd-filter-options"><li class="tsd-filter-item"><label class="tsd-filter-input"><input type="checkbox" id="tsd-filter-protected" name="protected"/><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect class="tsd-checkbox-background" width="30" height="30" x="1" y="1" rx="6" fill="none"></rect><path class="tsd-checkbox-checkmark" d="M8.35422 16.8214L13.2143 21.75L24.6458 10.25" stroke="none" stroke-width="3.5" stroke-linejoin="round" fill="none"></path></svg><span>Protected</span></label></li><li class="tsd-filter-item"><label class="tsd-filter-input"><input type="checkbox" id="tsd-filter-inherited" name="inherited" checked/><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect class="tsd-checkbox-background" width="30" height="30" x="1" y="1" rx="6" fill="none"></rect><path class="tsd-checkbox-checkmark" d="M8.35422 16.8214L13.2143 21.75L24.6458 10.25" stroke="none" stroke-width="3.5" stroke-linejoin="round" fill="none"></path></svg><span>Inherited</span></label></li><li class="tsd-filter-item"><label class="tsd-filter-input"><input type="checkbox" id="tsd-filter-external" name="external"/><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect class="tsd-checkbox-background" width="30" height="30" x="1" y="1" rx="6" fill="none"></rect><path class="tsd-checkbox-checkmark" d="M8.35422 16.8214L13.2143 21.75L24.6458 10.25" stroke="none" stroke-width="3.5" stroke-linejoin="round" fill="none"></path></svg><span>External</span></label></li></ul></div><div class="tsd-theme-toggle"><label class="settings-label" for="tsd-theme">Theme</label><select id="tsd-theme"><option value="os">OS</option><option value="light">Light</option><option value="dark">Dark</option></select></div></div></details></div><details open class="tsd-accordion tsd-page-navigation"><summary class="tsd-accordion-summary"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="assets/icons.svg#icon-chevronDown"></use></svg><h3>On This Page</h3></summary><div class="tsd-accordion-details"><a href="#loom-engine"><span>Loom <wbr/>Engine</span></a><ul><li><a href="#install"><span>Install</span></a></li><li><a href="#documentation"><span>Documentation</span></a></li><li><a href="#quickstart"><span>Quickstart</span></a></li><li><a href="#configuration"><span>Configuration</span></a></li><li><ul><li><a href="#director-bridge-credentials-security-note"><span>Director-<wbr/>bridge credentials (security note)</span></a></li></ul></li><li><a href="#status"><span>Status</span></a></li><li><a href="#build"><span>Build</span></a></li><li><a href="#run-the-demo"><span>Run the demo</span></a></li><li><a href="#layout"><span>Layout</span></a></li><li><a href="#architecture-quick-reference"><span>Architecture quick-<wbr/>reference</span></a></li><li><a href="#public-api-surface-phase-5"><span>Public <wbr/>API surface (<wbr/>Phase 5)</span></a></li><li><a href="#patent-strategy"><span>Patent strategy</span></a></li><li><a href="#test-coverage"><span>Test coverage</span></a></li><li><a href="#docs-deploy"><span>Docs deploy</span></a></li><li><ul><li><a href="#re-creating-the-deploy-from-scratch"><span>Re-<wbr/>creating the deploy from scratch</span></a></li></ul></li><li><a href="#license"><span>License</span></a></li><li><a href="#publishing"><span>Publishing</span></a></li><li><a href="#contributing"><span>Contributing</span></a></li></ul></div></details></div><div class="site-menu"><nav id="tsd-sidebar-links" class="tsd-navigation"><a href="https://github.com/sadhaka/loom-engine" class="tsd-nav-link">GitHub</a><a href="https://theworldtable.ai" class="tsd-nav-link">TheWorldTable.ai</a></nav><nav class="tsd-navigation"><a href="modules.html">Loom Engine - v0.11.0</a><ul class="tsd-small-nested-navigation" id="tsd-nav-container"><li>Loading...</li></ul></nav></div></div></div><footer><p class="tsd-generator">Generated using <a href="https://typedoc.org/" target="_blank">TypeDoc</a></p></footer><div class="overlay"></div></body></html>
+</div></div><div class="col-sidebar"><div class="page-menu"><div class="tsd-navigation settings"><details class="tsd-accordion"><summary class="tsd-accordion-summary"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="assets/icons.svg#icon-chevronDown"></use></svg><h3>Settings</h3></summary><div class="tsd-accordion-details"><div class="tsd-filter-visibility"><span class="settings-label">Member Visibility</span><ul id="tsd-filter-options"><li class="tsd-filter-item"><label class="tsd-filter-input"><input type="checkbox" id="tsd-filter-protected" name="protected"/><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect class="tsd-checkbox-background" width="30" height="30" x="1" y="1" rx="6" fill="none"></rect><path class="tsd-checkbox-checkmark" d="M8.35422 16.8214L13.2143 21.75L24.6458 10.25" stroke="none" stroke-width="3.5" stroke-linejoin="round" fill="none"></path></svg><span>Protected</span></label></li><li class="tsd-filter-item"><label class="tsd-filter-input"><input type="checkbox" id="tsd-filter-inherited" name="inherited" checked/><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect class="tsd-checkbox-background" width="30" height="30" x="1" y="1" rx="6" fill="none"></rect><path class="tsd-checkbox-checkmark" d="M8.35422 16.8214L13.2143 21.75L24.6458 10.25" stroke="none" stroke-width="3.5" stroke-linejoin="round" fill="none"></path></svg><span>Inherited</span></label></li><li class="tsd-filter-item"><label class="tsd-filter-input"><input type="checkbox" id="tsd-filter-external" name="external"/><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect class="tsd-checkbox-background" width="30" height="30" x="1" y="1" rx="6" fill="none"></rect><path class="tsd-checkbox-checkmark" d="M8.35422 16.8214L13.2143 21.75L24.6458 10.25" stroke="none" stroke-width="3.5" stroke-linejoin="round" fill="none"></path></svg><span>External</span></label></li></ul></div><div class="tsd-theme-toggle"><label class="settings-label" for="tsd-theme">Theme</label><select id="tsd-theme"><option value="os">OS</option><option value="light">Light</option><option value="dark">Dark</option></select></div></div></details></div><details open class="tsd-accordion tsd-page-navigation"><summary class="tsd-accordion-summary"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="assets/icons.svg#icon-chevronDown"></use></svg><h3>On This Page</h3></summary><div class="tsd-accordion-details"><a href="#loom-engine"><span>Loom <wbr/>Engine</span></a><ul><li><a href="#install"><span>Install</span></a></li><li><a href="#documentation"><span>Documentation</span></a></li><li><a href="#quickstart"><span>Quickstart</span></a></li><li><a href="#configuration"><span>Configuration</span></a></li><li><ul><li><a href="#director-bridge-credentials-security-note"><span>Director-<wbr/>bridge credentials (security note)</span></a></li></ul></li><li><a href="#status"><span>Status</span></a></li><li><a href="#renderer-backends"><span>Renderer backends</span></a></li><li><ul><li><a href="#opt-into-webgl2"><span>Opt into <wbr/>Web<wbr/>GL2</span></a></li><li><a href="#how-batching-works"><span>How batching works</span></a></li><li><a href="#tree-shake-story"><span>Tree-<wbr/>shake story</span></a></li><li><a href="#webgl2-limits-fallback"><span>Web<wbr/>GL2 limits + fallback</span></a></li></ul></li><li><a href="#build"><span>Build</span></a></li><li><a href="#run-the-demos"><span>Run the demos</span></a></li><li><a href="#examples"><span>Examples</span></a></li><li><a href="#layout"><span>Layout</span></a></li><li><a href="#architecture-quick-reference"><span>Architecture quick-<wbr/>reference</span></a></li><li><a href="#public-api-surface-phase-5"><span>Public <wbr/>API surface (<wbr/>Phase 5)</span></a></li><li><a href="#patent-strategy"><span>Patent strategy</span></a></li><li><a href="#test-coverage"><span>Test coverage</span></a></li><li><a href="#docs-deploy"><span>Docs deploy</span></a></li><li><ul><li><a href="#re-creating-the-deploy-from-scratch"><span>Re-<wbr/>creating the deploy from scratch</span></a></li></ul></li><li><a href="#license"><span>License</span></a></li><li><a href="#publishing"><span>Publishing</span></a></li><li><a href="#contributing"><span>Contributing</span></a></li></ul></div></details></div><div class="site-menu"><nav id="tsd-sidebar-links" class="tsd-navigation"><a href="https://github.com/sadhaka/loom-engine" class="tsd-nav-link">GitHub</a><a href="https://theworldtable.ai" class="tsd-nav-link">TheWorldTable.ai</a></nav><nav class="tsd-navigation"><a href="modules.html">Loom Engine - v0.12.0</a><ul class="tsd-small-nested-navigation" id="tsd-nav-container"><li>Loading...</li></ul></nav></div></div></div><footer><p class="tsd-generator">Generated using <a href="https://typedoc.org/" target="_blank">TypeDoc</a></p></footer><div class="overlay"></div></body></html>

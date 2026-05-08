@@ -1,0 +1,1 @@
+{"version":3,"file":"veil-budget-system.d.ts","sourceRoot":"","sources":["../../src/systems/veil-budget-system.ts"],"names":[],"mappings":"AAmBA,OAAO,KAAK,EAAE,MAAM,EAAE,MAAM,cAAc,CAAC;AAC3C,OAAO,KAAK,EAAE,KAAK,EAAE,MAAM,aAAa,CAAC;AASzC,qBAAa,gBAAiB,YAAW,MAAM;IAC7C,QAAQ,CAAC,IAAI,EAAE,MAAM,CAAiB;IAEtC,MAAM,CAAC,KAAK,EAAE,KAAK,EAAE,GAAG,EAAE,MAAM,GAAG,IAAI;CAYxC"}
