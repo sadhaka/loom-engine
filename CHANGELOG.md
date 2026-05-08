@@ -7,6 +7,79 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.13.0 - 2026-05-08
+
+**Multiplayer presence layer** (Phase 15.1, client-side). Engine-side
+primitives for showing other players in real time on the same world.
+Pluggable transport (works with SSE / WebSocket / WebRTC), per-peer
+linear interpolation between known positions, and a render system
+that draws peers with name labels above each sprite. No CRDT;
+position-only state. Shared state beyond position is deferred until
+there's a concrete need.
+
+### Why
+
+The Loom-survivor + plaza experiences both want "see who else is
+here" without the implementation cost of a fully concurrent shared
+world. Position alone covers the social-presence feeling; the
+server is authoritative on conflicts (last-write-wins). The wire
+protocol mirrors Director's SSE shape so the same backend tooling
+applies, and the bridge interface is small enough to swap to
+WebSocket or WebRTC without engine changes.
+
+### Added
+
+- `IMultiplayerBridge` (`src/network/multiplayer-bridge.ts`) - five
+  methods (`connect` / `disconnect` / `status` / `pollMessages` /
+  `broadcastPosition` plus `stats`). All transports implement this.
+- `SSEMultiplayerBridge` (`src/network/sse-multiplayer-bridge.ts`) -
+  EventSource subscription paired with a fetch POST for outbound
+  position frames. Browser-only; throws in Node.
+- `MockMultiplayerBridge` (`src/network/mock-multiplayer-bridge.ts`) -
+  in-process bridge for tests + offline demos. `enqueueIncoming()`
+  simulates server pushes; `getSentBroadcasts()` captures local
+  sends so tests can assert cadence.
+- `PeerPool` (`src/network/peer-pool.ts`) - tracks known peers and
+  their last two known positions. `forEachRendered(nowMs, frame, fn)`
+  iterates with the per-peer interpolated position computed as
+  `lerp(prev, current, clamp01((now - prevTs) / (curTs - prevTs)))`.
+  Self-filter via `setLocalCharacterId()`.
+- `PeerSpritePool` (`src/components/peer-sprite.ts`) - per-peer
+  rendering hints (atlas, frame, tint) keyed by `character_id`.
+  `setOverride()` for cosmetic / class differentiation; otherwise
+  the default entry from the constructor is used.
+- `PeerPresenceSystem` (`src/systems/peer-presence-system.ts`) -
+  drains the bridge each tick (`PHASE_INPUT`) and routes `update` /
+  `depart` / `snapshot` messages to the right `PeerPool` method.
+- `PeerRenderSystem` (same file) - draws each peer at the
+  interpolated position with an optional name label above
+  (`PHASE_RENDER`).
+- Wire protocol shared with the server-side Track B: SSE event
+  types `presence.update` / `presence.depart` / `presence.snapshot`,
+  client `POST /presence/move` rate-limited to 10 Hz
+  (`BROADCAST_HZ`). Documented in the README's Multiplayer section.
+- `demo/plaza-multiplayer/` - extends the plaza-mini demo with three
+  synthetic peers driven by a `MockMultiplayerBridge`. Local player
+  walks via WASD; peers wander randomly. Stats overlay shows bridge
+  stats + peer count live.
+
+### Tests
+
+Adds `tests/multiplayer.test.ts` (23 cases): pool interpolation
+(midpoint, saturate-above, clamp-below), prev/current slide on
+update, out-of-order drop, self-filter, snapshot replaces roster,
+mock bridge enqueue + drain + rate-limit (100 calls in 1 simulated
+second admit at most `BROADCAST_HZ`), end-to-end snapshot / update /
+depart through `PeerPresenceSystem`, render-system draw counts +
+name-label gating + per-peer override. 252 tests total (229 + 23);
+all green.
+
+### Compat
+
+Backwards-compatible: nothing in 0.12 changed. The new modules are
+additive. Engine consumers who don't use the multiplayer surface
+pay zero runtime cost (tree-shakes out).
+
 ## 0.12.0 - 2026-05-08
 
 **WebGL2 instanced sprite batcher backend** (Phase 14.1). Lifts the
