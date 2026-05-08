@@ -237,6 +237,21 @@ export {
 } from './audio/audio-asset-cache.js';
 export type { AudioAssetManifest } from './audio/audio-asset-loader.js';
 export { AudioAssetLoader } from './audio/audio-asset-loader.js';
+export type {
+  CueDefinition,
+  CuePlayOptions,
+  // TODO[phase-17-merge]: these stub re-exports come from cue-catalog's
+  // own local stub. After Track A merges, swap to imports from
+  // ./audio/spatial-audio-bus.js and update both the stub source and
+  // these re-exports in one coordination commit.
+  PositionalPlayOptions,
+  SpatialAudioBus,
+  SpatialSourceHandle,
+} from './audio/cue-catalog.js';
+export {
+  CueCatalog,
+  RESOURCE_CUE_CATALOG,
+} from './audio/cue-catalog.js';
 
 // Input (Phase 5): unified keyboard / mouse / touch with frame-
 // coherent snapshot resource.
