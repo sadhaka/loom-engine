@@ -322,6 +322,75 @@ export {
 export type { DirectorEncounterSystemOptions } from './director/director-encounter-system.js';
 export { DirectorEncounterSystem } from './director/director-encounter-system.js';
 
+// ===== Director v2 (Phase 16) - zone-scoped event surface =====
+//
+// LOOM-DIRECTOR-PROTOCOL-V2.md §3 + §4. Parallel to v1 above; v1 stays
+// untouched. v2 reuses v1's DropSpec, NarratorVoice, KnotPaletteHex,
+// KnotMood for overlapping shapes - those are exported once via the
+// v1 block above and the v2 envelope re-uses them by import.
+//
+// The zone-event surface targets a different scope (per-zone fanout)
+// and a different stream (multiplexed onto the 15.x presence SSE
+// channel). Consumers who do not register an IZoneEventBridge see
+// identical behaviour to 0.13.0 - the ZoneEventSystem is a no-op
+// without a bridge resource attached.
+export type {
+  ZoneEventEnvelope,
+  ZoneEvent,
+  ZoneEventType,
+  ZoneEventDataMap,
+  ZoneBossSpec,
+  ZoneBossSpawnData,
+  ZoneBossTickData,
+  ZoneBossEndData,
+  ZoneBossOutcome,
+  ZoneBossHit,
+  ZoneNarratorData,
+  ZoneKnotData,
+  ZoneStateData,
+  ZoneSnapshotData,
+  ZoneStateChange,
+} from './director/zone/zone-event-envelope.js';
+export {
+  parseZoneEnvelope,
+  parseZoneEnvelopeJson,
+  priorityFor as zonePriorityFor,
+  ZoneEventEnvelopeParseError,
+} from './director/zone/zone-event-envelope.js';
+export type {
+  IZoneEventBridge,
+  ZoneEventBridgeStatus,
+  ZoneEventBridgeStats,
+} from './director/zone/zone-event-bridge.js';
+export { RESOURCE_ZONE_EVENT_BRIDGE } from './director/zone/zone-event-bridge.js';
+export { MockZoneBridge } from './director/zone/mock-zone-bridge.js';
+export type {
+  SSEZoneBridgeOptions,
+  SSEZoneBridgeEventSource,
+} from './director/zone/sse-zone-bridge.js';
+export { SSEZoneBridge } from './director/zone/sse-zone-bridge.js';
+export type {
+  ZoneEventLog,
+  ZoneEventLogEntry,
+} from './director/zone/zone-event-log.js';
+export {
+  RESOURCE_ZONE_EVENT_LOG,
+  ZONE_RING_SIZE,
+  createZoneEventLog,
+  getOrCreateZoneEntry,
+  pushZoneEvent,
+} from './director/zone/zone-event-log.js';
+export type { DirectorZoneStateResource } from './director/zone/zone-state-resource.js';
+export {
+  RESOURCE_DIRECTOR_ZONE_STATE,
+  createDirectorZoneStateResource,
+  getOrCreateZoneStateMap,
+  applyZoneStateChanges,
+  replaceZoneStateFromSnapshot,
+} from './director/zone/zone-state-resource.js';
+export type { ZoneEventSystemOptions } from './director/zone/zone-event-system.js';
+export { ZoneEventSystem } from './director/zone/zone-event-system.js';
+
 // Combat (Phase 7): health, damage, simple AI, attack. Engine-side
 // primitives that the actual Survivor port will use. The full
 // Survivor wave engine sits on top of these in subsequent sessions.
