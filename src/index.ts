@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.37.0';
+export const LOOM_ENGINE_VERSION = '0.38.0';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -181,6 +181,18 @@ export type {
   FloatingTextRenderState,
   FloatingTextOptions,
 } from './runtime/floating-text.js';
+// 0.38.0 - persistent storage adapter (localStorage / in-memory key/value).
+export {
+  PersistentStorage,
+  MemoryStorageBackend,
+  LocalStorageBackend,
+  RESOURCE_PERSISTENT_STORAGE,
+} from './runtime/persistent-storage.js';
+export type {
+  IStorageBackend,
+  PersistentStorageOptions,
+  LocalStorageBackendOptions,
+} from './runtime/persistent-storage.js';
 export {
   ResourceRegistry,
   createTimeResource,

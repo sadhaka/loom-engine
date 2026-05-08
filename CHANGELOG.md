@@ -7,6 +7,89 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.38.0 - 2026-05-08
+
+**PersistentStorage - browser/SSR-safe key/value adapter for engine state.**
+0.26.0 WorldSnapshot produces an `IPersistableResource` envelope;
+PersistentStorage gives consumers a place to put it. Three pieces:
+a minimal async `IStorageBackend` contract, two concrete backends
+(`MemoryStorageBackend` for tests / SSR / fallback and
+`LocalStorageBackend` for browser `window.localStorage`), and the
+`PersistentStorage` facade that adds JSON encoding, namespacing, and
+typed `WorldSnapshot` helpers on top.
+
+Async-only API so the same code runs against synchronous
+localStorage today and asynchronous IndexedDB / network backends
+tomorrow without consumers branching.
+
+### Added
+
+- `src/runtime/persistent-storage.ts`:
+  - `IStorageBackend` interface: `get / set / remove / keys / clear`,
+    all returning Promises.
+  - `MemoryStorageBackend` - Map-backed, useful for tests + SSR.
+  - `LocalStorageBackend` - wraps `window.localStorage` with optional
+    per-instance `prefix` for safe sharing. Falls back to in-memory
+    if no Storage is available (Node SSR boot path). `isLive()`
+    surfaces which mode it's in.
+  - `PersistentStorage` facade:
+    - `save(key, data)` / `load(key)` - JSON-encoded read/write.
+      Corrupted JSON returns null instead of throwing.
+    - `hasKey(key)` / `remove(key)` / `listKeys()` / `clearAll()`.
+    - `saveSnapshot(key, snap)` / `loadSnapshot(key)` - typed
+      WorldSnapshot helpers; loadSnapshot validates the envelope
+      shape and returns null on mismatch (defensive against
+      corrupted localStorage).
+    - `dispose()` - locks subsequent ops; the underlying backend is
+      NOT disposed (consumer owns its lifetime).
+  - Optional `namespace` on the facade, separate from the backend's
+    `prefix`, so multiple subsystems can share one localStorage.
+- `RESOURCE_PERSISTENT_STORAGE` constant.
+
+### Tests
+
+884 -> 914 (30 new in tests/persistent-storage.test.ts):
+- RESOURCE_PERSISTENT_STORAGE stable string.
+- MemoryStorageBackend: starts empty; set+get; overwrite; remove;
+  keys; clear.
+- LocalStorageBackend: provided Storage; prefix scoping; keys
+  prefix-stripped; clear with prefix only clears scoped keys; falls
+  back to in-memory; missing key returns null; remove on missing is
+  no-op.
+- PersistentStorage facade: save+load roundtrip; missing key null;
+  corrupted JSON null; hasKey; remove; namespace isolation;
+  listKeys namespace-stripped; clearAll within namespace; dispose
+  no-op; circular reference rejects.
+- WorldSnapshot helpers: roundtrip envelope; missing snapshot null;
+  non-snapshot payload null; wrong field types null; works against
+  LocalStorageBackend with prefix + namespace.
+- IStorageBackend can be implemented externally (custom Counter
+  backend example).
+
+### Backwards compatibility
+
+Pure addition. Engine consumers opt in:
+
+```ts
+import {
+  PersistentStorage, LocalStorageBackend,
+  serializeWorldSnapshot, deserializeWorldSnapshot,
+} from '@sadhaka/loom-engine';
+
+var ps = PersistentStorage.create({
+  backend: new LocalStorageBackend({ prefix: 'twt:' }),
+  namespace: 'snap:',
+});
+
+// Save on quit:
+var snap = serializeWorldSnapshot(world.resources, '0.38.0');
+await ps.saveSnapshot('autosave', snap);
+
+// Load on boot:
+var prior = await ps.loadSnapshot('autosave');
+if (prior) deserializeWorldSnapshot(world.resources, prior);
+```
+
 ## 0.37.0 - 2026-05-08
 
 **FloatingText - HUD primitive for damage numbers / floating labels.**
