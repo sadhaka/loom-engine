@@ -7,6 +7,83 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.49.0 - 2026-05-09
+
+**Spline - 2D path evaluators for camera paths and animations.**
+The engine has Tween (single scalar) and TweenChain (sequenced
+scalars). Splines fill the missing gap: smooth 2D path evaluation
+for cinematic camera dollies, NPC walk paths, projectile arcs,
+HUD reveals along curves.
+
+Three evaluators, all pure functions taking `Vec2Like` { x, y }
+control points and returning a fresh { x, y } for `t in [0, 1]`:
+
+- `linearPath` — straight-line segments through control points.
+- `catmullRomPath` — C^1-continuous curve passing through every
+  control point. Default centripetal tension (0.5) for
+  overshoot-free shapes on arbitrary point distributions.
+- `hermitePath` — explicit per-point tangents for precise slope
+  control (arc trajectories with target angles).
+
+### Added
+
+- `src/runtime/spline.ts`:
+  - `linearPath(points, t)` — linear interpolation across N
+    points; t spans the full path; segments share parameter
+    range equally.
+  - `catmullRomPath(points, t, opts?)` — Catmull-Rom with
+    `tension` (default 0.5) + `closed` loop support. <2 points
+    falls back to linear; phantom endpoints synthesized for open
+    paths.
+  - `hermitePath(keys, t)` — Hermite cubic with explicit `{ p, m }`
+    keys (position + outgoing tangent vector).
+  - All three: t outside [0, 1] clamps to endpoints; empty input
+    returns origin; single point returns itself; returns fresh
+    object each call (no shared mutation).
+- `Vec2Like`, `HermiteKey`, `SplineOptions` types exported.
+- `RESOURCE_SPLINE` constant.
+
+### Tests
+
+1185 -> 1210 (25 new in tests/spline.test.ts):
+- RESOURCE_SPLINE stable string.
+- linearPath: empty / single / 2-point / 3-point segment selection;
+  endpoints; midpoint; out-of-range clamps; fresh object.
+- catmullRomPath: degenerate cases (empty / single / 2-point);
+  endpoints exact; passes through every interior control point;
+  shape differs from linear at non-control t; closed loop wraps;
+  out-of-range clamps.
+- hermitePath: empty / single; endpoints; zero-tangent case
+  (reduces to linear midpoint); strong outgoing tangent shapes
+  curve; t outside [0, 1] clamps; 3-key segment selection;
+  smooth motion (no discontinuous jumps); fresh object each call.
+
+### Backwards compatibility
+
+Pure addition. Engine consumers opt in:
+
+```ts
+import { catmullRomPath, hermitePath } from '@sadhaka/loom-engine';
+
+// Cinematic camera dolly through 5 waypoints:
+var waypoints = [
+  { x: 0, y: 0 }, { x: 50, y: 30 }, { x: 100, y: 80 },
+  { x: 150, y: 30 }, { x: 200, y: 0 },
+];
+function cameraAt(t) {
+  return catmullRomPath(waypoints, t);
+}
+
+// Projectile arc with explicit launch + landing tangents:
+var arc = [
+  { p: { x: 0,   y: 0 }, m: { x: 50,  y: -100 } }, // launch up
+  { p: { x: 100, y: 0 }, m: { x: 50,  y:  100 } }, // land down
+];
+function projectileAt(t) {
+  return hermitePath(arc, t);
+}
+```
+
 ## 0.48.0 - 2026-05-09
 
 **TimerScheduler - engine-clock-driven setTimeout / setInterval.**

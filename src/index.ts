@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.48.0';
+export const LOOM_ENGINE_VERSION = '0.49.0';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -267,6 +267,18 @@ export type { TweenChainStartOptions } from './runtime/tween-chain.js';
 // 0.48.0 - timer scheduler (engine-clock-driven setTimeout / setInterval).
 export { TimerScheduler, RESOURCE_TIMER_SCHEDULER } from './runtime/timer-scheduler.js';
 export type { TimerHandle, TimerSchedulerOptions } from './runtime/timer-scheduler.js';
+// 0.49.0 - spline path evaluators (linear / Catmull-Rom / Hermite).
+export {
+  linearPath,
+  catmullRomPath,
+  hermitePath,
+  RESOURCE_SPLINE,
+} from './runtime/spline.js';
+export type {
+  Vec2Like,
+  HermiteKey,
+  SplineOptions,
+} from './runtime/spline.js';
 export {
   ResourceRegistry,
   createTimeResource,
