@@ -229,10 +229,6 @@ export {
 // PannerNodes, and ships an AudioListener resource + system that
 // pushes the local character's transform into the listener pose
 // each frame.
-//
-// Track B (cue catalog + music director + asset cache) re-exports
-// land in their own block when that branch merges. This block is
-// independently shippable.
 export type {
   PositionalPlayOptions,
   AudioListenerPose,
@@ -251,6 +247,33 @@ export {
   DEFAULT_LISTENER_UP,
 } from './audio/audio-listener-resource.js';
 export { SpatialAudioSystem } from './audio/spatial-audio-system.js';
+
+// ===== Phase 17 audio - assets + cues + music (Track B) =====
+//
+// LOOM-AUDIO-SPEC §4. Asset cache + URL fetch+decode loader, named
+// cue catalog routing through AudioBus / SpatialAudioBus, and a music
+// director with fade and crossfade. The catalog and music director
+// consume SpatialAudioBus + PositionalPlayOptions + SpatialSourceHandle
+// from Track A's spatial-audio-bus.ts (now both merged into 0.15.0).
+export {
+  AudioAssetCache,
+  createAudioAssetCache,
+  RESOURCE_AUDIO_ASSET_CACHE,
+} from './audio/audio-asset-cache.js';
+export type { AudioAssetManifest } from './audio/audio-asset-loader.js';
+export { AudioAssetLoader } from './audio/audio-asset-loader.js';
+export type {
+  CueDefinition,
+  CuePlayOptions,
+} from './audio/cue-catalog.js';
+export {
+  CueCatalog,
+  RESOURCE_CUE_CATALOG,
+} from './audio/cue-catalog.js';
+export {
+  MusicDirector,
+  RESOURCE_MUSIC_DIRECTOR,
+} from './audio/music-director.js';
 
 // Input (Phase 5): unified keyboard / mouse / touch with frame-
 // coherent snapshot resource.
