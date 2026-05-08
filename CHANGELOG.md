@@ -7,6 +7,83 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.47.0 - 2026-05-09
+
+**TweenChain - sequential composition of tweens, delays, and callbacks.**
+Tween (0.29.0) animates a single scalar from A to B over T seconds.
+TweenChain composes a sequence of those steps, plus delays and
+instant callbacks, into a single timeline. Strictly sequential -
+parallel animations are still done via two Tweens / two chains
+running side-by-side, which keeps this primitive small.
+
+Loop support: `start({ loop: true })` repeats forever;
+`start({ loop: 3 })` repeats 3 additional times (4 total runs).
+
+### Added
+
+- `src/runtime/tween-chain.ts` - `TweenChain` class:
+  - Fluent builder: `.to(from, to, durSec, onUpdate, easing?)`,
+    `.delay(durSec)`, `.call(fn)`. Each returns the chain for
+    chaining.
+  - `start(opts?)` — opts: `onComplete` callback fired exactly
+    once when the chain finishes (never on cancel; never on
+    `loop: true`); `loop` boolean or positive integer.
+  - `update(dtSeconds)` — advances; spans dt across multiple steps
+    in a single call so a large dt finishes the chain cleanly.
+  - `cancel()` / `isActive()` / `hasCompleted()`.
+  - `totalDuration()` — sums tween + delay durations (callback = 0).
+  - `stepCount()` — total step count.
+  - Defensive: NaN / negative / zero dt ignored; throwing onUpdate
+    or call-step callback isolated; re-start() resets cursor and
+    `fired` state on call-steps; zero-duration tween snaps to end
+    value; zero-duration delay skips instantly.
+- `TweenChainStartOptions` type exported.
+- `RESOURCE_TWEEN_CHAIN` constant.
+
+### Tests
+
+1130 -> 1155 (25 new in tests/tween-chain.test.ts):
+- RESOURCE_TWEEN_CHAIN stable string.
+- Update before start is no-op.
+- Single tween animates 0 -> end across updates.
+- Midpoint linear interpolation.
+- Easing applied to sample value.
+- Delay holds before next tween.
+- Callback step fires once at correct cursor position.
+- onComplete fires exactly once at finish.
+- Cancel mid-chain stops execution; onComplete does NOT fire.
+- Empty chain completes on first update.
+- totalDuration sums durations; stepCount accurate.
+- Zero-duration tween snaps; zero-duration delay skips.
+- loop=true repeats indefinitely (no onComplete).
+- loop=N repeats N additional times.
+- Cancel + re-start works.
+- Throwing onUpdate / callback isolated.
+- Single update can span multiple steps.
+- Fluent API returns the same instance.
+- NaN / negative dt ignored.
+- Re-start resets call-step fired state.
+- Tween after delay starts at correct from value.
+
+### Backwards compatibility
+
+Pure addition. Engine consumers opt in:
+
+```ts
+import { TweenChain } from '@sadhaka/loom-engine';
+
+var intro = TweenChain.create()
+  .to(0, 1, 0.4, function (v) { logo.alpha = v; }, 'easeOutCubic')
+  .delay(1.0)
+  .call(function () { audio.play('logo-sting'); })
+  .to(1, 0, 0.6, function (v) { logo.alpha = v; }, 'easeInQuad');
+
+intro.start({ onComplete: function () { showMainMenu(); } });
+
+// Per frame:
+intro.update(deltaTimeSeconds);
+```
+
 ## 0.46.0 - 2026-05-09
 
 **Localization - string table + locale + parameter interpolation.**

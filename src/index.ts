@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.46.0';
+export const LOOM_ENGINE_VERSION = '0.47.0';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -261,6 +261,9 @@ export type {
   LocalizationOptions,
   PluralForms,
 } from './runtime/localization.js';
+// 0.47.0 - tween chain (sequential composition of tweens / delays / callbacks).
+export { TweenChain, RESOURCE_TWEEN_CHAIN } from './runtime/tween-chain.js';
+export type { TweenChainStartOptions } from './runtime/tween-chain.js';
 export {
   ResourceRegistry,
   createTimeResource,
