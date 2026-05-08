@@ -117,9 +117,9 @@ var recovery = new SnapshotRecoveryHelper({
 });
 ```
 
-Audited as Low-severity finding L-02 in
-[`SECURITY-AUDIT-0.10.0.md`](./SECURITY-AUDIT-0.10.0.md). The
-override hooks have always existed; 0.10.1 documents them.
+The override hooks have always existed; 0.10.1 documents them.
+Internal security audit references are kept in the repository, not
+shipped with the npm package.
 
 ## Status
 

@@ -1,0 +1,46 @@
+version: 2
+
+# Dependabot configuration for sadhaka/loom-engine.
+#
+# Closes 12.6 audit finding L-11 (subset). Auto-PRs for npm devDeps
+# updates and GitHub Actions version bumps. Both ecosystems are
+# checked weekly so security patches surface within 7 days.
+#
+# npm runtime deps: ZERO (the engine ships with no runtime deps; the
+# dist tarball is self-contained TypeScript-compiled JS). Dependabot
+# only touches devDependencies (typedoc, tsc, tsx).
+#
+# GitHub Actions: pin updates so peaceiris/actions-gh-pages and
+# actions/setup-node etc stay current with security patches.
+
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Asia/Bangkok
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - automated
+    commit-message:
+      prefix: chore
+      include: scope
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Asia/Bangkok
+    open-pull-requests-limit: 3
+    labels:
+      - ci
+      - dependencies
+      - automated
+    commit-message:
+      prefix: ci
+      include: scope

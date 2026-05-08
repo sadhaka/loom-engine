@@ -16,7 +16,8 @@
   "files": [
     "dist",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "COMMERCIAL_LICENSE_TERMS.md"
   ],
   "keywords": [
     "game-engine",
