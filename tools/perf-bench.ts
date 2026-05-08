@@ -1,437 +1,364 @@
-// Loom Engine - Phase 9.1 perf microbenchmark.
+// Loom Engine - Phase 14.3 perf bench (Node entry).
 //
-// Synthetic CPU-cost measurement of the per-frame engine loop. Runs
-// the same systems the /arpg-loom/ plaza uses (transform + sprite +
-// animation + particle simulation + sprite render + particle render)
-// against a counted entity set, with a no-op FakeDevice that records
-// draw calls but does not paint.
+// Drives the standardized scenarios in perf-suite.ts, formats a report
+// via perf-report.ts, and writes JSON + Markdown output to
+// tools/bench-results/<timestamp>.{json,md}. The browser entry
+// (perf-bench-browser.ts) calls the same suite but renders to DOM
+// instead of disk.
 //
-// We cannot drive a real iPhone SE or Pixel 3a from this Node bench;
-// what this bench DOES measure is the JS-side cost of the hot loop
-// in milliseconds, separated from the device's drawImage cost. The
-// real-device read-out is the JS budget per frame BEFORE GPU /
-// rasterizer / compositor cost. If the JS is over 16.7ms here, no
-// amount of GPU optimization will hit 60fps. If the JS is well
-// under 16.7ms, the residual cost on a real device is up to the
-// canvas backend.
+// The Phase 9.1 perf-bench.ts that this file replaces ran a fixed
+// set of small/medium/large/xlarge sprite scenarios + a single
+// tint-alloc-churn microbench. That older shape is now produced by
+// the 'sprite-scaling' + 'tint-alloc-churn' scenarios here, with
+// larger entity counts (50k) extending the curve. Pre-Phase-14.3
+// log lines are NOT byte-compatible with the new format; the JSON
+// schema (REPORT_SCHEMA_VERSION = 1) is the stable contract.
 //
-// Run from the engine repo:
-//   npx tsx tools/perf-bench.ts
+// CLI:
+//   npx tsx tools/perf-bench.ts                         # all scenarios -> bench-results/
+//   npx tsx tools/perf-bench.ts --out my-run.json       # specific output path
+//   npx tsx tools/perf-bench.ts --format md             # markdown to stdout, no file
+//   npx tsx tools/perf-bench.ts --format json           # JSON to stdout, no file
+//   npx tsx tools/perf-bench.ts --label "MacBook M2"    # tag the report
+//   npx tsx tools/perf-bench.ts --compare a.json b.json # diff two reports -> stdout
 //
-// Optional env vars:
-//   BENCH_FRAMES=1800     (default 1800 = 30s @ 60fps)
-//   BENCH_WARMUP=120      (default 120 = 2s at 60fps)
-//   BENCH_SCENARIOS=small,medium,large,xlarge  (default all)
+// Environment overrides:
+//   BENCH_FRAMES=1800           default 1800 (30s @ 60fps)
+//   BENCH_WARMUP=120            default 120 (2s @ 60fps)
+//   BENCH_SCENARIOS=sprite-scaling,sse-drain    filter by id
+//   BENCH_LABEL="iPhone SE"     tag the report (overridden by --label)
+//
+// To pick up heap metrics, launch with --expose-gc:
+//   node --expose-gc --import=tsx tools/perf-bench.ts
+// Or run via the wrapper script which does that for you:
+//   bash tools/run-bench.sh
+//   pwsh -File tools/run-bench.ps1
 
-import { performance } from 'node:perf_hooks';
+import { performance as nodePerformance } from 'node:perf_hooks';
+import { mkdirSync, writeFileSync, readFileSync, existsSync } from 'node:fs';
+import { join, dirname, isAbsolute, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import * as os from 'node:os';
 
 import {
-  World,
-  POOL_TRANSFORM,
-  POOL_SPRITE,
-  TransformPool,
-  SpritePool,
-  SpriteRenderSystem,
-  SYSTEM_PHASE_ANIMATION,
-  SYSTEM_PHASE_INPUT,
-  SYSTEM_PHASE_RENDER,
-  createTimeResource,
-  createCamera,
-  RESOURCE_TIME,
-  RESOURCE_CAMERA,
-  RESOURCE_DEVICE,
-  COLOR_KNOT_INT,
-  InputManager,
-  RESOURCE_INPUT_MANAGER,
-  RESOURCE_INPUT,
-  InputSystem,
-  type System,
-  type IGraphicsDevice,
-  type CameraView,
-  type AtlasDescriptor,
-  type AtlasHandle,
-  type ColorRGBA,
-  type EntityId,
-} from '../src/index.js';
-import { AnimationSystem, POOL_ANIMATION } from '../src/systems/animation-system.js';
-import { AnimationStatePool } from '../src/animation/animation-state-pool.js';
-import type { SpriteSheetManifest } from '../src/asset/sprite-sheet-loader.js';
+  makeHeapHelper,
+  runSpriteScaling,
+  runAnimationScaling,
+  runParticleStress,
+  runSseDrain,
+  runEcsIteration,
+  runAssetLoad,
+  runMemorySustained,
+  runTintAllocChurn,
+  SPRITE_SCALING_DEFAULT_COUNTS,
+  ANIMATION_SCALING_DEFAULT_COUNTS,
+  PARTICLE_STRESS_DEFAULT_BUDGETS,
+  SSE_DRAIN_DEFAULT_RATES,
+  ECS_ITERATION_DEFAULT_COUNTS,
+  SCENARIO_IDS,
+  isScenarioId,
+  type ScenarioResult,
+  type ScenarioId,
+} from './perf-suite.js';
+import {
+  buildReport,
+  reportToJson,
+  reportToMarkdown,
+  reportToConsole,
+  compareReports,
+  diffToMarkdown,
+  type BenchReport,
+  type ReportEnvironment,
+} from './perf-report.js';
 
-// ----- Headless graphics device. Records draw counts only. -----
-
-class HeadlessDevice implements IGraphicsDevice {
-  readonly canvas: HTMLCanvasElement = {} as HTMLCanvasElement;
-  readonly viewportWidth: number = 640;
-  readonly viewportHeight: number = 400;
-  private drawCallCount: number = 0;
-  private cameraSet: boolean = false;
-
-  beginFrame(): void { this.drawCallCount = 0; }
-  endFrame(): void {}
-  setCamera(_c: Readonly<CameraView>): void { this.cameraSet = true; }
-  registerAtlas(_d: AtlasDescriptor): AtlasHandle { return 0; }
-  releaseAtlas(_h: AtlasHandle): void {}
-  drawSprite(
-    _x: number, _y: number, _z: number,
-    _atlas: AtlasHandle, _frame: number,
-    _tint?: Readonly<ColorRGBA>,
-  ): void { this.drawCallCount++; }
-  drawTile(_x: number, _y: number, _a: AtlasHandle, _f: number): void { this.drawCallCount++; }
-  drawText(): void { this.drawCallCount++; }
-  drawParticle(): void { this.drawCallCount++; }
-  getDrawCallCount(): number { return this.drawCallCount; }
+// Make performance.now resolvable inside perf-suite.ts when running
+// under Node. The suite uses globalThis.performance; the perf_hooks
+// module exposes it under that same name on modern Node, but importing
+// it here ensures the polyfill path in nowMs() never fires.
+if (typeof (globalThis as { performance?: Performance }).performance === 'undefined') {
+  (globalThis as { performance?: Performance }).performance = nodePerformance as unknown as Performance;
 }
 
-// ----- Scenario builder. Creates N entities walking around the plaza. -----
-
-interface BenchScenario {
-  name: string;
-  entityCount: number;
-  tintedFraction: number;  // 0..1 - fraction of sprites with a tint set
-  movePerTick: number;     // world units the entity drifts per tick
+interface CliArgs {
+  out: string | null;
+  format: 'json' | 'md' | 'console' | 'auto';
+  label: string | null;
+  compareBaseline: string | null;
+  compareCurrent: string | null;
+  // True when the user passed --no-write; we still print the report
+  // but skip writing to disk.
+  noWrite: boolean;
 }
 
-function buildManifest(): SpriteSheetManifest {
-  // 8-frame walk cycle, per-frame 100ms duration, looping.
-  const frames = [];
-  for (let i = 0; i < 8; i++) {
-    frames.push({ x: i * 16, y: 0, w: 16, h: 32, name: 'walk_' + i, duration_ms: 100 });
-  }
-  return {
-    name: 'bench-knight',
-    image: 'walk.png',
-    frames,
-    anchor: { x: 8, y: 32 },
-    fps: 8,
-    clips: [
-      { name: 'walk', frames: [0, 1, 2, 3, 4, 5, 6, 7], loop: true },
-    ],
+function parseArgs(argv: string[]): CliArgs {
+  const out: CliArgs = {
+    out: null,
+    format: 'auto',
+    label: null,
+    compareBaseline: null,
+    compareCurrent: null,
+    noWrite: false,
   };
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (a === '--out') { out.out = argv[++i] ?? null; }
+    else if (a === '--format') {
+      const v = argv[++i] ?? 'auto';
+      if (v === 'json' || v === 'md' || v === 'console' || v === 'auto') out.format = v;
+      else throw new Error('--format must be one of: json, md, console, auto');
+    }
+    else if (a === '--label') { out.label = argv[++i] ?? null; }
+    else if (a === '--no-write') { out.noWrite = true; }
+    else if (a === '--compare') {
+      out.compareBaseline = argv[++i] ?? null;
+      out.compareCurrent = argv[++i] ?? null;
+      if (!out.compareBaseline || !out.compareCurrent) {
+        throw new Error('--compare requires two paths: --compare BASELINE CURRENT');
+      }
+    }
+    else if (a === '-h' || a === '--help') {
+      printHelp();
+      process.exit(0);
+    }
+    else if (a && a.startsWith('-')) {
+      throw new Error('unknown flag: ' + a);
+    }
+  }
+  return out;
 }
 
-function buildScenario(
-  scen: BenchScenario,
-): { world: World; device: HeadlessDevice; entities: EntityId[]; input: InputManager } {
-  const world = new World();
-  const device = new HeadlessDevice();
-  const camera = createCamera(640, 400);
-  const time = createTimeResource();
-  const input = new InputManager();
+function printHelp(): void {
+  console.log('Loom Engine perf-bench');
+  console.log('');
+  console.log('Usage:');
+  console.log('  npx tsx tools/perf-bench.ts [options]');
+  console.log('');
+  console.log('Options:');
+  console.log('  --out <path>           write JSON + MD to a specific path (.json suffix appended/replaced)');
+  console.log('  --format <fmt>         json | md | console | auto (default: auto)');
+  console.log('  --label <text>         human-readable label tagging this run');
+  console.log('  --no-write             do not write to disk; print only');
+  console.log('  --compare <a> <b>      diff two report JSONs and print the markdown diff');
+  console.log('  -h, --help             this message');
+  console.log('');
+  console.log('Environment:');
+  console.log('  BENCH_FRAMES           per-scenario frames (default 1800)');
+  console.log('  BENCH_WARMUP           warmup frames (default 120)');
+  console.log('  BENCH_SCENARIOS        comma-separated id filter, e.g. sprite-scaling,sse-drain');
+  console.log('  BENCH_LABEL            label override (--label takes precedence)');
+}
 
-  world.resources.set(RESOURCE_TIME, time);
-  world.resources.set(RESOURCE_CAMERA, camera);
-  world.resources.set(RESOURCE_DEVICE, device);
-  world.resources.set(RESOURCE_INPUT_MANAGER, input);
-  world.resources.set(RESOURCE_INPUT, input.snapshot());
+function envInt(name: string, fallback: number): number {
+  const v = process.env[name];
+  if (!v) return fallback;
+  const n = parseInt(v, 10);
+  return Number.isFinite(n) && n >= 0 ? n : fallback;
+}
 
-  const transforms = new TransformPool();
-  const sprites = new SpritePool();
-  const animations = new AnimationStatePool();
-  world.registerPool(POOL_TRANSFORM, transforms);
-  world.registerPool(POOL_SPRITE, sprites);
-  world.registerPool(POOL_ANIMATION, animations);
-
-  // Wire InputSystem so per-frame snapshot/beginFrame allocations
-  // appear in the heap delta. Plaza-walk parity.
-  world.addSystem(new InputSystem(), SYSTEM_PHASE_INPUT);
-  world.addSystem(new AnimationSystem(), SYSTEM_PHASE_ANIMATION);
-  world.addSystem(new SpriteRenderSystem(), SYSTEM_PHASE_RENDER);
-
-  const manifest = buildManifest();
-  const tintedCount = Math.round(scen.entityCount * scen.tintedFraction);
-  const entities: EntityId[] = [];
-  for (let i = 0; i < scen.entityCount; i++) {
-    const e = world.createEntity();
-    entities.push(e);
-    // Distribute roughly uniformly across a 32x16 plaza area so
-    // depth-sort sees varied (x+y) keys, not a single value.
-    const x = (i % 32);
-    const y = Math.floor(i / 32);
-    transforms.attach(e, x, y, 0);
-    if (i < tintedCount) {
-      sprites.attach(e, 0, 0, COLOR_KNOT_INT);
+function selectedScenarios(): ScenarioId[] {
+  const env = process.env['BENCH_SCENARIOS'] ?? '';
+  const filter = env.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+  if (filter.length === 0) return SCENARIO_IDS.slice();
+  const out: ScenarioId[] = [];
+  for (const f of filter) {
+    if (isScenarioId(f)) {
+      out.push(f);
     } else {
-      sprites.attach(e, 0, 0);
+      console.warn('# warn: unknown scenario id "' + f + '" - ignoring. Valid ids: ' + SCENARIO_IDS.join(', '));
     }
-    animations.play(e, manifest, 'walk');
   }
-  return { world, device, entities, input };
+  return out;
 }
 
-// ----- Stats helpers -----
+function logProgress(line: string): void {
+  // Single line per progress event; goes to stderr so --format json
+  // stdout can be piped without interleaving.
+  process.stderr.write('[bench] ' + line + '\n');
+}
 
-interface FrameStats {
+async function runAll(opts: {
   frames: number;
-  meanMs: number;
-  p50Ms: number;
-  p95Ms: number;
-  p99Ms: number;
-  maxMs: number;
-  fpsMean: number;
-  fpsP95: number;
-  slowFrames: number;        // count of frames > 16.7ms
-  slowFraction: number;      // 0..1
-  longTaskMs: number;        // total ms spent in frames > 50ms
-  budget16Pct: number;       // mean / 16.7 * 100
-}
-
-function summarize(samples: number[]): FrameStats {
-  const sorted = samples.slice().sort((a, b) => a - b);
-  const n = sorted.length;
-  let sum = 0;
-  for (let i = 0; i < n; i++) sum += sorted[i] ?? 0;
-  const meanMs = sum / Math.max(1, n);
-  const pick = (q: number) => sorted[Math.min(n - 1, Math.floor(n * q))] ?? 0;
-  const p50 = pick(0.5);
-  const p95 = pick(0.95);
-  const p99 = pick(0.99);
-  const maxMs = sorted[n - 1] ?? 0;
-  let slowFrames = 0;
-  let longTaskMs = 0;
-  for (let i = 0; i < n; i++) {
-    const v = sorted[i] ?? 0;
-    if (v > 16.7) slowFrames++;
-    if (v > 50) longTaskMs += v;
+  warmup: number;
+  scenarios: ScenarioId[];
+  label: string | null;
+}): Promise<BenchReport> {
+  const heap = makeHeapHelper();
+  if (!heap.available) {
+    logProgress('heap metrics unavailable - relaunch with --expose-gc for heapDelta + peakHeap');
   }
-  return {
-    frames: n,
-    meanMs,
-    p50Ms: p50,
-    p95Ms: p95,
-    p99Ms: p99,
-    maxMs,
-    fpsMean: 1000 / Math.max(0.001, meanMs),
-    fpsP95: 1000 / Math.max(0.001, p95),
-    slowFrames,
-    slowFraction: slowFrames / Math.max(1, n),
-    longTaskMs,
-    budget16Pct: (meanMs / 16.7) * 100,
+
+  const results: ScenarioResult[] = [];
+
+  for (const id of opts.scenarios) {
+    if (id === 'sprite-scaling') {
+      for (const n of SPRITE_SCALING_DEFAULT_COUNTS) {
+        logProgress('sprite-scaling entities=' + n);
+        results.push(runSpriteScaling({
+          entityCount: n, frames: opts.frames, warmup: opts.warmup, heap,
+        }));
+      }
+    } else if (id === 'animation-scaling') {
+      for (const n of ANIMATION_SCALING_DEFAULT_COUNTS) {
+        logProgress('animation-scaling entities=' + n);
+        results.push(runAnimationScaling({
+          entityCount: n, frames: opts.frames, warmup: opts.warmup, heap,
+        }));
+      }
+    } else if (id === 'particle-stress') {
+      for (const n of PARTICLE_STRESS_DEFAULT_BUDGETS) {
+        logProgress('particle-stress budget=' + n);
+        results.push(runParticleStress({
+          particleBudget: n, frames: opts.frames, warmup: opts.warmup, heap,
+        }));
+      }
+    } else if (id === 'sse-drain') {
+      for (const n of SSE_DRAIN_DEFAULT_RATES) {
+        logProgress('sse-drain eventsPerFrame=' + n);
+        results.push(runSseDrain({
+          eventsPerFrame: n, frames: opts.frames, warmup: opts.warmup, heap,
+        }));
+      }
+    } else if (id === 'ecs-iteration') {
+      for (const n of ECS_ITERATION_DEFAULT_COUNTS) {
+        logProgress('ecs-iteration entities=' + n);
+        const iter = n >= 100000 ? 200 : n >= 10000 ? 1000 : 5000;
+        results.push(runEcsIteration({
+          entityCount: n, iterations: iter, heap,
+        }));
+      }
+    } else if (id === 'asset-load') {
+      logProgress('asset-load iterations=200');
+      results.push(await runAssetLoad({ iterations: 200, heap }));
+    } else if (id === 'memory-sustained') {
+      logProgress('memory-sustained entities=1000 frames=3600');
+      results.push(runMemorySustained({
+        entityCount: 1000, durationFrames: 3600, warmup: opts.warmup, heap,
+      }));
+    } else if (id === 'tint-alloc-churn') {
+      logProgress('tint-alloc-churn ticks=5000');
+      results.push(runTintAllocChurn({ ticks: 5000, warmup: 200, heap }));
+    }
+  }
+
+  const label = opts.label ?? process.env['BENCH_LABEL'] ?? null;
+  // Build env conditionally so exactOptionalPropertyTypes is happy.
+  const env: ReportEnvironment = {
+    runtime: 'node',
+    nodeVersion: process.version,
+    platform: process.platform + '/' + process.arch,
+    hardwareConcurrency: os.cpus().length,
+    backend: 'headless',
   };
+  if (label) env.label = label;
+  return buildReport({
+    environment: env,
+    frames: opts.frames,
+    warmup: opts.warmup,
+    scenarios: opts.scenarios.slice(),
+    results,
+  });
 }
 
-// ----- One run of one scenario -----
-
-interface RunResult {
-  scenario: BenchScenario;
-  stats: FrameStats;
-  drawCallsPerFrame: number;
-  heapUsedDeltaKb: number | null;
-  // Peak mid-run heap above the post-warmup baseline. This is the
-  // metric alloc-churn fixes actually move - residual heap after a
-  // final GC is identical either way; what changes is how high heap
-  // climbs between collections, which on mobile maps to GC pause
-  // frequency.
-  peakHeapAboveBaselineKb: number | null;
+function timestampSlug(): string {
+  const d = new Date();
+  // ISO-ish but filename-safe: 2026-05-08T193045Z
+  const pad = function (n: number): string { return n < 10 ? '0' + n : '' + n; };
+  return d.getUTCFullYear() + '-'
+    + pad(d.getUTCMonth() + 1) + '-'
+    + pad(d.getUTCDate()) + 'T'
+    + pad(d.getUTCHours())
+    + pad(d.getUTCMinutes())
+    + pad(d.getUTCSeconds()) + 'Z';
 }
 
-function runScenario(scen: BenchScenario, frames: number, warmup: number): RunResult {
-  const { world, device, input } = buildScenario(scen);
-  const dt = 1 / 60;
-
-  // Force GC if --expose-gc was passed; record a baseline heap.
-  let heapBefore: number | null = null;
-  let heapAfter: number | null = null;
-  if (typeof (globalThis as { gc?: () => void }).gc === 'function') {
-    (globalThis as { gc?: () => void }).gc!();
-    heapBefore = process.memoryUsage().heapUsed;
-  }
-
-  // Plaza-walk simulation: hold KeyD continuously, swap direction
-  // every 90 frames to exercise pressed/released accumulator paths.
-  input.injectKeyDown('KeyD');
-
-  // Warmup so JIT settles.
-  for (let i = 0; i < warmup; i++) {
-    device.beginFrame();
-    world.update(dt);
-    device.endFrame();
-  }
-
-  // Re-baseline heap AFTER warmup so JIT compilation + first-time
-  // allocations don't dominate the per-tick rate. peakHeap tracks
-  // the highest heap-used value sampled mid-run; that's the metric
-  // alloc-churn fixes move (residual after a final gc is identical).
-  let peakHeapKb: number | null = null;
-  let warmupBaselineHeap: number | null = null;
-  if (typeof (globalThis as { gc?: () => void }).gc === 'function') {
-    warmupBaselineHeap = process.memoryUsage().heapUsed;
-    peakHeapKb = 0;
-  }
-
-  const samples: number[] = new Array(frames);
-  let heldKey: 'KeyD' | 'KeyA' | 'KeyW' | 'KeyS' = 'KeyD';
-  for (let i = 0; i < frames; i++) {
-    if (i > 0 && i % 90 === 0) {
-      input.injectKeyUp(heldKey);
-      heldKey = (['KeyD', 'KeyS', 'KeyA', 'KeyW'] as const)[((i / 90) | 0) % 4]!;
-      input.injectKeyDown(heldKey);
-    }
-    const t0 = performance.now();
-    device.beginFrame();
-    world.update(dt);
-    device.endFrame();
-    samples[i] = performance.now() - t0;
-    // Sample heap every 60 frames; sampling per-frame is too costly.
-    if (warmupBaselineHeap != null && peakHeapKb != null && i % 60 === 0) {
-      const cur = process.memoryUsage().heapUsed;
-      const aboveKb = (cur - warmupBaselineHeap) / 1024;
-      if (aboveKb > peakHeapKb) peakHeapKb = aboveKb;
-    }
-  }
-
-  if (typeof (globalThis as { gc?: () => void }).gc === 'function') {
-    // Force a final GC so heapAfter reflects only allocations the
-    // collector failed to reclaim, not transient garbage waiting on
-    // the next collection cycle.
-    (globalThis as { gc?: () => void }).gc!();
-    heapAfter = process.memoryUsage().heapUsed;
-  }
-  const heapUsedDeltaKb = heapBefore != null && heapAfter != null
-    ? Math.round((heapAfter - heapBefore) / 1024)
-    : null;
-
-  return {
-    scenario: scen,
-    stats: summarize(samples),
-    drawCallsPerFrame: device.getDrawCallCount(),
-    heapUsedDeltaKb,
-    peakHeapAboveBaselineKb: peakHeapKb != null ? Math.round(peakHeapKb) : null,
-  };
+function ensureDir(path: string): void {
+  mkdirSync(path, { recursive: true });
 }
 
-// ----- Allocation-churn microbench -----
-//
-// Isolates SpriteRenderSystem's per-frame cost on tinted sprites,
-// which under the v1 implementation allocates a fresh tint object
-// each call. We run the system 5000 times against 100 fully-tinted
-// sprites and report the mean per-tick cost + the heapUsed delta.
-
-function runTintAllocChurn(): {
-  ticks: number;
-  meanMsPerTick: number;
-  heapUsedDeltaKb: number | null;
-} {
-  const world = new World();
-  const device = new HeadlessDevice();
-  const camera = createCamera(640, 400);
-  const time = createTimeResource();
-  world.resources.set(RESOURCE_TIME, time);
-  world.resources.set(RESOURCE_CAMERA, camera);
-  world.resources.set(RESOURCE_DEVICE, device);
-
-  const transforms = new TransformPool();
-  const sprites = new SpritePool();
-  world.registerPool(POOL_TRANSFORM, transforms);
-  world.registerPool(POOL_SPRITE, sprites);
-
-  const renderSys = new SpriteRenderSystem();
-  world.addSystem(renderSys, SYSTEM_PHASE_RENDER);
-
-  const N = 100;
-  for (let i = 0; i < N; i++) {
-    const e = world.createEntity();
-    transforms.attach(e, i % 16, Math.floor(i / 16), 0);
-    sprites.attach(e, 0, 0, COLOR_KNOT_INT);
-  }
-
-  let heapBefore: number | null = null;
-  let heapAfter: number | null = null;
-  if (typeof (globalThis as { gc?: () => void }).gc === 'function') {
-    (globalThis as { gc?: () => void }).gc!();
-    heapBefore = process.memoryUsage().heapUsed;
-  }
-
-  // Warmup
-  for (let i = 0; i < 200; i++) {
-    device.beginFrame();
-    world.update(1 / 60);
-    device.endFrame();
-  }
-
-  const ticks = 5000;
-  const t0 = performance.now();
-  for (let i = 0; i < ticks; i++) {
-    device.beginFrame();
-    world.update(1 / 60);
-    device.endFrame();
-  }
-  const elapsed = performance.now() - t0;
-
-  if (typeof (globalThis as { gc?: () => void }).gc === 'function') {
-    // Force a final GC so heapAfter reflects only allocations the
-    // collector failed to reclaim, not transient garbage waiting on
-    // the next collection cycle.
-    (globalThis as { gc?: () => void }).gc!();
-    heapAfter = process.memoryUsage().heapUsed;
-  }
-  const heapUsedDeltaKb = heapBefore != null && heapAfter != null
-    ? Math.round((heapAfter - heapBefore) / 1024)
-    : null;
-
-  return {
-    ticks,
-    meanMsPerTick: elapsed / ticks,
-    heapUsedDeltaKb,
-  };
+function thisDir(): string {
+  return dirname(fileURLToPath(import.meta.url));
 }
 
-// ----- Main -----
+function defaultResultsDir(): string {
+  return join(thisDir(), 'bench-results');
+}
 
-const SCENARIOS: BenchScenario[] = [
-  // Small: typical mobile, idle plaza.
-  { name: 'small',  entityCount: 30,  tintedFraction: 0.5, movePerTick: 0.05 },
-  // Medium: plaza with NPCs + a few mobs.
-  { name: 'medium', entityCount: 100, tintedFraction: 0.5, movePerTick: 0.05 },
-  // Large: stress test before zone change.
-  { name: 'large',  entityCount: 250, tintedFraction: 0.5, movePerTick: 0.05 },
-  // XLarge: well past expected plaza density - shows whether scaling
-  // cliffs hide in the tail of the curve.
-  { name: 'xlarge', entityCount: 500, tintedFraction: 0.5, movePerTick: 0.05 },
-];
-
-function main(): void {
-  const frames = parseInt(process.env['BENCH_FRAMES'] ?? '1800', 10);
-  const warmup = parseInt(process.env['BENCH_WARMUP'] ?? '120', 10);
-  const filter = (process.env['BENCH_SCENARIOS'] ?? '').split(',').map((s) => s.trim()).filter(Boolean);
-  const scenarios = filter.length > 0
-    ? SCENARIOS.filter((s) => filter.includes(s.name))
-    : SCENARIOS;
-
-  console.log('# Loom Engine perf bench');
-  console.log('frames=' + frames + ' warmup=' + warmup + ' scenarios=' + scenarios.map((s) => s.name).join(','));
-  console.log('node=' + process.version);
-  console.log('');
-
-  const results: RunResult[] = [];
-  for (const scen of scenarios) {
-    const r = runScenario(scen, frames, warmup);
-    results.push(r);
-    const s = r.stats;
-    console.log('## scenario: ' + scen.name + ' (entities=' + scen.entityCount + ', tintedFrac=' + scen.tintedFraction + ')');
-    console.log('  frames=' + s.frames);
-    console.log('  mean=' + s.meanMs.toFixed(3) + 'ms  p50=' + s.p50Ms.toFixed(3) + 'ms  p95=' + s.p95Ms.toFixed(3) + 'ms  p99=' + s.p99Ms.toFixed(3) + 'ms  max=' + s.maxMs.toFixed(3) + 'ms');
-    console.log('  fps_mean=' + s.fpsMean.toFixed(1) + '  fps_p95=' + s.fpsP95.toFixed(1));
-    console.log('  slowFrames=' + s.slowFrames + ' (' + (s.slowFraction * 100).toFixed(2) + '%)  longTaskMs=' + s.longTaskMs.toFixed(1));
-    console.log('  budget16=' + s.budget16Pct.toFixed(1) + '%  drawCalls=' + r.drawCallsPerFrame);
-    if (r.heapUsedDeltaKb != null) {
-      console.log('  heapDelta=' + r.heapUsedDeltaKb + ' KiB (frames=' + frames + ', ' + (r.heapUsedDeltaKb / frames).toFixed(2) + ' KiB/frame)');
-    }
-    if (r.peakHeapAboveBaselineKb != null) {
-      console.log('  peakHeapAboveBaseline=' + r.peakHeapAboveBaselineKb + ' KiB (mid-run high-water mark)');
-    }
-    console.log('');
-  }
-
-  console.log('## tint-alloc-churn microbench');
-  const tac = runTintAllocChurn();
-  console.log('  ticks=' + tac.ticks);
-  console.log('  meanMsPerTick=' + tac.meanMsPerTick.toFixed(4) + 'ms');
-  if (tac.heapUsedDeltaKb != null) {
-    console.log('  heapDelta=' + tac.heapUsedDeltaKb + ' KiB (' + (tac.heapUsedDeltaKb / tac.ticks * 1024).toFixed(1) + ' B/tick)');
+function writeReport(report: BenchReport, outFlag: string | null): { jsonPath: string; mdPath: string } {
+  let basePath: string;
+  if (outFlag) {
+    const abs = isAbsolute(outFlag) ? outFlag : resolve(process.cwd(), outFlag);
+    // Strip a trailing .json so we can produce both .json and .md from
+    // one --out value.
+    basePath = abs.replace(/\.json$/i, '');
   } else {
-    console.log('  heapDelta=N/A (run with --expose-gc for heap delta)');
+    const dir = defaultResultsDir();
+    ensureDir(dir);
+    basePath = join(dir, timestampSlug());
   }
-  console.log('');
+  const jsonPath = basePath + '.json';
+  const mdPath = basePath + '.md';
+  ensureDir(dirname(jsonPath));
+  writeFileSync(jsonPath, reportToJson(report, true), 'utf8');
+  writeFileSync(mdPath, reportToMarkdown(report), 'utf8');
+  return { jsonPath, mdPath };
 }
 
-main();
+async function main(): Promise<void> {
+  const args = parseArgs(process.argv.slice(2));
+
+  // Compare mode short-circuits the bench run; no scenarios execute.
+  if (args.compareBaseline && args.compareCurrent) {
+    if (!existsSync(args.compareBaseline)) {
+      console.error('compare: baseline not found: ' + args.compareBaseline);
+      process.exit(2);
+    }
+    if (!existsSync(args.compareCurrent)) {
+      console.error('compare: current not found: ' + args.compareCurrent);
+      process.exit(2);
+    }
+    const baseline = JSON.parse(readFileSync(args.compareBaseline, 'utf8')) as BenchReport;
+    const current = JSON.parse(readFileSync(args.compareCurrent, 'utf8')) as BenchReport;
+    const diff = compareReports(baseline, current);
+    process.stdout.write(diffToMarkdown(diff) + '\n');
+    return;
+  }
+
+  const frames = envInt('BENCH_FRAMES', 1800);
+  const warmup = envInt('BENCH_WARMUP', 120);
+  const scenarios = selectedScenarios();
+
+  logProgress('frames=' + frames + ' warmup=' + warmup
+    + ' scenarios=' + scenarios.join(',')
+    + ' node=' + process.version);
+
+  const report = await runAll({ frames, warmup, scenarios, label: args.label });
+
+  const format = args.format === 'auto'
+    ? (args.noWrite ? 'console' : 'console')
+    : args.format;
+
+  if (args.noWrite) {
+    if (format === 'json') process.stdout.write(reportToJson(report, true) + '\n');
+    else if (format === 'md') process.stdout.write(reportToMarkdown(report) + '\n');
+    else process.stdout.write(reportToConsole(report) + '\n');
+    return;
+  }
+
+  if (format === 'json') {
+    process.stdout.write(reportToJson(report, true) + '\n');
+  } else if (format === 'md') {
+    process.stdout.write(reportToMarkdown(report) + '\n');
+  } else {
+    // console
+    process.stdout.write(reportToConsole(report) + '\n');
+  }
+
+  const { jsonPath, mdPath } = writeReport(report, args.out);
+  logProgress('wrote ' + jsonPath);
+  logProgress('wrote ' + mdPath);
+}
+
+main().catch(function (err) {
+  console.error(err instanceof Error ? err.stack ?? err.message : String(err));
+  process.exit(1);
+});

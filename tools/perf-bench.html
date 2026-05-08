@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Loom Engine - Perf Bench</title>
+  <style>
+    html, body { margin: 0; padding: 0; background: #14110d; color: #e8d8b6; font: 13px/1.4 ui-monospace, Consolas, monospace; }
+    .wrap { max-width: 1080px; margin: 0 auto; padding: 16px; }
+    h1 { margin: 0 0 12px; font-size: 14px; color: #d6c694; letter-spacing: 0.05em; text-transform: uppercase; }
+    h2 { margin: 16px 0 4px; font-size: 12px; color: #b6a17a; letter-spacing: 0.05em; text-transform: uppercase; }
+    p, .note { margin: 4px 0; color: #8a7c5e; }
+    button { background: #2a241a; color: #e8d8b6; border: 1px solid #4a4030; padding: 8px 14px; cursor: pointer; font: inherit; }
+    button:disabled { color: #6a5e44; cursor: default; }
+    button:hover:not(:disabled) { background: #3a3424; }
+    #status { color: #d6c694; margin-top: 8px; }
+    #log { max-height: 200px; overflow: auto; background: #0c0a07; border: 1px solid #2a241a; padding: 8px; margin-top: 8px; font-size: 12px; color: #b6a17a; }
+    #output { background: #0c0a07; border: 1px solid #2a241a; padding: 12px; margin-top: 12px; white-space: pre-wrap; font-size: 12px; color: #e8d8b6; }
+    #downloads { margin-top: 12px; }
+    #downloads a { display: inline-block; margin-right: 12px; color: #e8d8b6; }
+    #downloads a:hover { color: #fff; }
+    code { background: #0c0a07; padding: 1px 4px; border-radius: 2px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Loom Engine - Perf Bench</h1>
+    <p>
+      Browser-side bench runner. Drives the standardized scenarios in <code>tools/perf-suite.ts</code> against the engine
+      built at <code>../dist/index.js</code>. Heap stats are unavailable in the browser; that's a runtime limit, not a bug.
+      Set <code>?frames=900&amp;warmup=60&amp;scenarios=sprite-scaling,ecs-iteration&amp;label=iPhone%20SE&amp;backend=canvas2d</code>
+      via querystring to scope the run.
+    </p>
+    <p class="note">
+      <strong>Real-device tip:</strong> serve <code>tools/</code> over your LAN (<code>npx serve tools/</code>), open this page on the
+      device under test, keep the tab foregrounded, and disable low-power mode. Backgrounded tabs are throttled to ~1fps
+      and will read as a 1000ms+ frame time which is the throttling budget, not the engine's.
+    </p>
+
+    <h2>Run</h2>
+    <button id="start" type="button">Start bench</button>
+    <div id="status">idle</div>
+
+    <h2>Progress</h2>
+    <div id="log"></div>
+
+    <h2>Report</h2>
+    <pre id="output"></pre>
+
+    <h2>Download</h2>
+    <div id="downloads">
+      <span class="note">Run the bench to enable downloads.</span>
+    </div>
+
+    <p class="note" style="margin-top:24px;">
+      See <code>docs/PERF-BENCH-METHODOLOGY.md</code> for what each scenario measures and how to interpret the numbers.
+    </p>
+  </div>
+  <script type="module" src="./perf-bench-browser.js"></script>
+</body>
+</html>
