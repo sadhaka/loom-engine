@@ -1,4 +1,4 @@
-export declare const LOOM_ENGINE_VERSION = "0.24.0";
+export declare const LOOM_ENGINE_VERSION = "0.25.0";
 export type { Vec2, Vec3, Rect } from './util/math.js';
 export { vec2, vec3, rect, clamp, lerp, smoothstep, approxEq, rectContains, rectIntersects, visibleInView, } from './util/math.js';
 export type { ColorRGBA } from './util/color.js';
@@ -17,6 +17,8 @@ export { RenderBatch, RENDER_LAYER_BACKGROUND, RENDER_LAYER_TERRAIN, RENDER_LAYE
 export type { BatchFlushCallback } from './renderer/render-batch.js';
 export { DebugHUD, RESOURCE_DEBUG_HUD } from './debug/debug-hud.js';
 export type { DebugHUDOptions } from './debug/debug-hud.js';
+export { EngineClock, RESOURCE_ENGINE_CLOCK } from './runtime/engine-clock.js';
+export type { EngineClockOptions } from './runtime/engine-clock.js';
 export { ResourceRegistry, createTimeResource, createVeilBudgetResource, RESOURCE_TIME, RESOURCE_CAMERA, RESOURCE_DEVICE, RESOURCE_VEIL_BUDGET, } from './resources.js';
 export { SpriteRenderSystem } from './systems/sprite-render-system.js';
 export { Engine, registerBackend, isBackendRegistered } from './engine.js';
