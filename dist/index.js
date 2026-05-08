@@ -8,7 +8,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.32.0';
+export const LOOM_ENGINE_VERSION = '0.33.0';
 export { vec2, vec3, rect, clamp, lerp, smoothstep, approxEq, rectContains, rectIntersects, visibleInView, } from './util/math.js';
 export { rgba, hexToRgba, rgbaToHexString, rgbaToCssString, colorLerp, COLOR_WHITE, COLOR_BLACK, COLOR_TRANSPARENT, COLOR_KNOT_STR, COLOR_KNOT_DEX, COLOR_KNOT_INT, COLOR_KNOT_CENTER, } from './util/color.js';
 export { EntityAllocator, NULL_ENTITY, entityIndex, entityGeneration, makeEntity, } from './entity.js';
@@ -40,6 +40,9 @@ export { SpatialHash, RESOURCE_SPATIAL_HASH } from './runtime/spatial-hash.js';
 export { InputActions, RESOURCE_INPUT_ACTIONS } from './input/input-actions.js';
 // 0.32.0 - generic object pool for short-lived reusable objects.
 export { ObjectPool } from './runtime/object-pool.js';
+// 0.33.0 - color utilities (parse / format / blend / HSL / pack32).
+// Augments the existing color helpers without shadowing them.
+export { clamp01, parseHex, toHexString, colorBlend, adjustHsl, pack32, unpack32, } from './util/color.js';
 export { ResourceRegistry, createTimeResource, createVeilBudgetResource, RESOURCE_TIME, RESOURCE_CAMERA, RESOURCE_DEVICE, RESOURCE_VEIL_BUDGET, } from './resources.js';
 // Default systems
 export { SpriteRenderSystem } from './systems/sprite-render-system.js';
