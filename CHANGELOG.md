@@ -7,6 +7,58 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.28.0 - 2026-05-08
+
+**EventBus - generic typed pub/sub for the engine.** Systems and
+consumers need to talk without each side knowing the other's
+identity. The engine already has specialized buses (zone events,
+plugin dispatch, DOM CustomEvents); EventBus is the generic layer
+for everything else.
+
+### Added
+
+- `src/runtime/event-bus.ts` - `EventBus` class:
+  - `subscribe(topic, handler)` -> unsubscribe function. Idempotent
+    unsubscribe.
+  - `once(topic, handler)` - auto-removes after first delivery.
+  - `publish(topic, data?)` - delivers to all current subscribers.
+    Errors caught + logged; one bad handler doesn't block siblings
+    or break the publisher.
+  - `off(topic)` / `clear()` - bulk-drop subscribers.
+  - `topics()` / `handlerCount(topic)` - introspection.
+  - `stats()` - publishCount + deliveredCount + topicCount.
+- Snapshot semantics: handlers added DURING a publish do NOT fire
+  for that same publish (they're added to the next-publish list).
+  This matches DOM EventTarget behavior.
+- `RESOURCE_EVENT_BUS` constant.
+- `EventHandler<T>` type.
+
+### Tests
+
+698 -> 711 (13 new in tests/event-bus.test.ts):
+- subscribe + publish delivers data.
+- Multiple subscribers all receive each publish.
+- Unsubscribe stops delivery; idempotent.
+- once fires exactly once + auto-removes.
+- Handlers added during publish don't fire for same publish.
+- Throwing handler doesn't block siblings or subsequent publishes.
+- off() / clear() bulk-drops.
+- topics() / handlerCount() / stats() round-trip.
+- Publish with no subscribers is silent.
+
+### Backwards compatibility
+
+Pure addition. Engine consumers opt in:
+
+```ts
+import { EventBus } from '@sadhaka/loom-engine';
+
+var bus = new EventBus();
+var unsub = bus.subscribe('player.died', function (data) { ... });
+bus.publish('player.died', { x: 10, y: 20 });
+unsub();
+```
+
 ## 0.27.0 - 2026-05-08
 
 **CameraController - smooth follow / shake / bounds clamp / fit-rect.**
