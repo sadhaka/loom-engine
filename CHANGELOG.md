@@ -7,6 +7,87 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.26.0 - 2026-05-08
+
+**WorldSnapshot - opt-in save/load via persistable resources.** Lets
+a consumer serialize world state to JSON for persistence / replay /
+trace export, and restore it later. Resources opt in by implementing
+`IPersistableResource`; resources that don't are silently skipped.
+
+### Why this scope (not full ECS serialization)
+
+Component pools are SoA Float32Arrays - serializing them generally
+requires schema versioning per pool + entity-id remapping on restore
+(complex). What CAN be saved cheaply today is the registered resource
+state: time, knot context, plugin storage snapshots, custom consumer
+resources. WorldSnapshot delivers exactly that with a minimal
+contract.
+
+A future v2 can layer entity-pool serialization on top once a stable
+component-schema discipline lands.
+
+### Added
+
+- `src/runtime/world-snapshot.ts` -
+  - `IPersistableResource` interface: optional `persistKey?: string`
+    + `serialize?(): unknown` + `deserialize?(data): void`. Both
+    methods return / accept JSON-safe data.
+  - `serializeWorldSnapshot(registry, engineVersion, nowFn?)` walks
+    the registry, calls serialize() on persistable resources,
+    returns a versioned envelope `{schemaVersion, engineVersion,
+    capturedAtMs, resources}`. Errors in serialize() are logged +
+    skipped; the rest of the envelope still ships.
+  - `deserializeWorldSnapshot(registry, snapshot)` matches envelope
+    keys to resources via `persistKey` (or registry key if absent),
+    calls deserialize() on each, returns count restored. Malformed
+    envelopes return 0; missing entries leave resources alone.
+  - `SNAPSHOT_SCHEMA_VERSION = 1`. Bump when the envelope shape
+    changes.
+  - `RESOURCE_WORLD_SNAPSHOT` constant for an attached snapshot
+    facility (e.g. an auto-save system).
+
+### Tests
+
+676 -> 686 (10 new in tests/world-snapshot.test.ts):
+- serialize collects only persistable resources; non-persistable
+  resources skipped silently.
+- persistKey overrides registry key in the envelope.
+- nowFn injection for deterministic capturedAtMs.
+- serialize() that throws is logged + skipped.
+- deserialize restores counter state.
+- deserialize uses persistKey to match envelope -> resource.
+- Missing persistKey in envelope leaves resource alone.
+- deserialize that throws is caught + counted out.
+- serialize -> deserialize round-trip preserves state.
+- Malformed snapshot envelopes return 0 restored.
+
+### Backwards compatibility
+
+Pure addition. Engine consumers opt in:
+
+```ts
+import {
+  serializeWorldSnapshot,
+  deserializeWorldSnapshot,
+  type IPersistableResource,
+} from '@sadhaka/loom-engine';
+
+class SaveData implements IPersistableResource {
+  persistKey = 'save-data';
+  level = 1;
+  serialize() { return { level: this.level }; }
+  deserialize(data) { this.level = data.level; }
+}
+
+// At save time:
+var snapshot = serializeWorldSnapshot(world.resources, LOOM_ENGINE_VERSION);
+localStorage.setItem('save-1', JSON.stringify(snapshot));
+
+// At load time:
+var snap = JSON.parse(localStorage.getItem('save-1'));
+var restored = deserializeWorldSnapshot(world.resources, snap);
+```
+
 ## 0.25.0 - 2026-05-08
 
 **EngineClock - pause / step / timeScale controls.** Self-contained

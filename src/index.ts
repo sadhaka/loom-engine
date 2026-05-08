@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.25.0';
+export const LOOM_ENGINE_VERSION = '0.26.0';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -107,6 +107,17 @@ export type { DebugHUDOptions } from './debug/debug-hud.js';
 // 0.25.0 - engine clock controls.
 export { EngineClock, RESOURCE_ENGINE_CLOCK } from './runtime/engine-clock.js';
 export type { EngineClockOptions } from './runtime/engine-clock.js';
+// 0.26.0 - world snapshot (save / load via persistable resources).
+export {
+  serializeWorldSnapshot,
+  deserializeWorldSnapshot,
+  SNAPSHOT_SCHEMA_VERSION,
+  RESOURCE_WORLD_SNAPSHOT,
+} from './runtime/world-snapshot.js';
+export type {
+  IPersistableResource,
+  WorldSnapshot,
+} from './runtime/world-snapshot.js';
 export {
   ResourceRegistry,
   createTimeResource,
