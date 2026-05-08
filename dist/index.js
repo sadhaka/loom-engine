@@ -8,7 +8,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.30.0';
+export const LOOM_ENGINE_VERSION = '0.31.0';
 export { vec2, vec3, rect, clamp, lerp, smoothstep, approxEq, rectContains, rectIntersects, visibleInView, } from './util/math.js';
 export { rgba, hexToRgba, rgbaToHexString, rgbaToCssString, colorLerp, COLOR_WHITE, COLOR_BLACK, COLOR_TRANSPARENT, COLOR_KNOT_STR, COLOR_KNOT_DEX, COLOR_KNOT_INT, COLOR_KNOT_CENTER, } from './util/color.js';
 export { EntityAllocator, NULL_ENTITY, entityIndex, entityGeneration, makeEntity, } from './entity.js';
@@ -36,6 +36,8 @@ export { EventBus, RESOURCE_EVENT_BUS } from './runtime/event-bus.js';
 export { Tween, Easings, RESOURCE_TWEEN } from './runtime/tween.js';
 // 0.30.0 - spatial hash for nearby-entity queries.
 export { SpatialHash, RESOURCE_SPATIAL_HASH } from './runtime/spatial-hash.js';
+// 0.31.0 - declarative input actions.
+export { InputActions, RESOURCE_INPUT_ACTIONS } from './input/input-actions.js';
 export { ResourceRegistry, createTimeResource, createVeilBudgetResource, RESOURCE_TIME, RESOURCE_CAMERA, RESOURCE_DEVICE, RESOURCE_VEIL_BUDGET, } from './resources.js';
 // Default systems
 export { SpriteRenderSystem } from './systems/sprite-render-system.js';
