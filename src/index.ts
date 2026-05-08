@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.59.0';
+export const LOOM_ENGINE_VERSION = '0.60.0';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -352,6 +352,15 @@ export type {
   ModifierKind,
   StatStackOptions,
 } from './runtime/stat-stack.js';
+// 0.60.0 - replay recorder (deterministic input + tick capture).
+export { ReplayRecorder, RESOURCE_REPLAY_RECORDER } from './runtime/replay-recorder.js';
+export type {
+  ReplayEvent,
+  ReplayStep,
+  ReplayTrace,
+  ReplayRecorderOptions,
+  RecorderMode,
+} from './runtime/replay-recorder.js';
 export {
   ResourceRegistry,
   createTimeResource,

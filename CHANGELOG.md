@@ -7,6 +7,102 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.60.0 - 2026-05-09
+
+**ReplayRecorder + 0.60 milestone - deterministic input + tick
+capture.** The engine had every ingredient for deterministic
+replay: Entropy (0.17) for seeded RNG, EngineClock (0.25) for
+tick-driven time, WorldSnapshot (0.26) for serialize/restore,
+TimerScheduler (0.48) for tick-driven setTimeout, PersistentStorage
+(0.38) + SaveSlots (0.45) for saving traces. ReplayRecorder is the
+recorder that captures the per-tick dt + input event stream and
+replays it later against the same initial seed + snapshot.
+
+The recorder itself does NOT integrate with World - that's the
+consumer's job. This keeps the primitive small and decoupled from
+specific world implementations. Pairs with the existing replay
+infra to give consumers full record-at-crash + replay-from-trace
+for QA / bug repro / coop session sync.
+
+### Added
+
+- `src/runtime/replay-recorder.ts` - `ReplayRecorder` class:
+  - `create({ initialSeed?, engineVersion?, maxSteps? })` /
+    `fromTrace(trace)`.
+  - `attachInitialSnapshot(snap)` - stamp the initial WorldSnapshot
+    for restore-before-playback.
+  - **Recording**: `startRecording()` / `recordEvent(type, key?,
+    data?)` (buffers until next tick) / `recordTick(dtMs)` (flushes
+    buffered events into a step) / `stopRecording()`.
+  - **Playback**: `startPlayback()` / `nextStep()` / `hasNextStep()`
+    / `rewind()` / `stopPlayback()`.
+  - `toTrace()` produces a JSON-safe envelope with version,
+    engineVersion, initialSeed, initialSnapshot, steps array.
+  - `getMode()` / `stepCount()` / introspection.
+- `maxSteps` option caps recording at the latest N steps (oldest
+  drops on overflow). Useful for crash-report ringbuffers.
+- `nextStep()` returns defensive copies; mutation does not affect
+  recorder state.
+- Mode-protected: cannot startRecording from playback; cannot
+  startPlayback while recording.
+- `ReplayEvent`, `ReplayStep`, `ReplayTrace`,
+  `ReplayRecorderOptions`, `RecorderMode` types exported.
+- `RESOURCE_REPLAY_RECORDER` constant.
+
+### Tests
+
+1466 -> 1492 (26 new in tests/replay-recorder.test.ts):
+- RESOURCE_REPLAY_RECORDER stable string; starts idle.
+- Stamps initial seed + engine version.
+- startRecording transitions; cannot from playback mode.
+- recordTick captures dt + advances count.
+- recordEvent buffers; events without recordTick stay buffered.
+- Empty type ignored; recordEvent before startRecording no-op;
+  recordTick before startRecording returns null.
+- maxSteps caps the recording at latest N.
+- stopRecording transitions to finished.
+- startPlayback resets cursor; nextStep yields steps in order;
+  null at end + transitions to finished.
+- hasNextStep reflects state; rewind resets cursor; rewind no-op
+  outside playback.
+- stopPlayback transitions to finished.
+- Cannot startPlayback while recording.
+- toTrace produces JSON-safe envelope; round-trip JSON preserves
+  shape + nested data.
+- fromTrace + nextStep reproduces recording.
+- attachInitialSnapshot survives toTrace + fromTrace.
+- nextStep returns defensive copies.
+- Realistic record + replay session example.
+
+### Backwards compatibility
+
+Pure addition. Engine consumers opt in.
+
+### Milestone — engine 0.60.0
+
+26 versions shipped this M8 session (0.34 → 0.60). 1492 tests
+across the engine. Pure-additive policy held: 0.10-era code
+compiles unmodified against 0.60. The engine surface now also
+includes:
+
+**Game systems (0.51 - 0.60):**
+- StateMachine (0.51): generic FSM
+- CooldownManager (0.52): per-key cooldown tracker
+- LRUCache (0.53): generic LRU
+- AABB (0.54): axis-aligned bounding box queries + raycast
+- Pathfinder (0.55): A* with grid-agnostic isWalkable
+- SceneManager (0.56): named scenes with async enter/exit
+- TileMap (0.57): Uint16Array-backed 2D tile grid
+- InventoryGrid (0.58): slot-based inventory with stacks
+- StatStack (0.59): derived stats from base + modifier stack
+- ReplayRecorder (0.60): deterministic record + replay
+
+The 0.51 - 0.60 wave focuses on game-system primitives a typical
+ARPG / hub-MMO consumer wires together. Combined with the audio /
+input / runtime infrastructure from 0.35 - 0.50, the engine now
+covers the canonical surface needed to build the Loom Survivor
+v1 onboarding spec end-to-end without engine forks.
+
 ## 0.59.0 - 2026-05-09
 
 **StatStack - base + modifier stack producing derived stats.**
