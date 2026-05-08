@@ -7,6 +7,98 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.42.0 - 2026-05-09
+
+**MemoryBudget - per-pool / per-resource memory size estimator.**
+Component pools (TransformPool, SpritePool, ParticlePool, etc.)
+own Float32Arrays that take real memory; ObjectPool (0.32.0) owns
+plain objects. As scenes grow, knowing roughly where the memory
+lives is useful for: a debug HUD line, a "are we leaking?" check,
+mobile-budget warnings, comparing two builds.
+
+MemoryBudget is a thin registry: register named sources that
+implement `IMemorySource.estimateBytes()`, ask for `report()`, and
+get back per-source bytes + total. The engine ships estimator
+helpers for the common shapes (TypedArray, Map, Set, plain array,
+plain object) so consumers don't write the same byte-counting
+boilerplate.
+
+The estimates are deliberately heuristic - JavaScript engines do
+not expose object size; what we report is typed-array `byteLength`
+plus rough constants for managed objects. Order-of-magnitude
+correct, not MB-precision.
+
+### Added
+
+- `src/runtime/memory-budget.ts` - `MemoryBudget` class:
+  - `register(name, source)` / `unregister(name)` / `has(name)`.
+  - `getBytes(name)` / `totalBytes()` / `report()` /
+    `sources_()` (the trailing underscore avoids the v8 hidden-
+    class clash with `Object.prototype.sources` on some legacy
+    setups).
+  - `clear()` / `dispose()`.
+  - Optional `onReport(rep)` callback fires synchronously after
+    every `report()`. Throwing callbacks isolated.
+- Estimator helpers (tree-shake-friendly free functions):
+  - `estimateTypedArrayBytes(...arrs)` — exact via byteLength.
+  - `estimateMapBytes(map, perEntryBytes=96)`.
+  - `estimateSetBytes(set, perEntryBytes=64)`.
+  - `estimateArrayBytes(arr, perElementBytes)`.
+  - `estimateObjectBytes(obj, perPropertyBytes=32)`.
+- Defensive: estimators returning NaN / negative / Infinity / non-
+  number / throwing all clamp to 0 in the report. A misbehaving
+  estimator can not poison the report.
+- `IMemorySource`, `MemoryReport`, `MemoryBudgetOptions` types
+  exported.
+- `RESOURCE_MEMORY_BUDGET` constant.
+
+### Tests
+
+990 -> 1018 (28 new in tests/memory-budget.test.ts; engine crosses
+the 1000-test mark):
+- RESOURCE_MEMORY_BUDGET stable string.
+- Estimator helpers: typed-array byteLength sum across multiple
+  arrays + no-arg edge case; map default 96/entry + custom +
+  null/undefined; set default 64/entry; array with custom per-
+  element + null/undefined; object property count default + custom.
+- Budget: starts empty; register adds source; register replaces
+  in place + preserves insertion order; unregister drops; missing
+  unregister returns false; getBytes missing returns 0.
+- Report sums every source in registration order; onReport callback
+  fires synchronously; throwing onReport callback isolated.
+- Throwing estimator clamps to 0 in the report.
+- NaN / negative / Infinity / non-number all clamp to 0.
+- clear empties; dispose locks subsequent ops.
+- Report is a fresh object each call.
+- Live source: bytes update as the underlying data changes.
+
+### Backwards compatibility
+
+Pure addition. Engine consumers opt in:
+
+```ts
+import {
+  MemoryBudget, estimateTypedArrayBytes, estimateMapBytes,
+} from '@sadhaka/loom-engine';
+
+var mb = MemoryBudget.create({
+  onReport: function (r) { hud.setMemoryLine(r.totalBytes); },
+});
+
+mb.register('transforms', {
+  estimateBytes: function () {
+    return estimateTypedArrayBytes(transformPool.x, transformPool.y);
+  },
+});
+mb.register('mobs', {
+  estimateBytes: function () { return estimateMapBytes(mobsById); },
+});
+
+// Each frame (or every N frames):
+var rep = mb.report();
+console.log('mem total:', rep.totalBytes, 'bytes', rep.bySource);
+```
+
 ## 0.41.0 - 2026-05-09
 
 **LayerManager - entity layer + intra-layer z-order management.**
