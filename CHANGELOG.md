@@ -7,6 +7,66 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.30.0 - 2026-05-08
+
+**SpatialHash - bucket entities by world cell for fast nearby
+queries.** Boss target picking, AoE coverage, particle culling, peer
+proximity - all the "entities NEAR a point" queries that ComponentSignature
++ QueryCache (0.22.0) don't accelerate. SpatialHash gives O(1) insert
++ O(K) query where K = entities in the queried cells.
+
+### Added
+
+- `src/runtime/spatial-hash.ts` - `SpatialHash` class:
+  - `insert(entity, x, y)` - O(1) bucket assignment.
+  - `update(entity, x, y)` - same-cell is no-op; cross-cell is
+    swap-pop + reinsert.
+  - `remove(entity)` - O(1) swap-pop; bucket auto-cleans when empty.
+  - `queryRect(x0, y0, x1, y1)` - returns all entities in cells
+    overlapping the rect. Caller filters by precise containment if
+    needed.
+  - `queryRadius(cx, cy, r)` - convenience over queryRect.
+  - `size()`, `bucketCount()`, `clear()`, `stats()`.
+- Cell size configurable at construction (default 32 world units).
+  Invalid sizes (0, NaN, negative) clamp to 32.
+- Negative coordinates handled (cell coord biased internally).
+- Reversed query rect bounds normalized.
+- `RESOURCE_SPATIAL_HASH` constant.
+
+### Tests
+
+726 -> 739 (13 new in tests/spatial-hash.test.ts):
+- insert + queryRect / queryRadius narrows correctly.
+- remove drops entity + cleans empty bucket; double-remove is false.
+- update within same cell is a no-op.
+- update across cells rebuckets; old cell empty + new cell has entity.
+- insert on existing entity equivalent to update.
+- queryRect with reversed bounds normalized.
+- 100-entity stress: all retrievable from full bbox query.
+- clear() drops everything.
+- cellSize defaults to 32 on invalid input.
+- Stats counters increment correctly.
+- Negative coordinates work.
+- Swap-pop maintains correct indexInBucket on remove (5-entity cell
+  stress test).
+
+### Backwards compatibility
+
+Pure addition. Engine consumers opt in:
+
+```ts
+import { SpatialHash } from '@sadhaka/loom-engine';
+
+var sh = new SpatialHash(32);
+// On entity transform update:
+sh.update(entityId, transform.x, transform.y);
+// Boss target search:
+var nearby = sh.queryRadius(boss.x, boss.y, ATTACK_RANGE);
+for (var i = 0; i < nearby.length; i++) {
+  // exact-distance filter here
+}
+```
+
 ## 0.29.0 - 2026-05-08
 
 **Tween system - animate scalar values over time with easings.**
