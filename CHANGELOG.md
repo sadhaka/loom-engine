@@ -7,6 +7,104 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.46.0 - 2026-05-09
+
+**Localization - string table + locale + parameter interpolation.**
+Every game ships strings: HUD labels, dialog lines, error messages,
+item names, ability tooltips. The engine ships ZERO of these (it's
+a runtime, not a content system) but provides the primitive: lookup
+by key in the active locale with parameter interpolation and full
+pluralization via Intl.PluralRules.
+
+Single small class. No build step, no JSON loader required. Tables
+are plain JS objects consumers can split per-feature, ship from
+JSON files, or generate from a CMS. The Loom project's EN/TH/RU
+trio fits naturally; the engine itself is locale-agnostic.
+
+### Added
+
+- `src/runtime/localization.ts` - `Localization` class:
+  - `register(locale, table)` — merges into existing table; safe
+    to call once per file/feature.
+  - `set(locale, table)` — replaces wholesale (no merge).
+  - `setLocale(locale)` / `getLocale()` / `getDefaultLocale()` /
+    `hasLocale(locale)` / `registeredLocales()`.
+  - `t(key, params?)` — direct lookup with `{name}` parameter
+    interpolation. Falls back active locale → default locale →
+    key verbatim. Unmatched placeholders left as `{name}`.
+  - `plural(key, count, params?)` — selects from `{ zero, one,
+    two, few, many, other }` via `Intl.PluralRules` for the
+    active locale (English fallback: count===1 → 'one' else
+    'other'). `{count}` is auto-injected as a param. Custom
+    `pluralRules` factory supported for testing / unusual locales.
+  - `clear()` — wipes tables and resets active locale to default.
+  - `dispose()` — locks subsequent ops.
+- Plural-shaped value passed to `t()` falls back to `.other`
+  (graceful degradation when consumers use a wrapper that doesn't
+  know about plurals).
+- Defensive: empty locale strings ignored on register / setLocale;
+  null/undefined/non-object tables ignored on register; unknown
+  keys return key verbatim (never throw / never crash boot).
+- `LocalizationValue`, `LocalizationTable`, `LocalizationOptions`,
+  `PluralForms` types exported.
+- `RESOURCE_LOCALIZATION` constant.
+
+### Tests
+
+1101 -> 1130 (29 new in tests/localization.test.ts):
+- RESOURCE_LOCALIZATION stable string; defaults to en locale.
+- Direct register + lookup; missing key returns the key.
+- Parameter interpolation: {name} substitution; numeric stringify;
+  missing param leaves placeholder verbatim; multiple instances
+  substitute everywhere.
+- Locale switch via setLocale; missing key falls back to default
+  locale.
+- register merges; set replaces wholesale.
+- hasLocale / registeredLocales; register ignores empty locale or
+  falsy table; setLocale ignores empty.
+- Plural: en one/other via Intl.PluralRules; missing form falls to
+  .other; count auto-injected as {count}; explicit count override;
+  non-plural value with plural() merges {count}; missing key returns
+  key; zero/two/few/many forms via custom rule.
+- t() on plural-shaped value falls to .other; locale fallback
+  finds plural-shaped key in default.
+- clear / dispose / empty key returns ''; defaultLocale option;
+  initialLocale override.
+
+### Backwards compatibility
+
+Pure addition. Engine consumers opt in:
+
+```ts
+import { Localization } from '@sadhaka/loom-engine';
+
+var loc = Localization.create({ defaultLocale: 'en' });
+
+loc.register('en', {
+  'hud.health': 'HP {value}/{max}',
+  'enemy.kills': { one: '{count} enemy slain', other: '{count} enemies slain' },
+});
+loc.register('th', {
+  'hud.health': 'พลัง {value}/{max}',
+  'enemy.kills': { other: 'สังหาร {count} ศัตรู' },
+});
+loc.register('ru', {
+  'hud.health': 'ХП {value}/{max}',
+  'enemy.kills': {
+    one: 'Повержен {count} враг',
+    few: 'Повержено {count} врага',
+    many: 'Повержено {count} врагов',
+    other: 'Повержено {count} врагов',
+  },
+});
+
+loc.setLocale('ru');
+loc.t('hud.health', { value: 87, max: 100 });   // ХП 87/100
+loc.plural('enemy.kills', 1);                    // Повержен 1 враг
+loc.plural('enemy.kills', 3);                    // Повержено 3 врага
+loc.plural('enemy.kills', 17);                   // Повержено 17 врагов
+```
+
 ## 0.45.0 - 2026-05-09
 
 **SaveSlots - multi-slot save manager on top of PersistentStorage +
