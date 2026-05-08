@@ -7,6 +7,10 @@ export interface ZoneEventBridgeStats {
     serverDropsP1: number;
     serverDropsP2: number;
     lastEventIdByZone: ReadonlyMap<string, number>;
+    lastConnectedAtMs: number;
+    lastDisconnectedAtMs: number;
+    totalConnectsCount: number;
+    totalDisconnectsCount: number;
 }
 export interface IZoneEventBridge {
     start(): void;

@@ -30,12 +30,16 @@ import { parseZoneEnvelopeJson } from './zone-event-envelope.js';
 // pulling DOM types into the engine's strict Node test config.
 const ES_OPEN = 1;
 const ES_CLOSED = 2;
+// 0.20.1 - status CustomEvent dispatch type (parallel to director).
+const STATUS_EVENT_TYPE = 'arpg:zone-bridge-status';
 export class SSEZoneBridge {
     es;
     characterId;
     currentZone;
     eventName;
     filterAtReceive;
+    nowFn;
+    statusEventTarget;
     listener = null;
     queue = [];
     statusValue = 'idle';
@@ -46,6 +50,10 @@ export class SSEZoneBridge {
         outOfOrderEvents: 0,
         serverDropsP1: 0,
         serverDropsP2: 0,
+        lastConnectedAtMs: 0,
+        lastDisconnectedAtMs: 0,
+        totalConnectsCount: 0,
+        totalDisconnectsCount: 0,
     };
     constructor(opts) {
         this.es = opts.eventSource;
@@ -53,9 +61,60 @@ export class SSEZoneBridge {
         this.currentZone = opts.currentZone;
         this.eventName = opts.eventName ?? 'zone.event';
         this.filterAtReceive = opts.filterAtReceive ?? false;
+        this.nowFn = opts.nowFn !== undefined
+            ? opts.nowFn
+            : (typeof Date !== 'undefined' && typeof Date.now === 'function'
+                ? Date.now : () => 0);
+        if (opts.statusEventTarget === null) {
+            this.statusEventTarget = null;
+        }
+        else if (opts.statusEventTarget !== undefined) {
+            this.statusEventTarget = opts.statusEventTarget;
+        }
+        else {
+            // Default to globalThis (browser window). null in headless tests
+            // that did not pass an EventTarget - fall back gracefully.
+            let defaultTarget = null;
+            try {
+                const g = globalThis;
+                if (g && g.window)
+                    defaultTarget = g.window;
+                else if (typeof globalThis !== 'undefined' && globalThis.addEventListener) {
+                    defaultTarget = globalThis;
+                }
+            }
+            catch { /* ignore */ }
+            this.statusEventTarget = defaultTarget;
+        }
         // characterId is currently used for diagnostics only - reserved
         // for future emitter_id-based UX hooks (e.g. local-cause cues).
         void this.characterId;
+    }
+    // 0.20.1 - transition to a new status, dispatching the
+    // arpg:zone-bridge-status CustomEvent + bumping connection-timing
+    // counters. Idempotent (no-op if status already matches).
+    transitionTo(next) {
+        const prev = this.statusValue;
+        if (prev === next)
+            return;
+        this.statusValue = next;
+        // Bump timing counters on connect / disconnect transitions.
+        if (next === 'connected') {
+            this.statsValue.lastConnectedAtMs = this.nowFn();
+            this.statsValue.totalConnectsCount += 1;
+        }
+        else if (prev === 'connected'
+            && (next === 'closed' || next === 'reconnecting'
+                || next === 'snapshot-required')) {
+            this.statsValue.lastDisconnectedAtMs = this.nowFn();
+            this.statsValue.totalDisconnectsCount += 1;
+        }
+        if (this.statusEventTarget) {
+            try {
+                this.statusEventTarget.dispatchEvent(new CustomEvent(STATUS_EVENT_TYPE, { detail: { from: prev, to: next, characterId: this.characterId } }));
+            }
+            catch { /* ignore */ }
+        }
     }
     start() {
         if (this.listener)
@@ -65,17 +124,17 @@ export class SSEZoneBridge {
         // The presence EventSource owns connect lifecycle. We mirror its
         // current readyState so consumers can reason about isConnected().
         if (this.es.readyState === ES_OPEN) {
-            this.statusValue = 'connected';
+            this.transitionTo('connected');
         }
         else if (this.es.readyState === ES_CLOSED) {
-            this.statusValue = 'closed';
+            this.transitionTo('closed');
         }
         else {
-            this.statusValue = 'connecting';
+            this.transitionTo('connecting');
         }
     }
     stop() {
-        this.statusValue = 'closed';
+        this.transitionTo('closed');
         if (this.listener && this.es.removeEventListener) {
             this.es.removeEventListener(this.eventName, this.listener);
         }
@@ -87,11 +146,11 @@ export class SSEZoneBridge {
         if (this.listener) {
             if (this.es.readyState === ES_OPEN) {
                 if (this.statusValue === 'connecting' || this.statusValue === 'reconnecting') {
-                    this.statusValue = 'connected';
+                    this.transitionTo('connected');
                 }
             }
             else if (this.es.readyState === ES_CLOSED) {
-                this.statusValue = 'closed';
+                this.transitionTo('closed');
             }
         }
         return this.statusValue;
@@ -117,6 +176,10 @@ export class SSEZoneBridge {
             serverDropsP1: this.statsValue.serverDropsP1,
             serverDropsP2: this.statsValue.serverDropsP2,
             lastEventIdByZone: new Map(this.lastEventIdByZone),
+            lastConnectedAtMs: this.statsValue.lastConnectedAtMs,
+            lastDisconnectedAtMs: this.statsValue.lastDisconnectedAtMs,
+            totalConnectsCount: this.statsValue.totalConnectsCount,
+            totalDisconnectsCount: this.statsValue.totalDisconnectsCount,
         };
     }
     // ----- Internal -----

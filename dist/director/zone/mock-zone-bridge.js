@@ -22,6 +22,10 @@ export class MockZoneBridge {
         outOfOrderEvents: 0,
         serverDropsP1: 0,
         serverDropsP2: 0,
+        lastConnectedAtMs: 0,
+        lastDisconnectedAtMs: 0,
+        totalConnectsCount: 0,
+        totalDisconnectsCount: 0,
     };
     start() {
         this.statusValue = 'connected';
@@ -56,6 +60,10 @@ export class MockZoneBridge {
             serverDropsP1: this.statsValue.serverDropsP1,
             serverDropsP2: this.statsValue.serverDropsP2,
             lastEventIdByZone: new Map(this.lastEventIdByZone),
+            lastConnectedAtMs: this.statsValue.lastConnectedAtMs,
+            lastDisconnectedAtMs: this.statsValue.lastDisconnectedAtMs,
+            totalConnectsCount: this.statsValue.totalConnectsCount,
+            totalDisconnectsCount: this.statsValue.totalDisconnectsCount,
         };
     }
     // ----- Mock-only injection helpers -----

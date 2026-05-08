@@ -15,6 +15,8 @@ export interface SSEZoneBridgeOptions {
     currentZone: () => string;
     eventName?: string;
     filterAtReceive?: boolean;
+    nowFn?: () => number;
+    statusEventTarget?: EventTarget | null;
 }
 export declare class SSEZoneBridge implements IZoneEventBridge {
     private readonly es;
@@ -22,12 +24,15 @@ export declare class SSEZoneBridge implements IZoneEventBridge {
     private readonly currentZone;
     private readonly eventName;
     private readonly filterAtReceive;
+    private readonly nowFn;
+    private readonly statusEventTarget;
     private listener;
     private queue;
     private statusValue;
     private readonly lastEventIdByZone;
     private readonly statsValue;
     constructor(opts: SSEZoneBridgeOptions);
+    private transitionTo;
     start(): void;
     stop(): void;
     status(): ZoneEventBridgeStatus;
