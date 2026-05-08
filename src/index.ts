@@ -222,6 +222,36 @@ export {
   AUDIO_BUDGET_ESSENTIAL_FLOOR,
 } from './audio/audio-bus.js';
 
+// ===== Phase 17 audio - spatializer + listener (Track A) =====
+//
+// LOOM-AUDIO-SPEC.md §3. Composes the existing AudioBus (Phase 5
+// untouched), adds a 'spatial' sub-bus whose sources route through
+// PannerNodes, and ships an AudioListener resource + system that
+// pushes the local character's transform into the listener pose
+// each frame.
+//
+// Track B (cue catalog + music director + asset cache) re-exports
+// land in their own block when that branch merges. This block is
+// independently shippable.
+export type {
+  PositionalPlayOptions,
+  AudioListenerPose,
+  SpatialSourceHandle,
+} from './audio/spatial-audio-bus.js';
+export {
+  SpatialAudioBus,
+  SPATIAL_BUS_NAME,
+  spatialDistance,
+} from './audio/spatial-audio-bus.js';
+export type { AudioListenerResource } from './audio/audio-listener-resource.js';
+export {
+  RESOURCE_AUDIO_LISTENER,
+  createAudioListenerResource,
+  DEFAULT_LISTENER_FORWARD,
+  DEFAULT_LISTENER_UP,
+} from './audio/audio-listener-resource.js';
+export { SpatialAudioSystem } from './audio/spatial-audio-system.js';
+
 // Input (Phase 5): unified keyboard / mouse / touch with frame-
 // coherent snapshot resource.
 export type {
