@@ -18,7 +18,7 @@
 // register their own systems and pools on top.
 
 import { Canvas2DDevice } from './renderer/canvas2d-device.js';
-import type { IGraphicsDevice } from './renderer/graphics-device.js';
+import type { IGraphicsDevice, DeviceBackend } from './renderer/graphics-device.js';
 import { createCamera, type CameraView } from './renderer/camera.js';
 import { World, POOL_TRANSFORM, POOL_SPRITE } from './world.js';
 import { TransformPool } from './components/transform.js';
@@ -84,6 +84,43 @@ export interface EngineOptions {
   // tests where AudioContext isn't available. Defaults to false in
   // browser, true in Node.
   skipAudio?: boolean;
+  // Backend selection. Defaults to 'canvas2d'. The 'webgl2' value
+  // requires WebGL2Device to be imported (which self-registers via
+  // the backend registry below); otherwise Engine.create throws a
+  // helpful error pointing at the missing import.
+  //
+  // Tree-shaking note: engine.ts does NOT statically import
+  // WebGL2Device. Consumers who never reference 'webgl2' or
+  // WebGL2Device get a Canvas2D-only bundle.
+  backend?: DeviceBackend;
+  // Pre-built device. Overrides `backend` when provided. Useful for
+  // tests, shared-context scenarios, and consumers who want absolute
+  // control over device construction.
+  device?: IGraphicsDevice;
+}
+
+// Backend factory registry. Canvas2DDevice is registered eagerly at
+// module load. Other backends self-register when their device module
+// is imported - see WebGL2Device's module-level registerBackend
+// call. Tree-shake-friendly: engine.ts has no static reference to
+// non-default backends, so a Canvas2D-only consumer never pulls
+// the WebGL2 bytes into their bundle.
+export type DeviceFactory = (canvas: HTMLCanvasElement) => IGraphicsDevice;
+const backendRegistry: Map<DeviceBackend, DeviceFactory> = new Map();
+backendRegistry.set('canvas2d', (canvas) => new Canvas2DDevice(canvas));
+
+// Register a backend factory. Devices call this from their module
+// load to make the string-based `backend:` selection work without
+// engine.ts knowing about them. Idempotent: re-registration replaces
+// the prior factory.
+export function registerBackend(name: DeviceBackend, factory: DeviceFactory): void {
+  backendRegistry.set(name, factory);
+}
+
+// Probe whether a backend is registered. Useful for diagnostic code
+// or tests asserting a backend was loaded.
+export function isBackendRegistered(name: DeviceBackend): boolean {
+  return backendRegistry.has(name);
 }
 
 // Max delta clamp. Long pauses (background tab, breakpoint) shouldn't
@@ -120,8 +157,29 @@ export class Engine {
   // Constructs an Engine + default resources + default pools +
   // default render system. Caller registers their own systems
   // afterward via engine.world.addSystem.
+  //
+  // Backend selection precedence:
+  //   1. opts.device  - if provided, used as-is (tree-shake friendly)
+  //   2. opts.backend - looked up in backendRegistry; throws if a
+  //      non-default backend is requested but its device module was
+  //      never imported.
+  //   3. 'canvas2d' default factory.
   static create(opts: EngineOptions): Engine {
-    const device = new Canvas2DDevice(opts.canvas);
+    let device: IGraphicsDevice;
+    if (opts.device) {
+      device = opts.device;
+    } else {
+      const backend: DeviceBackend = opts.backend ?? 'canvas2d';
+      const factory = backendRegistry.get(backend);
+      if (!factory) {
+        throw new Error(
+          "Engine.create: backend '" + backend + "' is not registered. " +
+          "For 'webgl2', import { WebGL2Device } from '@sadhaka/loom-engine' before calling Engine.create - " +
+          "the module self-registers on import. Alternatively pass opts.device directly.",
+        );
+      }
+      device = factory(opts.canvas);
+    }
     const camera = createCamera(opts.canvas.width, opts.canvas.height);
     const world = new World();
     const time = createTimeResource();
