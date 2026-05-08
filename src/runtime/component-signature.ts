@@ -31,7 +31,8 @@ export const COMPONENT_SIGNATURE_MAX_BIT: number = 31;
 export function componentMask(...bits: number[]): number {
   var mask = 0;
   for (var i = 0; i < bits.length; i++) {
-    var b = bits[i] | 0;
+    var raw = bits[i];
+    var b = (raw === undefined ? 0 : raw) | 0;
     if (b < 0 || b > COMPONENT_SIGNATURE_MAX_BIT) {
       throw new Error('componentMask: bit ' + b + ' out of range [0, 31]');
     }
@@ -74,7 +75,7 @@ export class ComponentSignature {
       throw new Error('ComponentSignature.setBit: bit ' + bit + ' out of range [0, 31]');
     }
     this.ensureCapacity(entityIdx);
-    var prev = this.masks[entityIdx];
+    var prev = this.masks[entityIdx] ?? 0;
     var bitMask = (1 << bit) >>> 0;
     var next = (prev | bitMask) >>> 0;
     if (next !== prev) {
@@ -90,7 +91,7 @@ export class ComponentSignature {
       throw new Error('ComponentSignature.clearBit: bit ' + bit + ' out of range [0, 31]');
     }
     if (entityIdx >= this.cap) return;
-    var prev = this.masks[entityIdx];
+    var prev = this.masks[entityIdx] ?? 0;
     var bitMask = (1 << bit) >>> 0;
     var inv = (~bitMask) >>> 0;
     var next = (prev & inv) >>> 0;
@@ -113,19 +114,22 @@ export class ComponentSignature {
   // current capacity (unset entities are implicitly empty).
   getMask(entityIdx: number): number {
     if (entityIdx >= this.cap) return 0;
-    return this.masks[entityIdx] >>> 0;
+    var v = this.masks[entityIdx] ?? 0;
+    return v >>> 0;
   }
 
   // True iff every bit in `mask` is set on the entity.
   hasAll(entityIdx: number, mask: number): boolean {
     if (entityIdx >= this.cap) return mask === 0;
-    return (this.masks[entityIdx] & mask) === (mask >>> 0);
+    var v = this.masks[entityIdx] ?? 0;
+    return (v & mask) === (mask >>> 0);
   }
 
   // True iff at least one bit in `mask` is set on the entity.
   hasAny(entityIdx: number, mask: number): boolean {
     if (entityIdx >= this.cap) return false;
-    return (this.masks[entityIdx] & mask) !== 0;
+    var v = this.masks[entityIdx] ?? 0;
+    return (v & mask) !== 0;
   }
 
   // Current version. Bumps on every actual mutation. Used by
@@ -145,12 +149,15 @@ export class ComponentSignature {
     var matches: number[] = [];
     var m = mask >>> 0;
     for (var i = 0; i < this.cap; i++) {
-      if ((this.masks[i] & m) === m) {
+      var v = this.masks[i] ?? 0;
+      if ((v & m) === m) {
         matches.push(i);
       }
     }
     var out = new Int32Array(matches.length);
-    for (var j = 0; j < matches.length; j++) out[j] = matches[j];
+    for (var j = 0; j < matches.length; j++) {
+      out[j] = matches[j] ?? 0;
+    }
     return out;
   }
 
