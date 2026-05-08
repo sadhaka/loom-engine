@@ -489,3 +489,71 @@ test('TTL helpers: set_with_ttl + get_with_ttl_check expire on read', async func
 test('CLIENT_PLUGIN_SCOPES contains the 3 documented scopes', function () {
   assert.deepEqual(CLIENT_PLUGIN_SCOPES.slice().sort(), ['read_characters', 'read_events', 'read_zones']);
 });
+
+// 0.19.1 regression: hooks may return null / undefined / a value
+// synchronously. Mirrors the Python Optional[EmittedEvents] shape;
+// pre-fix the registry called `.then()` on the raw return value and
+// threw "Cannot read properties of null (reading 'then')". The
+// safeCall path now wraps the return value via Promise.resolve, and
+// withTimeout no longer fires its setTimeout when the hook resolved
+// synchronously.
+test('client-registry: sync hook returning null is safe + fast (0.19.1 regression)', async function () {
+  var registry = new ClientPluginRegistry({ eventTarget: null });
+  var calls = 0;
+
+  // NOTE: not async - this returns null synchronously, exactly like
+  // the user's hud-probe plugin in production.
+  registry.register({
+    name: 'sync-null',
+    version: '1.0.0',
+    priority: 100,
+    onBossSpawn: function (
+      _ctx: ClientPluginContext,
+      _zoneId: string,
+      _boss: unknown,
+    ): ClientEmittedEvents | null {
+      calls += 1;
+      return null;
+    },
+  } as unknown as IClientPlugin);
+
+  var t0 = Date.now();
+  await registry.dispatchBossSpawn('z', {
+    boss_id: 'b1', type: 't', name: 'n', hp_max: 1, hp_current: 1,
+    dmg: 0, x: 0, y: 0, knot_flavor: 'umbral',
+  });
+  var elapsed = Date.now() - t0;
+  assert.equal(calls, 1, 'hook should fire exactly once');
+  assert.ok(elapsed < 200, 'sync hook returning null should resolve fast (<200ms); got ' + String(elapsed) + 'ms');
+
+  // Stats: hook_call_count bumped, NO timeout, NO error.
+  var stats = registry.statsFor('sync-null');
+  assert.ok(stats, 'stats should exist');
+  assert.equal(stats!.hook_call_count, 1);
+  assert.equal(stats!.hook_timeout_count, 0,
+    'sync return-null must NOT trigger a tick-budget timeout');
+  assert.equal(stats!.hook_error_count, 0,
+    'sync return-null must NOT trigger an error');
+});
+
+test('client-registry: sync hook returning a value resolves correctly', async function () {
+  var registry = new ClientPluginRegistry({ eventTarget: null });
+
+  registry.register({
+    name: 'sync-value',
+    version: '1.0.0',
+    priority: 100,
+    onBossSpawn: function (): ClientEmittedEvents {
+      return { zoneEvents: [{ type: 'zone.test.sync', data: {} } as unknown as ZoneEventEnvelope['data']] };
+    },
+  } as unknown as IClientPlugin);
+
+  var emitted = await registry.dispatchBossSpawn('z', {
+    boss_id: 'b2', type: 't', name: 'n', hp_max: 1, hp_current: 1,
+    dmg: 0, x: 0, y: 0, knot_flavor: 'umbral',
+  });
+  assert.ok(emitted.zoneEvents);
+  assert.equal((emitted.zoneEvents as unknown[]).length, 1);
+  var stats = registry.statsFor('sync-value');
+  assert.equal(stats!.hook_timeout_count, 0);
+});

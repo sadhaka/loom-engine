@@ -800,7 +800,13 @@ export class ClientPluginRegistry {
     while (attempts < maxAttempts) {
       attempts += 1;
       try {
-        var hookPromise = (hookFn as (...a: unknown[]) => Promise<EmittedEvents | void>).apply(plugin, [ctx as unknown].concat(args));
+        // 0.19.1 fix: hooks may return null / undefined / a value
+        // synchronously (mirrors the Python-side Optional[EmittedEvents]
+        // shape). Wrap unconditionally so .then() in withTimeout cannot
+        // throw on a non-Promise. Promise.resolve() is a no-op on an
+        // existing thenable.
+        var hookResult = (hookFn as (...a: unknown[]) => unknown).apply(plugin, [ctx as unknown].concat(args));
+        var hookPromise = Promise.resolve(hookResult) as Promise<EmittedEvents | void>;
         var raced = await this.withTimeout(hookPromise, budgetMs, plugin, hookName);
         if (raced === null) {
           // Timeout already logged + counted; return null to drop.
@@ -843,11 +849,23 @@ export class ClientPluginRegistry {
   // null on timeout. The timed-out hook is allowed to keep running
   // in the background (we cannot really cancel a Promise) but its
   // contribution is dropped.
+  //
+  // 0.19.1 fix: a "fired" flag short-circuits the timeout callback
+  // when the hook resolves (or rejects) first. The previous
+  // implementation cleared the setTimeout via clearTimeout in
+  // .then() callbacks, but the callbacks were attached to the inner
+  // promise which had ALREADY resolved synchronously by the time
+  // .then() was wired up - so the clearTimeout never ran and the
+  // timeout always fired at +budget. The flag-guard works regardless
+  // of microtask ordering.
   private withTimeout<T>(promise: Promise<T>, ms: number, plugin: IClientPlugin, hookName: string): Promise<T | null> {
     var stats = this.statsByName.get(String(plugin.name));
+    var fired = false;
     var timeoutId: ReturnType<typeof setTimeout> | null = null;
     var timed: Promise<T | null> = new Promise(function (resolve) {
       timeoutId = setTimeout(function () {
+        if (fired) return;
+        fired = true;
         if (stats) stats.hook_timeout_count += 1;
         try {
           console.warn('[plugin-registry] plugin ' + String(plugin.name) + ' hook ' + hookName + ' exceeded tick budget ' + String(ms) + 'ms - dropping');
@@ -857,20 +875,20 @@ export class ClientPluginRegistry {
         resolve(null);
       }, Math.max(1, Number(ms) | 0));
     });
-    return Promise.race([
-      promise.then(function (v) {
-        if (timeoutId !== null) {
-          try { clearTimeout(timeoutId); } catch { /* ignore */ }
-        }
-        return v;
-      }, function (err) {
-        if (timeoutId !== null) {
-          try { clearTimeout(timeoutId); } catch { /* ignore */ }
-        }
-        throw err;
-      }),
-      timed,
-    ]);
+    var settled = promise.then(function (v) {
+      fired = true;
+      if (timeoutId !== null) {
+        try { clearTimeout(timeoutId); } catch { /* ignore */ }
+      }
+      return v;
+    }, function (err) {
+      fired = true;
+      if (timeoutId !== null) {
+        try { clearTimeout(timeoutId); } catch { /* ignore */ }
+      }
+      throw err;
+    });
+    return Promise.race([settled, timed]);
   }
 
   private normalizeEmitted(raw: EmittedEvents | void | null | undefined): EmittedEvents {

@@ -7,6 +7,31 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.19.1 - 2026-05-08
+
+**Hot fix** for two bugs discovered when registering a sync hook in
+production:
+
+1. `safeCall` calls `hookFn.apply(...)` and assumed the return was a
+   Promise. A hook returning `null` synchronously (mirrors the Python
+   `Optional[EmittedEvents]` return shape) made `withTimeout` call
+   `.then()` on `null` and throw "Cannot read properties of null
+   (reading 'then')". Fixed by wrapping the return value in
+   `Promise.resolve(...)` before passing to `withTimeout`.
+
+2. `withTimeout` cleared the timeout via the inner promise's
+   `.then()` callbacks. With a sync hook the inner promise had
+   already resolved before the chain attached, so `clearTimeout`
+   never ran and the timeout always fired at +budget regardless of
+   the actual hook duration. Fixed via a `fired` boolean both the
+   timeout callback and the resolve/reject path check first - the
+   first to set it wins, the other becomes a no-op.
+
+Two regression tests added: `sync hook returning null is safe + fast`
+and `sync hook returning a value resolves correctly`. Run from a
+fresh registry, neither bumps `hook_timeout_count` or
+`hook_error_count`. 595 -> 597 tests, all green.
+
 ## 0.19.0 - 2026-05-08
 
 **Client-side plugin SDK** (LOOM-DIRECTOR-PROTOCOL-V3 sec.3.1).
