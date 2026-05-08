@@ -7,6 +7,111 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.14.0 - 2026-05-08
+
+**Director Protocol v2: zone-scoped events + AI plugin SPI** (Phase
+16.1 + 16.2). Engine surface for the v2 protocol locked at
+[LOOM-DIRECTOR-PROTOCOL-V2.md](LOOM-DIRECTOR-PROTOCOL-V2.md). v1 (Phase
+6) remains untouched and locked; consumers who do not opt into v2 see
+identical behavior to 0.13.0.
+
+### Why
+
+v1 gave each Founder a private Loom-voice in their combat loop. v2
+lets the Loom address an entire zone - when one player witnesses a
+boss spawn, every player in that zone witnesses it together. The
+Director is also no longer one hardcoded LLM flow: an AI plugin SPI
+under the new `@sadhaka/loom-engine/server` entry point lets engine
+consumers wire any backend (Anthropic, OpenAI, local model,
+deterministic state machine) by implementing `IAIPlugin`. Browser
+bundle stays LLM-free; plugins run server-side only.
+
+### Added
+
+- **Zone-scoped event surface** (Track A, §3 + §4 of spec):
+  - `ZoneEventEnvelope<T>` + 7 typed events: `zone.boss.spawn`,
+    `zone.boss.tick`, `zone.boss.end`, `zone.narrator`, `zone.knot`,
+    `zone.state`, `zone.snapshot`. Per-zone monotonic event ids.
+  - `IZoneEventBridge` abstraction; concrete `MockZoneBridge` (tests +
+    offline) and `SSEZoneBridge` (multiplexes onto an existing
+    presence EventSource per spec §2.1 - no second connection).
+  - `ZoneEventSystem` runs PHASE_INPUT after `DirectorSystem` +
+    `PeerPresenceSystem`. Local-zone filter: foreign-zone events are
+    logged for observability but not applied (spec §4.3).
+  - `ZoneEventLog` ring buffer + `DirectorZoneStateResource` (per-zone
+    KV store, mutated by `zone.state` and `zone.snapshot`).
+
+- **AI plugin SPI** under `@sadhaka/loom-engine/server` (Track B, §5):
+  - `IAIPlugin` interface with 5 lifecycle hooks (`onTick`,
+    `onPeerJoin`, `onPeerLeave`, `onZoneEnter`, `onPlayerAction`).
+    Hooks return `EmittedEvents` ({ characterEvents?, zoneEvents? }).
+  - `AIPluginRegistry` with priority-ordered dispatch and
+    error-isolation guarantee: a plugin throwing in one hook drops
+    only that plugin's contribution for that dispatch; other plugins
+    continue, dispatch never throws to caller.
+  - `MockAIPlugin` for deterministic synthetic events in tests +
+    offline demo.
+  - `MapPluginStorage` + `ConsolePluginLogger` reference impls of the
+    storage / logger SPI surfaces.
+  - New `package.json` exports field entry: `./server` -> the SPI
+    bundle. Browser-bundle consumers (`@sadhaka/loom-engine`) never
+    pull this in.
+
+### Changed
+
+- `src/director/index.ts` is now organized into a v1 block and a v2
+  block, both exported at the package root for ergonomic single-import
+  consumers. v1 names unchanged.
+- `src/index.ts` re-exports the v2 zone surface alongside v1 so
+  consumers wiring `ZoneEventSystem`, `MockZoneBridge`, etc. import
+  from the package root just like v1 systems.
+
+### Tests
+
+371 / 371 pass (252 baseline + 57 new zone tests + 62 new AI plugin
+tests). Zero v1 regressions. Coverage:
+
+- Zone envelope round-trip for all 7 types; malformed-input rejection;
+  priority class lookup; JSON parser nullability.
+- Mock zone bridge: enqueue/poll, snapshot recovery, local-zone filter.
+- Zone system: spawn/tick/end lifecycle, multi-zone fanout, PHASE_INPUT
+  ordering vs v1 DirectorSystem, ring buffer caps, no-op tolerance
+  when bridge absent, per-zone state isolation.
+- AI plugin registry: register/unregister/list/get; dispatch order;
+  merged EmittedEvents; snapshot-during-dispatch (newly-registered
+  plugins fire on next dispatch).
+- Error isolation: sync throw, async reject, partial-hook failure,
+  all-fail, hostile logger fallback to console, dispose() throws,
+  earlier-events preserved on later-plugin failure.
+- Mock AI plugin: script determinism, multi-instance via name
+  override, priority override, sparse-script gaps.
+- Plugin context: storage round-trip, namespace isolation,
+  clearPlugin, console logger tagging, circular-meta resilience.
+
+### Spec ambiguities resolved during implementation
+
+- Equal-priority plugins fire in registration order (insertion-sort
+  preserves it).
+- `register()` mid-dispatch: registry snapshot at dispatch start;
+  newly-registered plugins fire on next dispatch.
+- Empty-array `EmittedEvents` fields stay undefined in the merged
+  result (no allocation churn).
+- `dispose()` errors are isolated the same way hook errors are; an
+  unregister never throws to the caller.
+- Logger throwing while logging a hook failure falls back to console
+  so dispatch never crashes.
+
+### Open / deferred
+
+- Browser-side plugins (small local models, WASM stubs) deferred per
+  spec §8.4. Server-side only in v2.
+- Cross-zone / world events deferred per spec §8.5.
+- Zone event throughput perf-bench scenario: deferred. Existing
+  scenario #4 (SSE event drain) in `tools/perf-suite.ts` covers
+  Director-bridge throughput; a sibling MockZoneBridge scenario
+  would be a near-duplicate. Will add if profiling reveals a
+  different bottleneck on zone fanout.
+
 ## 0.13.0 - 2026-05-08
 
 **Multiplayer presence layer** (Phase 15.1, client-side). Engine-side
