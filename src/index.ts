@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.49.0';
+export const LOOM_ENGINE_VERSION = '0.50.0';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -279,6 +279,14 @@ export type {
   HermiteKey,
   SplineOptions,
 } from './runtime/spline.js';
+// 0.50.0 - log ring buffer (severity-filtered fixed-capacity log).
+export { LogRingBuffer, RESOURCE_LOG_RING_BUFFER } from './runtime/log-ring-buffer.js';
+export type {
+  LogLevel,
+  LogEntry,
+  LogRingBufferOptions,
+  LogFilter,
+} from './runtime/log-ring-buffer.js';
 export {
   ResourceRegistry,
   createTimeResource,

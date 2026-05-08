@@ -171,6 +171,10 @@ const DATE_NOW_WHITELIST = [
   // for deterministic replays; default falls back to Date.now for
   // wall-clock save timestamps. Out-of-tick (consumer-triggered).
   'runtime/save-slots.ts',               // Date.now fallback (clock seam)
+  // Phase 0.50 LogRingBuffer. Defaults timestamps via performance.now
+  // -> Date.now fallback; consumers wanting replay-tight timestamps
+  // pass `now` via LogRingBufferOptions. Diagnostic surface only.
+  'runtime/log-ring-buffer.ts',          // defaultNowMs fallback (clock seam)
 ];
 
 function isWhitelisted(file: string, list: string[]): boolean {

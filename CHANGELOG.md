@@ -7,6 +7,130 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.50.0 - 2026-05-09
+
+**LogRingBuffer - severity-filtered, fixed-capacity log.** The
+engine has DebugHUD (0.24.0) for per-frame diagnostic overlay
+text but no place for the historical entries every action game
+wants: combat events, state transitions, network warnings,
+plugin output, the last N lines of "what happened." Browser
+console.log works at first but has no severity filter, no cap,
+no programmatic readout for an in-game console.
+
+LogRingBuffer is a tiny fixed-capacity ring with severity levels
+(debug / info / warn / error / fatal), per-instance min severity
+filter, optional structured payload per entry, monotonic id +
+timestamp, and an optional sink callback (mirror to console for
+dev / forward to Sentry for prod).
+
+This is the M8 finale and lands the engine at version **0.50.0**
+— the original "is this a real number?" question Misha asked at
+the start of the session. The answer was yes; here we are.
+
+### Added
+
+- `src/runtime/log-ring-buffer.ts` - `LogRingBuffer` class:
+  - Severity helpers: `debug() / info() / warn() / error() / fatal()`
+    + generic `log(level, msg, extras?)`.
+  - `extras: { channel?, data? }` — optional channel string +
+    structured payload Record<string, unknown>.
+  - `setMinLevel(level)` / `getMinLevel()` — runtime filter.
+  - `count()` / `capacity()` / `droppedSinceStart()`.
+  - `tail(n?)` — last n entries newest-first.
+  - `all()` — every retained entry newest-first.
+  - `filter({ minLevel?, since?, channel? })` — server-side query.
+  - `clear()` — empty the ring; droppedSinceStart preserved.
+  - `dispose()` — locks subsequent ops.
+- Optional `sink` callback fires for every accepted (non-filtered)
+  entry; throwing sink isolated.
+- Defensive: filtered entries return id=0 (never break sequence),
+  non-string messages coerced via `String()`, ring evicts oldest
+  on overflow, monotonic ids preserved across eviction.
+- Optional `now` clock seam for deterministic replays.
+- `LogLevel`, `LogEntry`, `LogRingBufferOptions`, `LogFilter`
+  types exported.
+- `RESOURCE_LOG_RING_BUFFER` constant.
+
+### Tests
+
+1210 -> 1238 (28 new in tests/log-ring-buffer.test.ts):
+- RESOURCE_LOG_RING_BUFFER stable string; starts empty; default
+  capacity 1024 + minLevel debug.
+- log + count + retrieve newest-first.
+- Severity helpers map to correct level.
+- Monotonic ids.
+- minLevel filters entries below threshold; setMinLevel runtime.
+- Ring evicts oldest when full; droppedSinceStart accumulates.
+- tail(n) returns last n; tail(0) defaults to all; tail(>size)
+  returns all.
+- filter by minLevel / since / channel string / channel array.
+- Structured payload preserved; sink fires per entry; throwing
+  sink isolated; sink receives full entry shape; filtered entries
+  do NOT fire sink.
+- clear empties; droppedSinceStart preserved across clear.
+- dispose makes log a no-op; filtered entry returns id=0.
+- Non-string message coerced via String().
+- Ring buffer wrap-around order; ids monotonic across eviction.
+- filter with no opts uses buffer minLevel.
+
+### Backwards compatibility
+
+Pure addition. Engine consumers opt in:
+
+```ts
+import { LogRingBuffer } from '@sadhaka/loom-engine';
+
+var log = LogRingBuffer.create({
+  capacity: 500,
+  minLevel: 'info',
+  sink: function (e) {
+    if (e.level === 'fatal') reportToSentry(e);
+  },
+});
+
+log.info('zone entered', { channel: 'world', data: { zoneId: 1 } });
+log.warn('packet drop', { channel: 'net', data: { seq: 42 } });
+log.error('plugin crashed', { channel: 'plugin', data: { name: 'hud-probe' } });
+
+// In-game console:
+log.tail(20).forEach(function (e) { console.log(e.timestampMs, e.level, e.message); });
+
+// Filtered query:
+log.filter({ minLevel: 'warn', channel: ['net', 'plugin'] });
+```
+
+### Milestone — engine 0.50.0
+
+Ten months of additive growth, no breaking changes. Every release
+since 0.10.0 has been pure addition; consumer code from 0.10
+still compiles against 0.50. The engine surface now spans:
+
+- ECS core + render layers + iso projection
+- Canvas2D + WebGL2 backends with sprite batching
+- Particle pool + emitter system + render pipeline
+- Combat / projectile / mob catalog
+- Director protocol v1/v2/v3 (encounter, zone, ability streams)
+- SSE multiplayer with peer pool + interpolation
+- Audio: bus + spatial bus + cue catalog + music director +
+  mixer + attenuation curves
+- Input: manager + actions + chord recognizer + virtual dpad +
+  tap-to-walk
+- Plugin SDK (server + client) with sandboxing
+- Determinism: seeded entropy + replay + fuzzer + tripwire
+- Storage + snapshots + save slots
+- Localization
+- Tween + tween chain + cubic-bezier
+- Spline path evaluators
+- Frame budget scheduler + timer scheduler
+- Floating text / damage numbers
+- Layer manager
+- Memory budget tracker
+- Particle / spatial-audio curve utilities
+- Log ring buffer
+
+1238 tests across 60+ test files. Pure-additive policy continues
+into the 1.0 timeline (when the API stability promise gets formal).
+
 ## 0.49.0 - 2026-05-09
 
 **Spline - 2D path evaluators for camera paths and animations.**
