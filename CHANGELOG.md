@@ -7,6 +7,90 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.44.0 - 2026-05-09
+
+**SpatialAudioCurves - distance attenuation curve evaluation.**
+SpatialAudioBus (0.15.0) already passes `distanceModel` into Web
+Audio's PannerNode, but the engine has no way to EVALUATE these
+curves outside the audio thread. Consumers need that for: cheap
+mute-when-far cull predicates before allocating a PannerNode, HUD
+falloff envelopes, AI proximity reasoning ("would this character
+hear that?"), and custom non-Web-Audio attenuation (wall occlusion,
+fog density modifiers).
+
+This module ships pure-math implementations of the three Web Audio
+distance models plus a registry for named custom curves. The
+existing SpatialAudioBus / PositionalPlayOptions are unchanged.
+
+### Added
+
+- `linearAttenuation(d, opts?)` - Web Audio linear model. Drops
+  linearly from 1 at refDistance to (1 - rolloffFactor) at
+  maxDistance. Distances past max clamp to floor.
+- `inverseAttenuation(d, opts?)` - Web Audio inverse model. Classic
+  1/r curve at default rolloff=1. Clamped at maxDistance.
+- `exponentialAttenuation(d, opts?)` - Web Audio exponential model.
+  Power curve `(d/ref)^(-rolloff)`. rolloff=2 squares the falloff.
+- `attenuationByModel(name, d, opts?)` - dispatch by model name.
+- `AttenuationRegistry` class:
+  - Pre-registers `linear` / `inverse` / `exponential`.
+  - `register(name, fn)` for custom curves ("fog-occluded",
+    "underwater", "indoor-wall").
+  - `evaluate(name, d, opts?)` - falls back to inverse if name is
+    unknown (matches Web Audio's PannerNode default).
+  - Defensive clamps: NaN / Infinity / non-number / throwing
+    custom curves all clamp to 0; out-of-range gain clamped to
+    [0, 1].
+- All evaluators tolerate negative / NaN distance (treated as 0,
+  yields gain=1) and infinite distance (yields 0 or floor).
+- `AttenuationOptions`, `AttenuationFn`, `DistanceModelName`
+  types exported.
+- `RESOURCE_ATTENUATION_REGISTRY` constant.
+
+### Tests
+
+1045 -> 1074 (29 new in tests/spatial-audio-curves.test.ts):
+- linear: gain=1 inside refDistance; linear midpoint; gain=0 at
+  max with default rolloff; clamped past max; partial residual at
+  rolloff < 1.
+- inverse: gain=1 inside ref; classic 1/r at rolloff=1; gain=1/4 at
+  d=4; clamped at maxDistance.
+- exponential: gain=1 inside ref; power curve at rolloff=1;
+  rolloff=2 squares the falloff; rolloff=0 = no falloff.
+- shared: negative distance treats as 0; NaN treats as 0; Infinity
+  -> 0 / floor; max <= ref auto-corrects.
+- attenuationByModel: dispatch by name.
+- registry: pre-registers 3 standard models; register + evaluate;
+  unregister; missing returns false; falls back to inverse for
+  unknown name; throwing curve clamps to 0; NaN / Infinity from
+  curve clamps; out-of-range gain clamped to [0, 1]; empty name
+  ignored; register replaces.
+
+### Backwards compatibility
+
+Pure addition. Engine consumers opt in:
+
+```ts
+import {
+  inverseAttenuation, AttenuationRegistry,
+} from '@sadhaka/loom-engine';
+
+// Cheap mute-when-far cull before allocating a PannerNode:
+function shouldPlay(distance) {
+  return inverseAttenuation(distance, {
+    refDistance: 1, maxDistance: 50, rolloffFactor: 1,
+  }) > 0.05;
+}
+
+// Or register a custom "fog-occluded" curve:
+var attenuators = new AttenuationRegistry();
+attenuators.register('fog', function (d, opts) {
+  var clear = inverseAttenuation(d, opts);
+  return clear * Math.exp(-d / 30); // additional fog falloff
+});
+var gain = attenuators.evaluate('fog', heroDist);
+```
+
 ## 0.43.0 - 2026-05-09
 
 **ParticleCurves - emit-rate / color-over-life / size-over-life

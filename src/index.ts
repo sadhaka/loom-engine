@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.43.0';
+export const LOOM_ENGINE_VERSION = '0.44.0';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -231,6 +231,20 @@ export type {
   SizeOverLifeOptions,
   SizeShape,
 } from './runtime/particle-curves.js';
+// 0.44.0 - spatial audio attenuation curves (engine-side evaluation).
+export {
+  linearAttenuation,
+  inverseAttenuation,
+  exponentialAttenuation,
+  attenuationByModel,
+  AttenuationRegistry,
+  RESOURCE_ATTENUATION_REGISTRY,
+} from './audio/spatial-audio-curves.js';
+export type {
+  AttenuationOptions,
+  AttenuationFn,
+  DistanceModelName,
+} from './audio/spatial-audio-curves.js';
 export {
   ResourceRegistry,
   createTimeResource,
