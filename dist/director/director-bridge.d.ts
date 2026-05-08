@@ -7,6 +7,11 @@ export interface DirectorBridgeStats {
     outOfOrderEvents: number;
     serverDropsP1: number;
     serverDropsP2: number;
+    lastConnectedAtMs: number;
+    lastDisconnectedAtMs: number;
+    totalConnectsCount: number;
+    totalDisconnectsCount: number;
+    currentReconnectAttempt: number;
 }
 export interface IDirectorBridge {
     start(): void;

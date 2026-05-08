@@ -7,6 +7,13 @@ export interface SSEDirectorBridgeOptions {
     dropP2?: boolean;
     eventSourceFactory?: (url: string) => EventSource;
     initialLastEventId?: number;
+    baseBackoffMs?: number;
+    maxBackoffMs?: number;
+    setTimeoutFn?: (fn: () => void, ms: number) => unknown;
+    clearTimeoutFn?: (handle: unknown) => void;
+    randomFn?: () => number;
+    nowFn?: () => number;
+    statusEventTarget?: EventTarget | null;
 }
 export declare class SSEDirectorBridge implements IDirectorBridge {
     private readonly baseUrl;
@@ -14,6 +21,13 @@ export declare class SSEDirectorBridge implements IDirectorBridge {
     private readonly fps;
     private readonly dropP2;
     private readonly eventSourceFactory;
+    private readonly baseBackoffMs;
+    private readonly maxBackoffMs;
+    private readonly setTimeoutFn;
+    private readonly clearTimeoutFn;
+    private readonly randomFn;
+    private readonly nowFn;
+    private readonly statusEventTarget;
     private es;
     private queue;
     private statusValue;
@@ -22,6 +36,9 @@ export declare class SSEDirectorBridge implements IDirectorBridge {
     private reorderTimeoutHandle;
     private static readonly REORDER_BUFFER_MAX;
     private static readonly REORDER_TIMEOUT_MS;
+    private reconnectAttempt;
+    private reconnectTimeoutHandle;
+    private running;
     constructor(opts: SSEDirectorBridgeOptions);
     start(): void;
     stop(): void;
@@ -32,11 +49,14 @@ export declare class SSEDirectorBridge implements IDirectorBridge {
     stats(): Readonly<DirectorBridgeStats>;
     private buildUrl;
     private openConnection;
+    private scheduleReconnect;
+    private cancelReconnect;
     private closeConnection;
     private handleRaw;
     private armReorderTimeout;
     private drainReorderBuffer;
     private flushReorderBufferAsIs;
     private clearReorderBuffer;
+    private transitionTo;
 }
 //# sourceMappingURL=sse-director-bridge.d.ts.map
