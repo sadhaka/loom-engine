@@ -7,6 +7,116 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.35.0 - 2026-05-08
+
+**AudioMixer - engine-side fade / crossfade / snapshot / duck on top
+of AudioBus.** AudioBus (Phase 5) already exposes master gain +
+per-bus gain + mute + VE-budget priority floors, and MusicDirector
+(Phase 17) does fade/crossfade for the music channel only. AudioMixer
+fills the rest of the gap: animate any bus or master to a target
+gain over time, snapshot/restore mix presets, and stack named ducks
+with attack/release envelopes. Driven by `tick(dt)` (engine-side
+animation, not Web Audio AudioParam ramps) so behavior is
+deterministic against EngineClock and tests run against the same
+FakeAudioContext mocks the rest of the audio module uses.
+
+### Added
+
+- `src/audio/audio-mixer.ts` - `AudioMixer` class:
+  - `fadeBus(name, target, opts)` / `fadeMaster(target, opts)` -
+    animate to a target gain over `durationMs` with optional easing
+    (any 0.29.0 `EasingName` or custom `EasingFn`). `durationMs <= 0`
+    applies immediately; `onComplete` fires once when the fade lands.
+  - `crossfade(fromBus, toBus, toTarget, opts)` - simultaneous fades
+    on the two buses; `onComplete` fires once at the end.
+  - `snapshot(key)` / `restore(key, opts?)` / `hasSnapshot(key)` /
+    `clearSnapshot(key)` - capture the current target gains under a
+    name and replay them later (instant or faded).
+  - `pushDuck(key, busName, opts)` / `releaseDuck(key)` /
+    `hasDuck(key)` - apply a named multiplier (`scalar`, `attackMs`,
+    `releaseMs`) to a target bus. Multiple ducks stack with
+    lowest-scalar-wins. Useful for "duck music while voice plays"
+    without coupling the systems.
+  - `tick(dtMs)` - advances all in-flight fades + ducks, computes
+    `target * lowestDuckMultiplier`, and pushes the result via
+    `AudioBus.setBusGain` / `AudioBus.setMasterGain`. `tick(0)` is a
+    no-op.
+  - `isFading(name)` / `isMasterFading()` / `getBusTarget(name)` /
+    `getMasterTarget()` - introspection for tests + debug HUD.
+  - `dispose()` - clears all in-flight state. The underlying
+    AudioBus is NOT disposed (mixer does not own it).
+- `AudioBus.listBuses()` - tiny additive helper so the mixer can
+  enumerate registered buses for snapshots without external tracking.
+- `RESOURCE_AUDIO_MIXER` constant.
+
+### Tests
+
+804 -> 837 (33 new in tests/audio-mixer.test.ts):
+- RESOURCE_AUDIO_MIXER stable string.
+- Create seeds master + bus targets from live AudioBus state.
+- fadeBus duration 0 applies immediately + fires onComplete.
+- fadeBus animates linearly across ticks.
+- fadeBus onComplete fires exactly once.
+- Replacing in-flight fade re-targets from the current value.
+- fadeBus on unknown bus is a no-op.
+- fadeBus respects easeInOutQuad curve at quarter / half points.
+- fadeBus accepts a custom easing function (sqrt example).
+- fadeMaster animates / instant variant / onComplete behaviour.
+- crossfade animates two buses simultaneously, single onComplete.
+- snapshot + restore (instant) returns target gains.
+- snapshot + restore (faded) animates back to snapshot targets.
+- restore with unknown key is a no-op.
+- clearSnapshot removes the entry.
+- pushDuck attackMs=0 jumps multiplier immediately.
+- pushDuck attack ramp 1 -> scalar over attackMs.
+- releaseDuck releaseMs=0 removes the duck immediately.
+- releaseDuck ramps multiplier scalar -> 1 then removes.
+- Multiple ducks on same bus -> lowest scalar wins.
+- Duck multiplies on top of a fading bus target.
+- pushDuck on unknown bus is a no-op.
+- Re-pushing an active duck replaces parameters.
+- tick(0) is a no-op.
+- dispose makes subsequent operations no-op.
+- getBusTarget reflects animated value mid-fade.
+- Easings module sanity check.
+- fadeBus negative target clamps to 0.
+- Snapshot captures a target that mutates after capture.
+- Release after attack still ramps multiplier back to 1.
+- AudioBus.listBuses returns the default 4 names.
+
+### Backwards compatibility
+
+Pure addition. Engine consumers opt in:
+
+```ts
+import { AudioBus, AudioMixer } from '@sadhaka/loom-engine';
+
+var bus = AudioBus.create();
+var mixer = AudioMixer.create({ bus });
+
+// Fade music down to 30% over half a second when entering a menu.
+mixer.fadeBus('music', 0.3, { durationMs: 500, easing: 'easeOutCubic' });
+
+// Snapshot the in-game mix, switch to a cinematic preset, restore later.
+mixer.snapshot('inGame');
+mixer.fadeMaster(0.6, { durationMs: 200 });
+// ... cinematic plays ...
+mixer.restore('inGame', { durationMs: 400 });
+
+// Duck music when voice plays.
+mixer.pushDuck('voice-active', 'music', {
+  scalar: 0.3, attackMs: 120, releaseMs: 400,
+});
+// ... voice line plays ...
+mixer.releaseDuck('voice-active');
+
+// Each frame:
+mixer.tick(deltaTimeMs);
+```
+
+`AudioBus.listBuses()` is the only addition to existing surface; no
+existing AudioBus consumers had it referenced.
+
 ## 0.34.0 - 2026-05-08
 
 **AssetPreloader - declarative asset loading with progress events.**

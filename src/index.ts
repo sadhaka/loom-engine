@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.34.0';
+export const LOOM_ENGINE_VERSION = '0.35.0';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -156,6 +156,14 @@ export type {
   AssetErrorEvent,
   AssetDoneEvent,
 } from './runtime/asset-preloader.js';
+// 0.35.0 - audio mixer (engine-side fade / crossfade / snapshot / duck).
+export { AudioMixer, RESOURCE_AUDIO_MIXER } from './audio/audio-mixer.js';
+export type {
+  AudioMixerOptions,
+  FadeOptions,
+  DuckOptions,
+  MixerSnapshot,
+} from './audio/audio-mixer.js';
 export {
   ResourceRegistry,
   createTimeResource,
