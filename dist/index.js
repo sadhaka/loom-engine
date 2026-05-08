@@ -57,6 +57,13 @@ export { SnapshotRecoveryHelper, SnapshotFetchError, } from './director/snapshot
 export { KnotContextResource } from './director/knot-context-resource.js';
 export { DirectorSystem, RESOURCE_DIRECTOR_LOG, createDirectorEventLog, } from './director/director-system.js';
 export { DirectorEncounterSystem } from './director/director-encounter-system.js';
+export { parseZoneEnvelope, parseZoneEnvelopeJson, priorityFor as zonePriorityFor, ZoneEventEnvelopeParseError, } from './director/zone/zone-event-envelope.js';
+export { RESOURCE_ZONE_EVENT_BRIDGE } from './director/zone/zone-event-bridge.js';
+export { MockZoneBridge } from './director/zone/mock-zone-bridge.js';
+export { SSEZoneBridge } from './director/zone/sse-zone-bridge.js';
+export { RESOURCE_ZONE_EVENT_LOG, ZONE_RING_SIZE, createZoneEventLog, getOrCreateZoneEntry, pushZoneEvent, } from './director/zone/zone-event-log.js';
+export { RESOURCE_DIRECTOR_ZONE_STATE, createDirectorZoneStateResource, getOrCreateZoneStateMap, applyZoneStateChanges, replaceZoneStateFromSnapshot, } from './director/zone/zone-state-resource.js';
+export { ZoneEventSystem } from './director/zone/zone-event-system.js';
 // Combat (Phase 7): health, damage, simple AI, attack. Engine-side
 // primitives that the actual Survivor port will use. The full
 // Survivor wave engine sits on top of these in subsequent sessions.
