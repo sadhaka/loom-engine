@@ -1,4 +1,4 @@
-export declare const LOOM_ENGINE_VERSION = "0.18.0";
+export declare const LOOM_ENGINE_VERSION = "0.19.0";
 export type { Vec2, Vec3, Rect } from './util/math.js';
 export { vec2, vec3, rect, clamp, lerp, smoothstep, approxEq, rectContains, rectIntersects, visibleInView, } from './util/math.js';
 export type { ColorRGBA } from './util/color.js';
@@ -129,4 +129,6 @@ export { SSEMultiplayerBridge } from './network/sse-multiplayer-bridge.js';
 export type { PeerSpriteEntry, PeerSpritePoolOptions } from './components/peer-sprite.js';
 export { PeerSpritePool, POOL_PEER_SPRITE } from './components/peer-sprite.js';
 export { PeerPresenceSystem, PeerRenderSystem, } from './systems/peer-presence-system.js';
+export type { IClientPlugin, PluginContext as ClientPluginContext, PluginStorage as ClientPluginStorage, PluginLogger as ClientPluginLogger, PluginOpsStats, PluginDescribeRow, PluginScope, IPluginEntropy, EmittedEvents as ClientEmittedEvents, PeerInfo as ClientPeerInfo, ClientPluginRegistryOptions, } from './plugins/index.js';
+export { ClientPluginRegistry, MapPluginStorage as ClientMapPluginStorage, ConsolePluginLogger as ClientConsolePluginLogger, PluginEntropy, PluginError, ALL_SCOPES as CLIENT_PLUGIN_SCOPES, DEFAULT_PLUGIN_STORAGE_MAX_BYTES as CLIENT_PLUGIN_DEFAULT_STORAGE_MAX_BYTES, DEFAULT_PLUGIN_TICK_BUDGET_MS as CLIENT_PLUGIN_DEFAULT_TICK_BUDGET_MS, setWithTtl as clientPluginSetWithTtl, getWithTtlCheck as clientPluginGetWithTtlCheck, } from './plugins/index.js';
 //# sourceMappingURL=index.d.ts.map
