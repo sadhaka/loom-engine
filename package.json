@@ -1,6 +1,6 @@
 {
   "name": "@sadhaka/loom-engine",
-  "version": "0.11.0",
+  "version": "0.12.0",
   "description": "Browser-first 2D / 2.5D game engine. Canvas2D, ECS, render-graph stages, Director-bridge SSE integration. Built from scratch in TypeScript for TheWorldTable.ai.",
   "type": "module",
   "main": "./dist/index.js",
@@ -42,7 +42,7 @@
     "build:all": "npm run build && npm run build:demo",
     "watch": "tsc --watch",
     "clean": "rm -rf dist demo/*.js demo/*.js.map",
-    "test": "tsx --test tests/smoke.test.ts tests/world.test.ts tests/asset-loader.test.ts tests/animation.test.ts tests/vfx.test.ts tests/audio-input.test.ts tests/director.test.ts tests/combat.test.ts tests/projectile.test.ts tests/arpg.test.ts tests/snapshot-recovery.test.ts tests/touch-input.test.ts",
+    "test": "tsx --test tests/smoke.test.ts tests/world.test.ts tests/asset-loader.test.ts tests/animation.test.ts tests/vfx.test.ts tests/audio-input.test.ts tests/director.test.ts tests/combat.test.ts tests/projectile.test.ts tests/arpg.test.ts tests/snapshot-recovery.test.ts tests/touch-input.test.ts tests/webgl2-device.test.ts",
     "docs": "typedoc",
     "docs:ci": "typedoc --out docs-build --cleanOutputDir",
     "prepublishOnly": "npm test && npm run build"

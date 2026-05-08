@@ -144,9 +144,90 @@ public API surface will evolve until 1.0.
 | 9.3 | shipped | TypeDoc public-API site with auto-deploy |
 | 11A.2 | shipped | docs hosting migrated to Cloudflare Pages |
 | 11B.3 | shipped | MIT license + npm publish posture (this release) |
+| 12.4 | shipped | License pivot from MIT to BUSL 1.1 with $1M revenue cap |
+| 13.2 | shipped | Engine hardening: 12.6 audit lows L-08..L-12 closed |
+| 14.1 | shipped | WebGL2 instanced sprite batcher (this release) |
 
 See [LOOM-ENGINE-SPEC.md](../docker/LOOM-ENGINE-SPEC.md) Section 7
 for the full phase plan with effort estimates.
+
+## Renderer backends
+
+Two backends ship behind the same `IGraphicsDevice` contract:
+
+| Backend | Status | When to use |
+|---|---|---|
+| `canvas2d` | default, stable | Hundreds to ~2k sprites; broadest browser coverage |
+| `webgl2` | 0.12.0+, opt-in | Thousands of sprites; instanced batching with atlas grouping |
+
+Existing consumers do not need to change anything - `Engine.create({ canvas })`
+keeps the Canvas2D path it has always had, with byte-for-byte
+compatibility on every public API.
+
+### Opt into WebGL2
+
+```ts
+import { Engine, WebGL2Device } from '@sadhaka/loom-engine';
+
+// Importing WebGL2Device side-effect-registers the 'webgl2' backend
+// factory. The string-based form then works:
+var engine = Engine.create({ canvas: myCanvas, backend: 'webgl2' });
+```
+
+Or inject a pre-built device for absolute control over construction
+(useful when sharing the GL context with another renderer):
+
+```ts
+import { Engine, WebGL2Device } from '@sadhaka/loom-engine';
+
+var device = new WebGL2Device(myCanvas);
+var engine = Engine.create({ canvas: myCanvas, device: device });
+```
+
+### How batching works
+
+Every `drawSprite` / `drawTile` / `drawParticle` / `drawText` call
+flows through `SpriteBatcher`, which accumulates per-instance data
+(screen-space origin + size, atlas UV rect, RGBA tint) into a single
+Float32Array. A flush triggers when the next call uses a different
+atlas or blend mode, and at `endFrame`. Each flush issues exactly
+one `drawArraysInstanced` for the batch.
+
+For maximum throughput, group draws by atlas at the system level
+(e.g. render all hamlet props from one atlas, all NPCs from another).
+The default `SpriteRenderSystem` already sorts globally by iso depth
+key; submission order within an atlas-bounded run is preserved
+through the batcher.
+
+### Tree-shake story
+
+`engine.ts` deliberately does **not** statically import
+`WebGL2Device`. A consumer that only uses Canvas2D never pulls
+WebGL2-specific code into their bundle - the only way the WebGL2
+path enters the dependency graph is via an explicit
+`import { WebGL2Device }`, which also triggers backend registration
+through a `/*#__PURE__*/`-marked side effect.
+
+### WebGL2 limits + fallback
+
+- WebGL2 contexts can be lost (GPU crash, long backgrounded tab,
+  extension hijack). The device handles `webglcontextlost` /
+  `webglcontextrestored` automatically: every atlas re-uploads from
+  its cached source image; frames during the lost interval no-op.
+- Browsers without WebGL2 (Safari < 15, very old Chrome/Firefox)
+  throw at `WebGL2Device` construction. Wrap the upgrade in a
+  feature check and fall back to Canvas2D:
+  ```ts
+  function pickBackend() {
+    var probe = document.createElement('canvas').getContext('webgl2');
+    return probe ? 'webgl2' : 'canvas2d';
+  }
+  var engine = Engine.create({ canvas: myCanvas, backend: pickBackend() });
+  ```
+- Performance characterization lands in phase 14.3 (synthetic 5k+
+  sprite bench, frame-time histograms, pareto-front against
+  Canvas2D). Until then, treat WebGL2 as opt-in for scale-bound
+  scenes only.
 
 ## Build
 

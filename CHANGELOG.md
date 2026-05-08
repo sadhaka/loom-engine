@@ -7,6 +7,91 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.12.0 - 2026-05-08
+
+**WebGL2 instanced sprite batcher backend** (Phase 14.1). Lifts the
+Canvas2D ~2k-sprite ceiling to thousands+ via instanced rendering
+with atlas-grouped batching. Canvas2D remains the default and
+unchanged.
+
+### Why
+
+Canvas2D's `drawImage` is one driver call per sprite. At a few
+thousand sprites per frame the device-side cost dominates frame
+time. WebGL2's `drawArraysInstanced` issues one driver call for an
+entire atlas's worth of sprites, with per-instance data uploaded
+once per flush in a single `bufferSubData`. The `IGraphicsDevice`
+abstraction was already in place from Phase 1 (per the Babylon.js
+ThinEngine split documented in `PRIOR-ART.md`); this release fills
+in the second backend.
+
+### Added
+
+- `WebGL2Device` (`src/renderer/webgl2-device.ts`) implementing
+  `IGraphicsDevice` against a WebGL2 context. Same call-site
+  contract as `Canvas2DDevice`; consumers swap backends without
+  touching draw code.
+- `SpriteBatcher` (`src/renderer/sprite-batcher.ts`) - per-frame
+  CPU-side accumulator. Groups submitted instances by
+  `(atlas, blendMode)` key; flushes on key change and at end of
+  frame. 12 floats per instance: origin, size, uv-rect, tint.
+- `TextureAtlas` (`src/renderer/texture-atlas.ts`) - GL texture
+  wrapper plus pre-computed UV rect + frame size lookup tables.
+  Uses `UNPACK_FLIP_Y_WEBGL` so atlas frame coords map to UVs
+  without extra math at draw time.
+- Inlined GLSL ES 3.00 shader sources
+  (`src/renderer/shaders/sprite-shader-source.ts`) for the
+  instanced quad path. Vertex shader maps the static unit quad onto
+  per-instance origin + size; fragment shader samples the atlas and
+  multiplies by tint.
+- Backend registry on `Engine`: `registerBackend(name, factory)` +
+  `isBackendRegistered(name)`. Devices self-register at module
+  load. `Engine.create({ backend: 'webgl2' })` looks up the
+  factory; throws a diagnostic error if the device module was
+  never imported.
+- `EngineOptions.backend?: 'canvas2d' | 'webgl2'` (defaults to
+  `'canvas2d'`). New `EngineOptions.device?: IGraphicsDevice`
+  injection seam for shared-context scenarios and tree-shaking.
+- 21 new tests in `tests/webgl2-device.test.ts` covering backend
+  registration, atlas UV computation, batcher flush/grow,
+  drawArraysInstanced batching, atlas-swap flush behavior,
+  blend-mode swap, submission-order preservation, particle
+  additive blend, context-loss no-op, and dispose teardown.
+
+### Changed
+
+- `LOOM_ENGINE_VERSION` constant: `0.11.0` -> `0.12.0`.
+- `package.json` `version`: `0.11.0` -> `0.12.0`.
+- `package.json` `test` script appends `tests/webgl2-device.test.ts`.
+- `src/index.ts` re-exports `WebGL2Device`, `TextureAtlas`,
+  `SpriteBatcher`, `FLOATS_PER_INSTANCE`, `BlendMode`,
+  `FlushHandler`, `SPRITE_VERT_SRC`, `SPRITE_FRAG_SRC`,
+  `UNIT_QUAD_VERTICES`, `registerBackend`, `isBackendRegistered`,
+  and `DeviceFactory`.
+- `engine.ts` does **not** statically import `WebGL2Device`. The
+  default (Canvas2D-only) bundle stays the same size as 0.11.0;
+  WebGL2 code only enters the graph when a consumer imports
+  `WebGL2Device`.
+
+### Backwards compatibility
+
+Fully compatible. `Engine.create({ canvas })` produces the same
+`Canvas2DDevice` instance it did in 0.11.0. The 208 baseline tests
+all stay green. No existing call site needs to change.
+
+### Known limits
+
+- `drawText` is implemented via per-string baked textures with a
+  bounded LRU cache (256 entries). Fine for typical UI labels;
+  text-heavy scenes pay one texture upload per unique label.
+  Phase 14.4 will revisit with a glyph atlas if needed.
+- Particle disc texture is a single 64x64 RGBA upload; the
+  Canvas2DDevice's per-color tinting hack is replaced by proper
+  per-instance tint in the fragment shader (visually closer to
+  Phase 4 spec).
+- Performance numbers (synthetic 5k+ sprite bench, frame-time
+  histograms vs Canvas2D) are deferred to Phase 14.3.
+
 ## 0.11.0 - 2026-05-08
 
 **License pivot to BUSL 1.1** (Phase 12.4). The engine moves from MIT

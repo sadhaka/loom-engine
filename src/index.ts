@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.11.0';
+export const LOOM_ENGINE_VERSION = '0.12.0';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -93,8 +93,8 @@ export {
 export { SpriteRenderSystem } from './systems/sprite-render-system.js';
 
 // Engine facade
-export { Engine } from './engine.js';
-export type { EngineOptions } from './engine.js';
+export { Engine, registerBackend, isBackendRegistered } from './engine.js';
+export type { EngineOptions, DeviceFactory } from './engine.js';
 
 // Renderer (low-level, still exposed for direct device access in
 // Director-bridge and similar scenarios).
@@ -117,6 +117,30 @@ export {
 export {
   Canvas2DDevice,
 } from './renderer/canvas2d-device.js';
+
+// WebGL2 backend (Phase 14.1). Importing this symbol triggers the
+// module's self-registration of the 'webgl2' backend factory, so
+// Engine.create({ backend: 'webgl2' }) starts working from then on.
+// Canvas2D-only consumers do not import this and the entire WebGL2
+// path tree-shakes out of the bundle.
+export { WebGL2Device } from './renderer/webgl2-device.js';
+export {
+  TextureAtlas,
+  makeParticleDiscAtlas,
+} from './renderer/texture-atlas.js';
+export {
+  SpriteBatcher,
+  FLOATS_PER_INSTANCE,
+} from './renderer/sprite-batcher.js';
+export type {
+  BlendMode,
+  FlushHandler,
+} from './renderer/sprite-batcher.js';
+export {
+  SPRITE_VERT_SRC,
+  SPRITE_FRAG_SRC,
+  UNIT_QUAD_VERTICES,
+} from './renderer/shaders/sprite-shader-source.js';
 
 export {
   ISO_TILE_WIDTH,
