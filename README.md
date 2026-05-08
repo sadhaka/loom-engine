@@ -146,7 +146,8 @@ public API surface will evolve until 1.0.
 | 11B.3 | shipped | MIT license + npm publish posture (this release) |
 | 12.4 | shipped | License pivot from MIT to BUSL 1.1 with $1M revenue cap |
 | 13.2 | shipped | Engine hardening: 12.6 audit lows L-08..L-12 closed |
-| 14.1 | shipped | WebGL2 instanced sprite batcher (this release) |
+| 14.1 | shipped | WebGL2 instanced sprite batcher |
+| 15.1 | shipped | Multiplayer presence: pluggable bridge (SSE / Mock), peer pool with per-peer linear interpolation, render system (this release) |
 
 See [LOOM-ENGINE-SPEC.md](../docker/LOOM-ENGINE-SPEC.md) Section 7
 for the full phase plan with effort estimates.
@@ -276,6 +277,14 @@ the browser without a build step on the consumer side.
   Demonstrates that the same ECS / resource model that runs the action
   demos also fits a UI-only game: custom `Resource`, custom `System`
   reading both `InputSnapshot` and DOM events, DOM as the primary UI.
+- **[Plaza Multiplayer](./demo/plaza-multiplayer/)** - walkable iso
+  plaza with three synthetic peers wandering randomly, driven by a
+  `MockMultiplayerBridge`. WASD to walk; the local player broadcasts
+  position at 10 Hz and the three peers (Alice / Bob / Carol) lerp
+  smoothly between presence updates. Demonstrates the pluggable
+  multiplayer bridge, `PeerPool` linear interpolation, and the
+  `PeerPresenceSystem` / `PeerRenderSystem` pipeline. See the
+  [Multiplayer](#multiplayer) section below for the wire protocol.
 
 The legacy reference demos (Phase 6 director, Phase 7 combat, Phase 8
 ARPG slice) stay accessible from the gallery index.
@@ -284,6 +293,109 @@ Controls in the legacy director demo (`demo/director.html`):
 - **Arrow keys / WASD**: pan camera
 - **Click**: burst 24 particles + play SFX chirp (after first click, AudioContext unlocks)
 - **Hover**: stats panel shows the iso tile under the cursor
+
+## Multiplayer
+
+Phase 15.1 adds a thin presence layer for showing other players in
+real time on the same world. The transport is pluggable: the engine
+ships an `SSEMultiplayerBridge` (server-sent events) and a
+`MockMultiplayerBridge` (in-process; tests + offline demos), and the
+`IMultiplayerBridge` interface is small enough to swap in WebSocket
+or WebRTC without touching anything above it. No CRDT - peers carry
+position only, and conflict resolution is "last write wins" at the
+server. Shared state beyond position is deferred to a later phase.
+
+### Wire protocol
+
+The bridge layer hides this from gameplay code, but for anyone
+implementing a server (or a custom transport) the contract is:
+
+**Server -> client (SSE event types):**
+- `presence.snapshot` `{ peers: [{ character_id, x, y, zone, ts_ms, name? }] }`
+  emitted once on connect with the full current peer roster. The
+  client treats this as authoritative and drops any peer not in the
+  snapshot.
+- `presence.update` `{ character_id, x, y, zone, ts_ms, name? }`
+  emitted as peers move.
+- `presence.depart` `{ character_id }`
+  emitted when a peer disconnects.
+
+**Client -> server (HTTP POST):**
+- `POST <broadcastUrl>` `{ character_id, x, y, zone, ts_ms }`
+  the engine rate-limits to **10 Hz** (`BROADCAST_HZ`); excess calls
+  to `broadcastPosition()` are silently dropped and counted in
+  `bridge.stats().rateLimitedDrops`. Calling once per frame is fine.
+
+`ts_ms` is the wall clock at which the position was true. The
+`PeerPool` uses it to interpolate between successive samples so peers
+don't jitter at the network rate. Acceptable lag is ~150 ms (one
+update interval at 10 Hz), imperceptible at walk speed.
+
+### Setup
+
+```ts
+import {
+  Engine,
+  // Multiplayer
+  MockMultiplayerBridge,        // or SSEMultiplayerBridge
+  PeerPool,
+  PeerSpritePool,
+  PeerPresenceSystem,
+  PeerRenderSystem,
+  POOL_PEER_SPRITE,
+  RESOURCE_MULTIPLAYER_BRIDGE,
+  RESOURCE_PEER_POOL,
+  SYSTEM_PHASE_INPUT,
+  SYSTEM_PHASE_RENDER,
+} from '@sadhaka/loom-engine';
+
+const engine = Engine.create({ canvas });
+
+// 1. Create a bridge. Production code uses SSEMultiplayerBridge:
+//
+//   const bridge = new SSEMultiplayerBridge({
+//     baseUrl: '/api/v1/loom/presence/events',
+//     characterId: 'me',
+//     zone: 'plaza',
+//   });
+//
+// Tests + offline dev use the in-process mock:
+const bridge = new MockMultiplayerBridge();
+bridge.connect();
+
+// 2. PeerPool stores all known peers + their interpolated positions.
+//    Self-filter: tell the pool which character_id is the local player
+//    so it isn't rendered as a ghost when the server echoes it back.
+const peerPool = new PeerPool();
+peerPool.setLocalCharacterId('me');
+
+// 3. PeerSpritePool maps character_id -> rendering hint. A default
+//    atlas + frame is enough for an undifferentiated demo; setOverride()
+//    lets you assign per-class sprites or cosmetic shards.
+const peerSprites = new PeerSpritePool({ defaultAtlas: peerAtlas });
+
+engine.world.resources.set(RESOURCE_MULTIPLAYER_BRIDGE, bridge);
+engine.world.resources.set(RESOURCE_PEER_POOL, peerPool);
+engine.world.registerPool(POOL_PEER_SPRITE, peerSprites);
+
+// 4. Wire the systems. PeerPresenceSystem drains the bridge each
+//    frame; PeerRenderSystem submits a drawSprite + name label per
+//    peer at their interpolated position.
+engine.world.addSystem(new PeerPresenceSystem(), SYSTEM_PHASE_INPUT);
+engine.world.addSystem(new PeerRenderSystem(),   SYSTEM_PHASE_RENDER);
+
+// 5. Inside your walk-system, call broadcastPosition() each frame.
+//    The bridge enforces the 10 Hz wire rate.
+bridge.broadcastPosition(playerX, playerY, 'plaza', Date.now());
+```
+
+### Swapping transports
+
+The bridge interface is just five methods (`connect`, `disconnect`,
+`status`, `pollMessages`, `broadcastPosition`, plus `stats`). To use
+WebSocket or WebRTC, implement `IMultiplayerBridge` with the same
+`PresenceMessage` shape (`update` / `depart` / `snapshot`); none of
+the systems above the bridge change.
 
 ## Layout
 

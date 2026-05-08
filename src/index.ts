@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.12.0';
+export const LOOM_ENGINE_VERSION = '0.13.0';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -408,3 +408,37 @@ export {
   createLastInteraction,
   RESOURCE_LAST_INTERACTION,
 } from './systems/interaction-system.js';
+
+// Multiplayer (Phase 15.1): pluggable presence transport, per-peer
+// interpolation between known positions, simple peer rendering with
+// name labels. Server-side wire protocol is shared with Track B in
+// the LOOM-WEEK15 spec; the bridge layer hides transport details so
+// consumers can swap SSE for WebSocket or WebRTC without touching
+// the systems above it.
+export type {
+  IMultiplayerBridge,
+  MultiplayerBridgeStatus,
+  MultiplayerBridgeStats,
+  PresenceMessage,
+  PresenceUpdate,
+  PresenceDepart,
+  PresenceSnapshot,
+} from './network/multiplayer-bridge.js';
+export {
+  RESOURCE_MULTIPLAYER_BRIDGE,
+  RESOURCE_PEER_POOL,
+  BROADCAST_HZ,
+  BROADCAST_MIN_INTERVAL_MS,
+} from './network/multiplayer-bridge.js';
+export type { PeerEntry, RenderedPeerView } from './network/peer-pool.js';
+export { PeerPool } from './network/peer-pool.js';
+export type { MockMultiplayerBridgeOptions } from './network/mock-multiplayer-bridge.js';
+export { MockMultiplayerBridge } from './network/mock-multiplayer-bridge.js';
+export type { SSEMultiplayerBridgeOptions } from './network/sse-multiplayer-bridge.js';
+export { SSEMultiplayerBridge } from './network/sse-multiplayer-bridge.js';
+export type { PeerSpriteEntry, PeerSpritePoolOptions } from './components/peer-sprite.js';
+export { PeerSpritePool, POOL_PEER_SPRITE } from './components/peer-sprite.js';
+export {
+  PeerPresenceSystem,
+  PeerRenderSystem,
+} from './systems/peer-presence-system.js';

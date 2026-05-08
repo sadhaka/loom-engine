@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Loom Engine - Plaza Multiplayer</title>
+  <style>
+    html, body { margin: 0; padding: 0; background: #14110d; color: #e8d8b6; font: 13px/1.4 sans-serif; }
+    .wrap { max-width: 720px; margin: 0 auto; padding: 16px; }
+    canvas { display: block; image-rendering: pixelated; image-rendering: crisp-edges; background: #000; border: 1px solid #2a241a; }
+    h1 { margin: 0 0 12px; font-size: 14px; color: #d6c694; letter-spacing: 0.05em; text-transform: uppercase; }
+    p { margin: 4px 0; color: #8a7c5e; }
+    a { color: #d6c694; }
+    code { color: #d6c694; }
+    .stats {
+      margin-top: 12px;
+      padding: 12px 16px;
+      background: rgba(42, 36, 26, 0.9);
+      border-left: 3px solid #d6c694;
+      color: #b6a17a;
+      font-family: ui-monospace, "SF Mono", Menlo, monospace;
+      font-size: 12px;
+      white-space: pre;
+    }
+  </style>
+  <script type="importmap">
+  {
+    "imports": {
+      "@sadhaka/loom-engine": "../../dist/index.js"
+    }
+  }
+  </script>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Loom Engine - Plaza Multiplayer</h1>
+    <p>Walkable iso plaza with three synthetic peers wandering randomly. The local player (blue) walks via WASD or arrow keys. Three other peers (Alice/Bob/Carol, red/green/yellow) are driven by a <code>MockMultiplayerBridge</code> that pushes <code>presence.update</code> messages every 100 ms, exactly mirroring the wire protocol an SSE-backed server would emit. Swap <code>MockMultiplayerBridge</code> for <code>SSEMultiplayerBridge</code> and the same engine code drives a real backend. <a href="../">back to gallery</a> &middot; <a href="https://github.com/sadhaka/loom-engine/blob/main/demo/plaza-multiplayer/main.ts">view source</a></p>
+    <canvas id="stage" width="640" height="400"></canvas>
+    <div id="stats" class="stats">connecting...</div>
+  </div>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>
