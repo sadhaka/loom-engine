@@ -391,6 +391,31 @@ export {
 export type { ZoneEventSystemOptions } from './director/zone/zone-event-system.js';
 export { ZoneEventSystem } from './director/zone/zone-event-system.js';
 
+// ===== Phase 17 audio - zone integration shell (Track C) =====
+//
+// Generic system that maps zone events to cue plays. Engine ships
+// ZERO mappings; consumers register their own per spec sec.5.2.
+// The system tolerates missing CueCatalog / MusicDirector resources
+// (Track A + B may not be wired in every embedding) so it can be
+// safely added to a world before the audio chain finishes booting.
+export type {
+  ZoneAudioMapping,
+  ZoneCuePlay,
+  ZoneAudioContext,
+  ZoneAudioSystemOptions,
+  PositionalPlayOptionsStub,
+  AudioListenerPoseStub,
+  AudioListenerResourceStub,
+  CueCatalogStub,
+  MusicDirectorStub,
+} from './audio/zone-audio-system.js';
+export {
+  ZoneAudioSystem,
+  RESOURCE_AUDIO_LISTENER_STUB,
+  RESOURCE_CUE_CATALOG_STUB,
+  RESOURCE_MUSIC_DIRECTOR_STUB,
+} from './audio/zone-audio-system.js';
+
 // Combat (Phase 7): health, damage, simple AI, attack. Engine-side
 // primitives that the actual Survivor port will use. The full
 // Survivor wave engine sits on top of these in subsequent sessions.
