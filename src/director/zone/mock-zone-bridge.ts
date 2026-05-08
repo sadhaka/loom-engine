@@ -30,12 +30,20 @@ export class MockZoneBridge implements IZoneEventBridge {
     outOfOrderEvents: number;
     serverDropsP1: number;
     serverDropsP2: number;
+    lastConnectedAtMs: number;
+    lastDisconnectedAtMs: number;
+    totalConnectsCount: number;
+    totalDisconnectsCount: number;
   } = {
     eventsReceived: 0,
     reconnects: 0,
     outOfOrderEvents: 0,
     serverDropsP1: 0,
     serverDropsP2: 0,
+    lastConnectedAtMs: 0,
+    lastDisconnectedAtMs: 0,
+    totalConnectsCount: 0,
+    totalDisconnectsCount: 0,
   };
 
   start(): void {
@@ -70,12 +78,16 @@ export class MockZoneBridge implements IZoneEventBridge {
     // the call don't leak through. lastEventIdByZone is wrapped in a
     // shallow clone; spec calls this rare so cost is fine.
     return {
-      eventsReceived: this.statsValue.eventsReceived,
-      reconnects: this.statsValue.reconnects,
-      outOfOrderEvents: this.statsValue.outOfOrderEvents,
-      serverDropsP1: this.statsValue.serverDropsP1,
-      serverDropsP2: this.statsValue.serverDropsP2,
-      lastEventIdByZone: new Map(this.lastEventIdByZone),
+      eventsReceived:        this.statsValue.eventsReceived,
+      reconnects:            this.statsValue.reconnects,
+      outOfOrderEvents:      this.statsValue.outOfOrderEvents,
+      serverDropsP1:         this.statsValue.serverDropsP1,
+      serverDropsP2:         this.statsValue.serverDropsP2,
+      lastEventIdByZone:     new Map(this.lastEventIdByZone),
+      lastConnectedAtMs:     this.statsValue.lastConnectedAtMs,
+      lastDisconnectedAtMs:  this.statsValue.lastDisconnectedAtMs,
+      totalConnectsCount:    this.statsValue.totalConnectsCount,
+      totalDisconnectsCount: this.statsValue.totalDisconnectsCount,
     };
   }
 

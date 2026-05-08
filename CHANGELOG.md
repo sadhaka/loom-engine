@@ -7,6 +7,69 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.20.1 - 2026-05-08
+
+**SSEZoneBridge networking polish.** Mirrors the 0.20.0
+director-bridge surface for the zone-event channel, scoped to what
+makes sense for a bridge that does NOT own its EventSource (the
+presence layer does). No backoff or snapshot-required handling -
+those would be foreign concerns - just status state-machine + timing
+stats parity.
+
+### Added
+
+- `arpg:zone-bridge-status` CustomEvent on every status transition
+  with `{from, to, characterId}` detail. Default target is
+  `globalThis.window`; `opts.statusEventTarget` can pin a custom
+  target (or `null` to disable dispatch).
+- `transitionTo(next)` private method routes every status change
+  through one site so timing-stat bumps stay consistent. Idempotent
+  (same-status calls no-op + don't double-bump counters).
+- `ZoneEventBridgeStats` gains `lastConnectedAtMs`,
+  `lastDisconnectedAtMs`, `totalConnectsCount`,
+  `totalDisconnectsCount`. Reuses the underlying
+  `EventSource.readyState` transitions as the trigger; the bridge
+  doesn't own retry, so these track OBSERVED state changes from the
+  presence layer.
+- `nowFn` injection seam (defaults to `Date.now`) for deterministic
+  timing in tests.
+- `MockZoneBridge` updated to include the new stats fields so type
+  callers don't fork.
+
+### Tests
+
+606 -> 617 (11 new). Coverage:
+- Initial idle status; start with open/connecting/closed ES
+  reflects correctly.
+- `status()` reflects underlying readyState transitions even when
+  ES changes after start.
+- `stop()` transitions to closed.
+- Connected transition bumps lastConnectedAtMs + totalConnectsCount.
+- Connected -> closed bumps lastDisconnectedAtMs + totalDisconnectsCount.
+- arpg:zone-bridge-status CustomEvent fires with full detail
+  (`from / to / characterId`).
+- All 0.20.1 fields present on `stats()` AND existing fields
+  preserved.
+- Out-of-order delivery still works (regression duplicate of the
+  fuzzer contract from 0.20.0).
+- Idempotent `transitionTo` - redundant `status()` polls don't
+  double-bump `totalConnectsCount`.
+
+### Why this scope (not the original 0.20.x plan)
+
+The first attempt at this phase added gap-detection +
+snapshot-required handling at the bridge layer. That broke the
+fuzzer's "out-of-order events MUST still be queued" contract,
+because gap detection lives downstream in `ZoneEventSystem` per the
+existing comment at `tests/fuzzer/fuzzer.test.ts` line 113-116.
+Reverting to the existing buffer-everything semantic + adding only
+status / timing parity ships the surface improvements without
+crossing the contract.
+
+A future 0.21.x can layer system-level gap detection (with a
+configurable `GAP_THRESHOLD` + snapshot-pull recovery) without
+touching the bridge.
+
 ## 0.20.0 - 2026-05-08
 
 **Networking polish for SSEDirectorBridge.** Eliminates the

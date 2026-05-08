@@ -44,6 +44,14 @@ export interface ZoneEventBridgeStats {
   // Per-zone last-id map snapshot. Allocations cost; called rarely
   // (HUD / debug only).
   lastEventIdByZone: ReadonlyMap<string, number>;
+  // 0.20.1 - connection-timing fields. SSEZoneBridge does NOT own the
+  // EventSource (presence layer does), so these track the bridge's
+  // OBSERVED transitions of the underlying readyState rather than its
+  // own retry attempts. Mirrors DirectorBridgeStats for HUD parity.
+  lastConnectedAtMs: number;
+  lastDisconnectedAtMs: number;
+  totalConnectsCount: number;
+  totalDisconnectsCount: number;
 }
 
 export interface IZoneEventBridge {
