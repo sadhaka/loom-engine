@@ -7,6 +7,80 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.20.0 - 2026-05-08
+
+**Networking polish for SSEDirectorBridge.** Eliminates the
+fixed-delay reconnect anti-pattern and gives consumers + operators
+visibility into bridge lifecycle. The director bridge is now the
+canonical reference; SSEZoneBridge gets the same treatment in 0.20.1
+once the gap-detection + snapshot-pull paths are validated against
+the protocol fuzzer.
+
+### Added
+
+- **Exponential backoff with full jitter.** On `EventSource.onerror`,
+  the bridge takes ownership of the retry loop and schedules a
+  manual reconnect with `delay_n = min(MAX, BASE * 2^n) + uniform(0,
+  BASE)`. Defaults `BASE=500ms` / `MAX=30000ms`, both configurable
+  via constructor opts. Replaces the prior fixed-2000ms retry
+  scheduled inside `EventSource`'s default reconnect path.
+- **Last-Event-Id idempotent replay.** `lastEventId` appended to the
+  reconnect URL as both `?last_event_id` (legacy) and `?since=`
+  (canonical per LOOM-DIRECTOR-PROTOCOL-V2 sec.3) so the server-side
+  replay route fills the gap and the bridge dedupes any envelopes
+  with `id <= initialLastEventId`.
+- **Status state machine.** Statuses: `idle / connecting / connected
+  / reconnecting / snapshot-required / closed`. Every transition
+  logs and dispatches `arpg:director-bridge-status` CustomEvent with
+  `{from, to, characterId}` detail on `globalThis.window` (or
+  `opts.statusEventTarget`). Consumers wire UI off this stream.
+- **Stats counters expanded.** `DirectorBridgeStats` adds
+  `lastConnectedAtMs`, `lastDisconnectedAtMs`, `totalConnectsCount`,
+  `totalDisconnectsCount`, `currentReconnectAttempt`. Existing
+  fields (`eventsReceived`, `reconnects`, `lastEventId`, etc.)
+  preserved.
+- **Injection seams** for deterministic tests:
+  `setTimeoutFn`/`clearTimeoutFn`/`randomFn`/`nowFn`/`statusEventTarget`.
+  Production code uses `globalThis` defaults.
+
+### Tests
+
+597 -> 606 (9 new networking tests). Coverage:
+
+- Initial idle status; start -> connecting transition.
+- onopen -> connected + lastConnected/totalConnects bumped.
+- onerror -> reconnecting + scheduled reconnect with computed
+  backoff (zero-jitter case asserts exact 500ms first retry).
+- Backoff doubles per attempt; caps at maxBackoffMs (asserted by
+  driving 5 successive errors with base=100/max=800: 100/200/400/
+  800/800).
+- Jitter adds 0..BASE: randomFn=0.5 with BASE=500 yields 750ms total.
+- Successful onopen resets `currentReconnectAttempt` to 0; the next
+  error re-starts at attempt 0's delay.
+- arpg:director-bridge-status CustomEvents fire with `{from, to}`
+  detail on every transition.
+- onerror bumps `lastDisconnectedAtMs` + `totalDisconnectsCount`.
+- Explicit `stop()` -> closed AND cancels any pending reconnect
+  timeout (advancing the clock 10s after stop creates no new ES).
+
+### Deferred to 0.20.1
+
+- **SSEZoneBridge networking polish** with the same backoff +
+  status state machine, plus a gap-detection + snapshot-pull
+  recovery path. Initial implementation broke the protocol fuzzer's
+  out-of-order delivery contract; ships in 0.20.1 once the gap-
+  threshold semantics are reconciled with the existing reorder
+  buffer.
+
+### Changed
+
+- `LOOM_ENGINE_VERSION` 0.19.1 -> 0.20.0. Smoke + webgl2 version
+  pinning tests bumped accordingly.
+- `tests/no-nondeterminism.test.ts` whitelist updated to allow the
+  director bridge's `Math.random` for jitter (production seam) and
+  `Date.now` for connection timestamps (out-of-tick metric, mirrors
+  the plugin runtime entry).
+
 ## 0.19.1 - 2026-05-08
 
 **Hot fix** for two bugs discovered when registering a sync hook in
