@@ -4,6 +4,7 @@
   "entryPointStrategy": "resolve",
   "tsconfig": "./tsconfig.json",
   "out": "docs",
+  "cleanOutputDir": false,
   "readme": "README.md",
   "name": "Loom Engine",
   "theme": "default",

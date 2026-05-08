@@ -1,0 +1,19 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./",
+    "rootDir": "./",
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": true,
+    "noEmit": false
+  },
+  "include": [
+    "./perf-suite.ts",
+    "./perf-report.ts",
+    "./perf-bench-browser.ts"
+  ],
+  "exclude": [
+    "./perf-bench.ts"
+  ]
+}

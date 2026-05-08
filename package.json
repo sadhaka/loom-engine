@@ -43,6 +43,10 @@
     "watch": "tsc --watch",
     "clean": "rm -rf dist demo/*.js demo/*.js.map",
     "test": "tsx --test tests/smoke.test.ts tests/world.test.ts tests/asset-loader.test.ts tests/animation.test.ts tests/vfx.test.ts tests/audio-input.test.ts tests/director.test.ts tests/combat.test.ts tests/projectile.test.ts tests/arpg.test.ts tests/snapshot-recovery.test.ts tests/touch-input.test.ts tests/webgl2-device.test.ts",
+    "bench": "npm run build && node --expose-gc --import=tsx tools/perf-bench.ts",
+    "bench:fast": "npm run build && node --expose-gc --import=tsx tools/perf-bench.ts --no-write",
+    "bench:browser": "npm run build && tsc -p tools/tsconfig.bench.json",
+    "bench:compare": "node --import=tsx tools/perf-bench.ts --compare",
     "docs": "typedoc",
     "docs:ci": "typedoc --out docs-build --cleanOutputDir",
     "prepublishOnly": "npm test && npm run build"
