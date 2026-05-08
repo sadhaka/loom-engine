@@ -7,6 +7,101 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.37.0 - 2026-05-08
+
+**FloatingText - HUD primitive for damage numbers / floating labels.**
+A renderer-agnostic state container for the short-lived numeric /
+text overlays every action game ships: damage numbers on hit, "+10
+XP" reward popups, miss indicators, status confirmations. Pool-
+backed (no per-spawn GC), kinematic integration with optional
+gravity / drift, and an alpha curve that fades over the last
+portion of lifetime. Engine ships ZERO render path - consumers wire
+`forEach()` to whatever they have (Canvas2D fillText, WebGL2
+SpriteBatcher with a font atlas, DOM-overlay element pool, etc.).
+
+### Added
+
+- `src/runtime/floating-text.ts` - `FloatingText` class:
+  - `emit(spawn)` -> slot index >= 0, or -1 if pool full / disposed.
+    Spawn shape carries position, text, optional vx/vy/ax/ay,
+    lifetimeMs, color (0xRRGGBB), and scale. Missing fields fall
+    back to system options, then library defaults.
+  - `tick(dtMs)` - semi-implicit Euler integration of velocity +
+    acceleration; auto-deactivates entries past their lifetimeMs.
+    `tick(0)` is a no-op.
+  - `forEach(cb)` - iterate active entries with their current
+    render state (text, x, y, alpha, color, scale, ageMs,
+    lifetimeMs). Throwing callbacks are isolated per-entry.
+  - `clearAll()` - deactivate all entries immediately.
+  - `activeCount()` / `capacity()` - introspection.
+  - `dispose()` - locks subsequent ops.
+- Alpha curve: linear fade-in over `fadeFractionStart` of lifetime,
+  hold at 1 in the middle, linear fade-out over the final
+  `fadeFractionEnd`. Defaults: 0% fade-in, 30% fade-out.
+- Round-robin slot search keeps allocation O(capacity) without
+  preferring head-of-array entries.
+- `FloatingTextSpawn`, `FloatingTextRenderState`, `FloatingTextOptions`
+  types exported.
+- `RESOURCE_FLOATING_TEXT` constant.
+
+### Tests
+
+861 -> 884 (23 new in tests/floating-text.test.ts):
+- RESOURCE_FLOATING_TEXT stable string.
+- Default capacity 64.
+- emit returns slot index >= 0 when pool has space.
+- emit returns -1 when pool full.
+- emit defaults pull from system options.
+- emit explicit options override system defaults.
+- tick integrates position from velocity over time.
+- tick integrates velocity from acceleration (semi-implicit Euler).
+- tick deactivates entries past lifetimeMs.
+- alpha is 1 in the middle of lifetime.
+- alpha fades linearly over the last fadeFractionEnd.
+- alpha fade-in ramps up at start when fadeFractionStart > 0.
+- forEach iterates only active entries.
+- Deactivated slot is reusable on next emit.
+- clearAll deactivates all texts immediately.
+- dispose makes ops no-op.
+- tick(0) is a no-op.
+- forEach swallows callback errors per entry.
+- ageMs and lifetimeMs surface to render state.
+- emit text content preserved verbatim.
+- Round-robin slot search reuses freed slots.
+- lifetimeMs <= 0 falls back to default.
+- Alpha never escapes [0, 1].
+
+### Backwards compatibility
+
+Pure addition. Engine consumers opt in:
+
+```ts
+import { FloatingText } from '@sadhaka/loom-engine';
+
+var fx = FloatingText.create({ capacity: 128 });
+
+// On hit:
+fx.emit({
+  x: enemy.x, y: enemy.y - 20,
+  text: '42',
+  color: isCrit ? 0xffd700 : 0xffffff,
+  scale: isCrit ? 1.5 : 1,
+  vy: -80, ay: 100, lifetimeMs: 700,
+});
+
+// Each frame:
+fx.tick(deltaTimeMs);
+
+// Render (Canvas2D example):
+fx.forEach(function (s) {
+  ctx.globalAlpha = s.alpha;
+  ctx.fillStyle = '#' + s.color.toString(16).padStart(6, '0');
+  ctx.font = (14 * s.scale).toFixed(0) + 'px sans-serif';
+  ctx.fillText(s.text, s.x, s.y);
+});
+ctx.globalAlpha = 1;
+```
+
 ## 0.36.0 - 2026-05-08
 
 **FrameBudgetScheduler - soft-deadline task queue for off-frame work.**
