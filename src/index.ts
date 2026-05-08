@@ -469,6 +469,26 @@ export {
   RESOURCE_MUSIC_DIRECTOR_STUB,
 } from './audio/zone-audio-system.js';
 
+// ===== Phase 18 visual boss (Track A) =====
+//
+// LOOM-BOSS-RENDER-SPEC §3. Renderer-agnostic boss entity primitive +
+// system that pumps it from Phase 16 zone events. Renderers (Three.js,
+// Canvas2D, etc.) read ZoneBossEntityResource.byZone[zoneId] each frame
+// without knowing about the underlying SSE protocol.
+export type {
+  ZoneBossEntity,
+  ZoneBossEntityResource,
+  ZoneBossHitRecord,
+} from './director/zone/zone-boss-entity.js';
+export {
+  RESOURCE_ZONE_BOSS_ENTITY,
+  RECENT_HITS_RING_SIZE,
+  createZoneBossEntityResource,
+  buildEntityFromSpawn,
+  applyTick,
+} from './director/zone/zone-boss-entity.js';
+export { ZoneBossEntitySystem } from './director/zone/zone-boss-entity-system.js';
+
 // Combat (Phase 7): health, damage, simple AI, attack. Engine-side
 // primitives that the actual Survivor port will use. The full
 // Survivor wave engine sits on top of these in subsequent sessions.
