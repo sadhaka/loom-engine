@@ -7,6 +7,69 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.31.0 - 2026-05-08
+
+**InputActions - declarative key/action bindings.** Existing
+input-manager captures raw keydown/keyup; consumers wire game logic
+to specific keys ("if SPACE is down, jump"). InputActions adds
+indirection: declare an action ("jump") + the keys triggering it,
+query by name. Foundation for a future settings-rebind UI.
+
+### Added
+
+- `src/input/input-actions.ts` - `InputActions` class:
+  - `bind(action, keys)` / `unbind(action, keys?)` - manage bindings.
+  - `handleKeyDown(key)` / `handleKeyUp(key)` - feed from window
+    listeners or input-manager.
+  - `releaseAll()` - drop all held keys (window blur).
+  - `isActive(action)` / `wasJustPressed(action)` /
+    `wasJustReleased(action)` - per-frame queries.
+  - `update()` - call once per frame; clears just-pressed /
+    just-released so they're single-frame events.
+  - `keysFor(action)` / `actionNames()` - introspection.
+  - `clear()` / `stats()`.
+- Multi-key bindings: any of the bound keys triggers the action;
+  action stays active while ANY bound key is held.
+- Same key can drive multiple actions (e.g. Space -> 'jump' +
+  'confirm-dialog').
+- Duplicate keydown events on already-held key don't re-fire
+  justPressed (matches DOM behaviour for held keys).
+- Unbinding a held key forces re-evaluation of active state.
+- `RESOURCE_INPUT_ACTIONS` constant.
+
+### Tests
+
+739 -> 756 (17 new in tests/input-actions.test.ts):
+- bind + isActive single key.
+- Bind to array - any triggers action.
+- Multiple held keys keep action active until last released.
+- wasJustPressed / wasJustReleased fire once per transition.
+- Duplicate keydown does not re-fire justPressed.
+- unbind drops keys; held key unbind re-evaluates.
+- unbind() with no keys drops the whole action.
+- releaseAll wipes held keys + fires justReleased.
+- Same key shared across actions fires both.
+- Stats track event counts.
+- clear() drops everything.
+- Empty key strings silently ignored; re-bind idempotent.
+
+### Backwards compatibility
+
+Pure addition. Engine consumers opt in:
+
+```ts
+import { InputActions } from '@sadhaka/loom-engine';
+
+var ia = new InputActions();
+ia.bind('jump', ['Space', 'Enter']);
+window.addEventListener('keydown', e => ia.handleKeyDown(e.code));
+window.addEventListener('keyup', e => ia.handleKeyUp(e.code));
+
+// In game loop:
+if (ia.wasJustPressed('jump')) player.jump();
+ia.update();
+```
+
 ## 0.30.0 - 2026-05-08
 
 **SpatialHash - bucket entities by world cell for fast nearby
