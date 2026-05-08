@@ -1,0 +1,247 @@
+{
+  "schema": "loom.zone-trace.v1",
+  "ticksBetween": 1,
+  "envelopes": [
+    {
+      "id": 1,
+      "ts": 1700000001000,
+      "type": "zone.knot",
+      "zone_id": "iron_reach",
+      "emitter_id": null,
+      "data": {
+        "knot": "str",
+        "palette": { "primary": "#b04a24", "secondary": "#a32f3f", "accent": "#f0c47a" },
+        "mood": "ambient",
+        "fade_ms": 500
+      }
+    },
+    {
+      "id": 2,
+      "ts": 1700000002000,
+      "type": "zone.state",
+      "zone_id": "iron_reach",
+      "emitter_id": null,
+      "data": { "changes": [{ "key": "door.gate_north", "value": "closed" }] }
+    },
+    {
+      "id": 3,
+      "ts": 1700000003000,
+      "type": "zone.narrator",
+      "zone_id": "iron_reach",
+      "emitter_id": null,
+      "data": { "line": "The iron hum rises.", "voice": "ambient", "ttl_ms": 2000 }
+    },
+    {
+      "id": 4,
+      "ts": 1700000004000,
+      "type": "zone.boss.spawn",
+      "zone_id": "iron_reach",
+      "emitter_id": null,
+      "data": {
+        "boss": {
+          "boss_id": "b_iron_1",
+          "type": "iron_titan",
+          "name": "Iron Titan",
+          "hp_max": 1000,
+          "hp_current": 1000,
+          "dmg": 50,
+          "x": 5,
+          "y": 5,
+          "knot_flavor": "str"
+        },
+        "narrator_line": "The Titan rises."
+      }
+    },
+    {
+      "id": 5,
+      "ts": 1700000005000,
+      "type": "zone.boss.tick",
+      "zone_id": "iron_reach",
+      "emitter_id": "c_alpha",
+      "data": {
+        "boss_id": "b_iron_1",
+        "hp_current": 920,
+        "x": 5,
+        "y": 5,
+        "recent_hits": [{ "from_character_id": "c_alpha", "amount": 80, "ts_ms": 1700000005000 }]
+      }
+    },
+    {
+      "id": 6,
+      "ts": 1700000006000,
+      "type": "zone.boss.tick",
+      "zone_id": "iron_reach",
+      "emitter_id": "c_alpha",
+      "data": {
+        "boss_id": "b_iron_1",
+        "hp_current": 800,
+        "x": 6,
+        "y": 5,
+        "recent_hits": [{ "from_character_id": "c_alpha", "amount": 120, "ts_ms": 1700000006000 }]
+      }
+    },
+    {
+      "id": 7,
+      "ts": 1700000007000,
+      "type": "zone.knot",
+      "zone_id": "iron_reach",
+      "emitter_id": null,
+      "data": {
+        "knot": "int",
+        "palette": { "primary": "#9b5de5", "secondary": "#5ac9d6", "accent": "#ffd86a" },
+        "mood": "climactic",
+        "fade_ms": 800
+      }
+    },
+    {
+      "id": 8,
+      "ts": 1700000008000,
+      "type": "zone.boss.tick",
+      "zone_id": "iron_reach",
+      "emitter_id": "c_beta",
+      "data": {
+        "boss_id": "b_iron_1",
+        "hp_current": 600,
+        "x": 6,
+        "y": 6,
+        "recent_hits": [{ "from_character_id": "c_beta", "amount": 200, "ts_ms": 1700000008000 }]
+      }
+    },
+    {
+      "id": 9,
+      "ts": 1700000009000,
+      "type": "zone.state",
+      "zone_id": "iron_reach",
+      "emitter_id": null,
+      "data": { "changes": [{ "key": "door.gate_north", "value": "open" }, { "key": "fire.altar", "value": true }] }
+    },
+    {
+      "id": 10,
+      "ts": 1700000010000,
+      "type": "zone.boss.tick",
+      "zone_id": "iron_reach",
+      "emitter_id": "c_alpha",
+      "data": {
+        "boss_id": "b_iron_1",
+        "hp_current": 400,
+        "x": 7,
+        "y": 6,
+        "recent_hits": [{ "from_character_id": "c_alpha", "amount": 200, "ts_ms": 1700000010000 }]
+      }
+    },
+    {
+      "id": 11,
+      "ts": 1700000011000,
+      "type": "zone.narrator",
+      "zone_id": "iron_reach",
+      "emitter_id": null,
+      "data": { "line": "Half its plates have shattered.", "voice": "urgent", "ttl_ms": 2500 }
+    },
+    {
+      "id": 12,
+      "ts": 1700000012000,
+      "type": "zone.boss.tick",
+      "zone_id": "iron_reach",
+      "emitter_id": "c_beta",
+      "data": {
+        "boss_id": "b_iron_1",
+        "hp_current": 250,
+        "x": 7,
+        "y": 7,
+        "recent_hits": [{ "from_character_id": "c_beta", "amount": 150, "ts_ms": 1700000012000 }]
+      }
+    },
+    {
+      "id": 13,
+      "ts": 1700000013000,
+      "type": "zone.boss.tick",
+      "zone_id": "iron_reach",
+      "emitter_id": "c_alpha",
+      "data": {
+        "boss_id": "b_iron_1",
+        "hp_current": 100,
+        "x": 8,
+        "y": 7,
+        "recent_hits": [{ "from_character_id": "c_alpha", "amount": 150, "ts_ms": 1700000013000 }]
+      }
+    },
+    {
+      "id": 14,
+      "ts": 1700000014000,
+      "type": "zone.boss.tick",
+      "zone_id": "iron_reach",
+      "emitter_id": "c_beta",
+      "data": {
+        "boss_id": "b_iron_1",
+        "hp_current": 30,
+        "x": 8,
+        "y": 8,
+        "recent_hits": [{ "from_character_id": "c_beta", "amount": 70, "ts_ms": 1700000014000 }]
+      }
+    },
+    {
+      "id": 15,
+      "ts": 1700000015000,
+      "type": "zone.boss.end",
+      "zone_id": "iron_reach",
+      "emitter_id": "c_alpha",
+      "data": {
+        "boss_id": "b_iron_1",
+        "outcome": "killed",
+        "killer_character_id": "c_alpha",
+        "loot": [],
+        "duration_ms": 11000
+      }
+    },
+    {
+      "id": 16,
+      "ts": 1700000016000,
+      "type": "zone.knot",
+      "zone_id": "iron_reach",
+      "emitter_id": null,
+      "data": {
+        "knot": "dex",
+        "palette": { "primary": "#5ac9d6", "secondary": "#3b8e9a", "accent": "#dff8ff" },
+        "mood": "ambient",
+        "fade_ms": 1200
+      }
+    },
+    {
+      "id": 17,
+      "ts": 1700000017000,
+      "type": "zone.narrator",
+      "zone_id": "iron_reach",
+      "emitter_id": null,
+      "data": { "line": "Silence settles back into the reach.", "voice": "ambient", "ttl_ms": 1500 }
+    },
+    {
+      "id": 18,
+      "ts": 1700000018000,
+      "type": "zone.state",
+      "zone_id": "iron_reach",
+      "emitter_id": null,
+      "data": { "changes": [{ "key": "fire.altar", "value": false }] }
+    },
+    {
+      "id": 19,
+      "ts": 1700000019000,
+      "type": "zone.snapshot",
+      "zone_id": "iron_reach",
+      "emitter_id": null,
+      "data": {
+        "active_boss": null,
+        "knot": null,
+        "state": [{ "key": "door.gate_north", "value": "open" }],
+        "last_event_id": 19
+      }
+    },
+    {
+      "id": 20,
+      "ts": 1700000020000,
+      "type": "zone.narrator",
+      "zone_id": "iron_reach",
+      "emitter_id": null,
+      "data": { "line": "The reach awaits the next disturbance.", "voice": "ambient", "ttl_ms": 1500 }
+    }
+  ]
+}
