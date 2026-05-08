@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.54.0';
+export const LOOM_ENGINE_VERSION = '0.55.0';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -317,6 +317,16 @@ export {
   RESOURCE_AABB,
 } from './runtime/aabb.js';
 export type { AABB } from './runtime/aabb.js';
+// 0.55.0 - A* pathfinder on a grid (grid-agnostic via isWalkable callback).
+export { findPath, RESOURCE_PATHFINDER } from './runtime/pathfinder.js';
+export type {
+  IsWalkableFn,
+  CellCostFn,
+  HeuristicFn,
+  PathfinderOptions,
+  PathPoint,
+  PathResult,
+} from './runtime/pathfinder.js';
 export {
   ResourceRegistry,
   createTimeResource,

@@ -7,6 +7,64 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.55.0 - 2026-05-09
+
+**Pathfinder - A* on a grid.** Mob nav, NPC walk paths, room-to-
+room hub routing, "click to walk" tap-to-walk landing distance, AI
+approach behaviour - all share grid-based shortest-path search.
+Pathfinder is grid-AGNOSTIC: the consumer supplies an
+`isWalkable(x, y)` callback. The pathfinder doesn't know about
+TileMap (0.57+) or any specific grid representation.
+
+### Added
+
+- `src/runtime/pathfinder.ts`:
+  - `findPath(startX, startY, goalX, goalY, isWalkable, opts?)` -
+    returns `{ path, cost, nodesExpanded } | null`. null on
+    unreachable goal / blocked start / blocked goal / out-of-
+    bounds / maxNodes exceeded.
+  - `IsWalkableFn`, `CellCostFn`, `HeuristicFn`, `PathfinderOptions`,
+    `PathPoint`, `PathResult` types.
+  - Options:
+    - `allowDiagonal` — 8-direction movement (default false).
+    - `blockCornerCutting` — diagonals through wall corners
+      forbidden (default false). Only meaningful with
+      allowDiagonal.
+    - `cost(x, y)` — per-cell cost (default 1).
+    - `heuristic(dx, dy)` — default octile when diagonal,
+      manhattan otherwise. Pass `() => 0` for uniform-cost
+      Dijkstra.
+    - `maxNodes` — node-expansion cap (default 8192).
+- Float coordinates floor cleanly to grid cells.
+- `nodesExpanded` in the result for diagnostics / debug HUD.
+- Deterministic across runs with same inputs.
+- `RESOURCE_PATHFINDER` constant.
+
+### Tests
+
+1341 -> 1361 (20 new in tests/pathfinder.test.ts):
+- RESOURCE_PATHFINDER stable string.
+- start === goal returns single-cell path.
+- Blocked goal / blocked start returns null.
+- Straight line in open field; 4-direction path length.
+- allowDiagonal cuts the path; cost = 3 * sqrt(2) for 3-step
+  diagonal.
+- Routes around obstacle column; unreachable goal returns null;
+  out-of-bounds goal returns null.
+- blockCornerCutting prevents diagonal through wall corners;
+  default allows.
+- Cost callback shapes the path (avoids expensive cells).
+- maxNodes cap returns null; nodesExpanded reflects search size.
+- Custom heuristic = 0 produces uniform-cost (Dijkstra).
+- Complex maze finds valid contiguous 4-directional path.
+- Float coordinates floor to cells.
+- Deterministic across runs.
+- Realistic mob aggro pursuit scenario.
+
+### Backwards compatibility
+
+Pure addition.
+
 ## 0.54.0 - 2026-05-09
 
 **AABB - 2D axis-aligned bounding box queries.** SpatialHash
