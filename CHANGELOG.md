@@ -7,6 +7,49 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.33.0 - 2026-05-08
+
+**Color utility extensions.** The existing src/util/color.ts already
+had ColorRGBA, hexToRgba (number), rgbaToHexString, colorLerp(out)
+and the COLOR_KNOT palette. 0.33.0 adds string-parsing, blending,
+HSL adjustment, and Uint32 pack/unpack without changing the
+existing surface.
+
+### Added
+
+- `parseHex(str)` - parse a string hex color. Accepts 3 / 4 / 6 / 8
+  hex digits with or without leading `#`. Returns null on invalid.
+- `toHexString(c)` - format with auto 6 / 8 digits based on alpha.
+- `colorBlend(over, under)` - alpha-composite two straight-alpha
+  colors; output is straight-alpha. Returns a fresh object.
+- `adjustHsl(c, dh, ds, dl)` - hue (degrees) + saturation + lightness
+  deltas in HSL space; alpha preserved.
+- `pack32(r, g, b, a)` -> Uint32 in 0xRRGGBBAA byte order. Useful
+  for typed-array storage in particle pools.
+- `unpack32(packed)` - inverse.
+- `clamp01(v)` - clamp to [0, 1] with NaN / Infinity rejected.
+
+### Backwards compatibility
+
+Pure addition. Existing exports unchanged. The new helpers complement
+rather than replace - e.g. parseHex(string) is the str-input
+companion to the existing hexToRgba(number).
+
+### Tests
+
+769 -> 788 (19 new in tests/color.test.ts):
+- rgba builds object; clamp01 edge cases.
+- parseHex 3 / 4 / 6 / 8-digit forms; with / without # prefix;
+  invalid input returns null.
+- toHexString auto 6 / 8 digit formatting.
+- parseHex -> toHexString round-trip.
+- colorBlend opaque-over-opaque, transparent-over-opaque,
+  transparent-over-transparent.
+- adjustHsl shifts hue 120deg correctly; alpha preserved.
+- pack32 + unpack32 round-trip.
+- pack32 byte order is RRGGBBAA.
+- pack32 clamps inputs.
+
 ## 0.32.0 - 2026-05-08
 
 **ObjectPool - generic reusable object pool to cut GC pressure.**
