@@ -8,7 +8,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.26.0';
+export const LOOM_ENGINE_VERSION = '0.27.0';
 export { vec2, vec3, rect, clamp, lerp, smoothstep, approxEq, rectContains, rectIntersects, visibleInView, } from './util/math.js';
 export { rgba, hexToRgba, rgbaToHexString, rgbaToCssString, colorLerp, COLOR_WHITE, COLOR_BLACK, COLOR_TRANSPARENT, COLOR_KNOT_STR, COLOR_KNOT_DEX, COLOR_KNOT_INT, COLOR_KNOT_CENTER, } from './util/color.js';
 export { EntityAllocator, NULL_ENTITY, entityIndex, entityGeneration, makeEntity, } from './entity.js';
@@ -28,6 +28,8 @@ export { DebugHUD, RESOURCE_DEBUG_HUD } from './debug/debug-hud.js';
 export { EngineClock, RESOURCE_ENGINE_CLOCK } from './runtime/engine-clock.js';
 // 0.26.0 - world snapshot (save / load via persistable resources).
 export { serializeWorldSnapshot, deserializeWorldSnapshot, SNAPSHOT_SCHEMA_VERSION, RESOURCE_WORLD_SNAPSHOT, } from './runtime/world-snapshot.js';
+// 0.27.0 - camera controller (follow / shake / bounds / fit).
+export { CameraController, RESOURCE_CAMERA_CONTROLLER, } from './renderer/camera-controller.js';
 export { ResourceRegistry, createTimeResource, createVeilBudgetResource, RESOURCE_TIME, RESOURCE_CAMERA, RESOURCE_DEVICE, RESOURCE_VEIL_BUDGET, } from './resources.js';
 // Default systems
 export { SpriteRenderSystem } from './systems/sprite-render-system.js';
