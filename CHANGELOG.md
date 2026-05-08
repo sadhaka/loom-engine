@@ -7,6 +7,106 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.39.0 - 2026-05-08
+
+**InputChord - combo / sequence / doubleTap / hold pattern recognizer
+on top of InputActions.** InputActions (0.31.0) covers the
+"single-key triggers an action" case; InputChord adds the four
+patterns InputActions can't express:
+
+- **`combo`** — all keys held simultaneously (Ctrl+S, Shift+W).
+  Order-agnostic. Re-arms after any key in the set comes up.
+- **`sequence`** — keys pressed in order, each within `windowMs` of
+  the prior. Fighting-game / cheat-code style.
+- **`doubleTap`** — same key pressed twice within `windowMs`.
+  Common dash trigger.
+- **`hold`** — single key held continuously for `holdMs`. Charge
+  attacks, contextual prompts, long-press menus.
+
+Same driving model as InputActions: wire `handleKeyDown` /
+`handleKeyUp` to whatever event source you have, call `tick(dtMs)`
+once per frame, read `wasFired(name)` or subscribe via
+`onFired(name, cb)`.
+
+### Added
+
+- `src/input/input-chord.ts` - `InputChord` class:
+  - `define(name, def)` / `undefine(name)` / `has(name)` /
+    `chordNames()` / `clear()`.
+  - `handleKeyDown(key)` / `handleKeyUp(key)` / `releaseAll()`
+    (wipes in-flight state on window blur).
+  - `tick(dtMs)` advances hold clocks (firing on threshold) and
+    ages sequence/doubleTap windows (resetting on timeout). Also
+    clears `firedThisFrame` so `wasFired` is single-frame.
+  - `wasFired(name)` polling + `onFired(name, cb)` callback API.
+    Throwing callbacks isolated.
+  - `stats()` introspection (chord count + watched key count).
+  - Reverse-index from key -> chord names so handleKeyDown /
+    handleKeyUp dispatch is O(chords-watching-this-key) not
+    O(all-chords).
+- `ChordDef`, `ChordKind` types exported.
+- `RESOURCE_INPUT_CHORD` constant.
+
+### Tests
+
+914 -> 944 (30 new in tests/input-chord.test.ts):
+- RESOURCE_INPUT_CHORD stable string.
+- define + has + chordNames; undefine drops chord + reverse index;
+  undefine missing returns false.
+- combo: fires when all held; order-agnostic; once per
+  satisfaction with re-arm on key-up; does not fire if a key comes
+  up before completion; single-key combo fires on key-down.
+- sequence: fires on in-order completion; wrong key resets;
+  windowMs timeout resets; stays alive across multiple ticks;
+  first-key recovery (wrong key that's the start key restarts).
+- doubleTap: fires on second tap within window; window timeout
+  blocks; ignores unrelated keys in between.
+- hold: fires after threshold; cancels on early release; once per
+  press cycle with re-arm on key-up.
+- onFired: callback fires on match; unsubscribe works; throwing
+  callback does not break dispatch.
+- releaseAll wipes in-flight recognition state.
+- tick clears firedThisFrame (single-frame); tick(0) clears flag
+  without advancing clocks.
+- redefining a chord resets state and drops callbacks.
+- clear drops everything; stats reflects counts.
+- Ignores key events for unwatched keys.
+
+### Backwards compatibility
+
+Pure addition. Engine consumers opt in:
+
+```ts
+import { InputChord } from '@sadhaka/loom-engine';
+
+var ch = new InputChord();
+
+// Save: Ctrl+S anywhere.
+ch.define('save', { kind: 'combo', keys: ['Control', 'KeyS'] });
+
+// Dash: double-tap a movement key.
+ch.define('dash-left', { kind: 'doubleTap', keys: 'KeyA', windowMs: 250 });
+
+// Charge attack: hold E for 600ms.
+ch.define('charge', { kind: 'hold', keys: 'KeyE', holdMs: 600 });
+
+// Hadoken: down, down-forward, forward, punch.
+ch.define('hadoken', {
+  kind: 'sequence',
+  keys: ['ArrowDown', 'ArrowRight', 'KeyP'],
+  windowMs: 400,
+});
+
+// Wire to your event source:
+window.addEventListener('keydown', (e) => ch.handleKeyDown(e.code));
+window.addEventListener('keyup', (e) => ch.handleKeyUp(e.code));
+window.addEventListener('blur', () => ch.releaseAll());
+
+// Each frame:
+ch.tick(deltaTimeMs);
+if (ch.wasFired('hadoken')) playHadoken();
+```
+
 ## 0.38.0 - 2026-05-08
 
 **PersistentStorage - browser/SSR-safe key/value adapter for engine state.**
