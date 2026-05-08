@@ -7,6 +7,85 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.41.0 - 2026-05-09
+
+**LayerManager - entity layer + intra-layer z-order management.**
+0.23.0 RenderBatch ships coarse layer constants (BACKGROUND /
+TERRAIN / ENTITIES / FX / HUD) and flushes one layer at a time.
+LayerManager fills the gap *within* a layer: which entities render
+in front of which. For an ARPG hub with mob / player / projectile
+sprites all on `RENDER_LAYER_ENTITIES`, the renderer needs a
+stable, intentional sort key.
+
+The manager is a tiny registry: each entity has `(layer, z)` and
+forEach yields entries in `(layer asc, z asc)` order with stable
+tie-break by entityId. Insert / move / remove are O(1) on the map;
+the sort cache rebuilds only on dirty cycles, so consecutive
+forEach calls without mutation are O(n).
+
+### Added
+
+- `src/runtime/layer-manager.ts` - `LayerManager` class:
+  - `add(entityId, layer, z?)` / `remove(entityId)` /
+    `setZ(entityId, z)` / `setLayer(entityId, layer)`.
+  - `has(entityId)` / `getLayer(entityId)` / `getZ(entityId)` /
+    `count()` / `countOnLayer(layer)`.
+  - `forEach(cb)` — yields entries in (layer asc, z asc, entityId
+    asc) order. Throwing callbacks isolated per entry.
+  - `forEachOnLayer(layer, cb)` — yields only entries on the named
+    layer in z-asc order; relies on monotonic sort to skip past
+    other layers in O(n).
+  - `toArray()` — defensive snapshot for diagnostics; mutating the
+    returned array does NOT affect the manager.
+  - `clear()` / `dispose()`.
+- `LayerEntry`, `LayerManagerOptions` types exported.
+- `RESOURCE_LAYER_MANAGER` constant.
+
+### Tests
+
+965 -> 990 (25 new in tests/layer-manager.test.ts):
+- RESOURCE_LAYER_MANAGER stable string.
+- Starts empty.
+- add tracks layer + z; default z=0; re-add updates idempotently.
+- remove drops entity; remove on missing returns false.
+- getLayer / getZ return null for unknown entity.
+- setZ updates z; setLayer updates layer; both no-op on unknown.
+- forEach yields (layer asc, z asc) order; ties break by entityId.
+- forEachOnLayer filters by layer; empty layer is a no-op.
+- countOnLayer reflects per-layer count.
+- Changing z reorders within layer; changing layer moves between.
+- forEach uses cached sort on repeated calls.
+- clear empties; dispose makes mutations no-ops.
+- forEach swallows callback errors per entry.
+- toArray is a defensive snapshot.
+- Negative z values sort below positive.
+- Removing an entity invalidates the sort cache.
+
+### Backwards compatibility
+
+Pure addition. Engine consumers opt in:
+
+```ts
+import {
+  LayerManager, RENDER_LAYER_ENTITIES, RENDER_LAYER_HUD,
+} from '@sadhaka/loom-engine';
+
+var lm = LayerManager.create();
+lm.add(playerEntityId, RENDER_LAYER_ENTITIES, 5);
+lm.add(mobEntityId,    RENDER_LAYER_ENTITIES, 0);
+lm.add(damageNumberId, RENDER_LAYER_HUD,      100);
+
+// Per frame in your renderer:
+lm.forEach(function (entry) {
+  drawEntity(entry.entityId, entry.layer);
+});
+
+// Or filter to a single layer:
+lm.forEachOnLayer(RENDER_LAYER_ENTITIES, function (entry) {
+  drawEntitySprite(entry.entityId);
+});
+```
+
 ## 0.40.0 - 2026-05-09
 
 **Easings - cubicBezier factory + back / elastic / bounce curves.**

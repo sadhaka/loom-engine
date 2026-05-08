@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.40.0';
+export const LOOM_ENGINE_VERSION = '0.41.0';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -198,6 +198,9 @@ export type {
 // 0.39.0 - input chord recognizer (combo / sequence / doubleTap / hold).
 export { InputChord, RESOURCE_INPUT_CHORD } from './input/input-chord.js';
 export type { ChordDef, ChordKind } from './input/input-chord.js';
+// 0.41.0 - layer manager (entity z-order on top of RenderBatch layers).
+export { LayerManager, RESOURCE_LAYER_MANAGER } from './runtime/layer-manager.js';
+export type { LayerEntry, LayerManagerOptions } from './runtime/layer-manager.js';
 export {
   ResourceRegistry,
   createTimeResource,
