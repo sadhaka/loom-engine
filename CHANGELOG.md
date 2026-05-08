@@ -7,6 +7,64 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.54.0 - 2026-05-09
+
+**AABB - 2D axis-aligned bounding box queries.** SpatialHash
+(0.30.0) buckets points; util/math has rect helpers. AABB fills
+the gap with min/max-corner shape, containment / intersection /
+overlap tests, segment raycast (line-of-sight), range query, and
+mutation helpers (expand, translate, fromPoints, union,
+intersection).
+
+Distinct from util/math's `Rect` (x/y/width/height) which is
+better for camera viewports + culling. AABB is min/max corners
+which integrates cleanly with downstream broadphase algorithms
+(BVH, sweep-and-prune, pair generation).
+
+### Added
+
+- `src/runtime/aabb.ts`:
+  - `AABB` type with `minX / minY / maxX / maxY`.
+  - Constructors: `aabb`, `aabbFromRect`, `aabbFromPoints`.
+  - Tests: `aabbContainsPoint`, `aabbContainsAabb`, `aabbOverlaps`.
+  - Sizes: `aabbWidth`, `aabbHeight`, `aabbArea`, `aabbCenter` (out
+    arg supported).
+  - Mutation: `aabbExpand`, `aabbTranslate`.
+  - Combiners: `aabbUnion`, `aabbIntersection` (returns null on no
+    overlap).
+  - Range query: `aabbRangeQuery(boxes, query, out?)` returns
+    indexes of overlapping boxes; out array reused if provided.
+  - Segment raycast: `aabbRaycastSegment(box, p0x, p0y, p1x, p1y)`
+    returns t in [0, 1] of first entry, or null if miss. Slab
+    method (Cyrus-Beck-style); handles axis-parallel degenerate
+    cases.
+- `aabb()` is order-tolerant: swaps inputs if the caller passes
+  flipped corners.
+- Edge-touching counts as overlap (consistent with intuitive
+  "did the boxes meet" semantics).
+- `RESOURCE_AABB` constant.
+
+### Tests
+
+1312 -> 1341 (29 new in tests/aabb.test.ts):
+- RESOURCE_AABB stable string.
+- Constructors: corners, flipped corners, fromRect, fromPoints
+  (empty / single / multi).
+- Containment: point inside / outside / boundary; aabb full /
+  partial / disjoint / self.
+- Overlaps: clear / edge-touching / disjoint / nested.
+- Width / height / area / center (with + without out arg).
+- Mutation: expand pos / neg; translate.
+- Union / intersection (with overlap; null on miss).
+- Range query: returns indexes; reuses out; resets stale data.
+- Raycast: outside / crossing / inside-start / vertical /
+  horizontal / parallel-outside-slab.
+- Realistic mob aggro example.
+
+### Backwards compatibility
+
+Pure addition.
+
 ## 0.53.0 - 2026-05-09
 
 **LRUCache - generic least-recently-used cache.** Decoded sprite
