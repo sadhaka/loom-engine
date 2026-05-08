@@ -144,7 +144,7 @@ export class World {
     // Phase 2: dispose resources in registration order.
     this.resources.disposeAll();
     // Phase 3: clear pools (no lifecycle for pools yet; just drop).
-    (this as { pools: Map<string, unknown> }).pools = new Map();
+    this.pools.clear();
   }
 }
 
