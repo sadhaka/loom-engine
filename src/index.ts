@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.58.0';
+export const LOOM_ENGINE_VERSION = '0.59.0';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -345,6 +345,13 @@ export type {
   InventoryGridOptions,
   AddResult,
 } from './runtime/inventory-grid.js';
+// 0.59.0 - base + modifier stack producing derived stats.
+export { StatStack, RESOURCE_STAT_STACK } from './runtime/stat-stack.js';
+export type {
+  Modifier,
+  ModifierKind,
+  StatStackOptions,
+} from './runtime/stat-stack.js';
 export {
   ResourceRegistry,
   createTimeResource,

@@ -7,6 +7,63 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.59.0 - 2026-05-09
+
+**StatStack - base + modifier stack producing derived stats.**
+Stats (max-hp, attack-power, run-speed, crit-chance) come from
+layered sources: base from class, equipment bonuses, buffs,
+debuffs, aura effects. Each source can apply a flat addition, a
+percentage-of-base, or a final multiplier. StatStack applies them
+in the canonical RPG order:
+
+1. baseValue
+2. + sum of all 'flat' additions
+3. * (1 + sum of all 'percentBase')
+4. * product of all 'multiplier' (final scalar)
+
+### Added
+
+- `src/runtime/stat-stack.ts` - `StatStack` class:
+  - `setBase(stat, value)` / `getBase(stat)`.
+  - `addModifier({ source, stat, kind, value })` - replaces any
+    existing modifier with the same (source, stat, kind).
+  - `removeModifier(source, stat, kind?)` - kind optional.
+  - `removeBySource(source)` - drops every modifier across all
+    stats with that source. Useful for buff expiry / unequip.
+  - `get(stat)` - lazy derived value with cached re-compute.
+  - `getModifiers(stat)` - defensive copies.
+  - `statNames()` / `clear()` / `dispose()`.
+- Optional `onChanged(stat, newValue, prevValue)` callback fires
+  only when the derived value actually changes; throwing isolated.
+- Defensive: invalid input rejected; NaN / non-string / empty
+  source/stat ignored.
+- `Modifier`, `ModifierKind`, `StatStackOptions` types exported.
+- `RESOURCE_STAT_STACK` constant.
+
+### Tests
+
+1441 -> 1466 (25 new in tests/stat-stack.test.ts):
+- RESOURCE_STAT_STACK stable string.
+- starts empty; setBase + get; setBase rejects invalid input.
+- flat / percentBase / multiplier kinds; full ordering example;
+  multiple flats sum, percents sum, multipliers multiply.
+- Re-adding same (source, kind) replaces; same source different
+  kinds both apply.
+- addModifier rejects invalid input.
+- removeModifier drops all kinds (no kind) or just one (with kind);
+  missing returns false.
+- removeBySource drops across stats.
+- getModifiers returns fresh copies; missing stat returns [].
+- statNames lists all defined.
+- onChanged fires with new + prev; not on unchanged; throwing
+  isolated.
+- clear empties; dispose locks ops.
+- Realistic hero buff stack scenario.
+
+### Backwards compatibility
+
+Pure addition.
+
 ## 0.58.0 - 2026-05-09
 
 **InventoryGrid - slot-based inventory with stack support.**
