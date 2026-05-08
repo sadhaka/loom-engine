@@ -278,6 +278,7 @@ export { AudioAssetLoader } from './audio/audio-asset-loader.js';
 export type {
   CueDefinition,
   CuePlayOptions,
+  CueCatalogOptions,
 } from './audio/cue-catalog.js';
 export {
   CueCatalog,
