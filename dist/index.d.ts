@@ -1,4 +1,4 @@
-export declare const LOOM_ENGINE_VERSION = "0.13.0";
+export declare const LOOM_ENGINE_VERSION = "0.15.0";
 export type { Vec2, Vec3, Rect } from './util/math.js';
 export { vec2, vec3, rect, clamp, lerp, smoothstep, approxEq, rectContains, rectIntersects, visibleInView, } from './util/math.js';
 export type { ColorRGBA } from './util/color.js';
@@ -40,6 +40,17 @@ export { ParticleEmitterSystem, POOL_EMITTER, } from './systems/particle-emitter
 export { ParticleRenderSystem } from './systems/particle-render-system.js';
 export type { BusOptions, BusPriority } from './audio/audio-bus.js';
 export { AudioBus, RESOURCE_AUDIO_BUS, AUDIO_BUDGET_AMBIENT_FLOOR, AUDIO_BUDGET_ESSENTIAL_FLOOR, } from './audio/audio-bus.js';
+export type { PositionalPlayOptions, AudioListenerPose, SpatialSourceHandle, } from './audio/spatial-audio-bus.js';
+export { SpatialAudioBus, SPATIAL_BUS_NAME, spatialDistance, } from './audio/spatial-audio-bus.js';
+export type { AudioListenerResource } from './audio/audio-listener-resource.js';
+export { RESOURCE_AUDIO_LISTENER, createAudioListenerResource, DEFAULT_LISTENER_FORWARD, DEFAULT_LISTENER_UP, } from './audio/audio-listener-resource.js';
+export { SpatialAudioSystem } from './audio/spatial-audio-system.js';
+export { AudioAssetCache, createAudioAssetCache, RESOURCE_AUDIO_ASSET_CACHE, } from './audio/audio-asset-cache.js';
+export type { AudioAssetManifest } from './audio/audio-asset-loader.js';
+export { AudioAssetLoader } from './audio/audio-asset-loader.js';
+export type { CueDefinition, CuePlayOptions, } from './audio/cue-catalog.js';
+export { CueCatalog, RESOURCE_CUE_CATALOG, } from './audio/cue-catalog.js';
+export { MusicDirector, RESOURCE_MUSIC_DIRECTOR, } from './audio/music-director.js';
 export type { PointerSnapshot, TouchPoint, InputSnapshot, } from './input/input-manager.js';
 export { InputManager, RESOURCE_INPUT_MANAGER, RESOURCE_INPUT, } from './input/input-manager.js';
 export { InputSystem } from './systems/input-system.js';
@@ -76,6 +87,8 @@ export type { DirectorZoneStateResource } from './director/zone/zone-state-resou
 export { RESOURCE_DIRECTOR_ZONE_STATE, createDirectorZoneStateResource, getOrCreateZoneStateMap, applyZoneStateChanges, replaceZoneStateFromSnapshot, } from './director/zone/zone-state-resource.js';
 export type { ZoneEventSystemOptions } from './director/zone/zone-event-system.js';
 export { ZoneEventSystem } from './director/zone/zone-event-system.js';
+export type { ZoneAudioMapping, ZoneCuePlay, ZoneAudioContext, ZoneAudioSystemOptions, PositionalPlayOptionsStub, AudioListenerPoseStub, AudioListenerResourceStub, CueCatalogStub, MusicDirectorStub, } from './audio/zone-audio-system.js';
+export { ZoneAudioSystem, RESOURCE_AUDIO_LISTENER_STUB, RESOURCE_CUE_CATALOG_STUB, RESOURCE_MUSIC_DIRECTOR_STUB, } from './audio/zone-audio-system.js';
 export { HealthPool, POOL_HEALTH, HEALTH_FLAG_ACTIVE, HEALTH_FLAG_DEAD, HEALTH_FLAG_INVULNERABLE, } from './components/health.js';
 export { PursuePool, POOL_PURSUE, PURSUE_FLAG_ACTIVE, } from './components/pursue.js';
 export type { KillEvent } from './systems/damage-system.js';

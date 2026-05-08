@@ -8,7 +8,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.13.0';
+export const LOOM_ENGINE_VERSION = '0.15.0';
 export { vec2, vec3, rect, clamp, lerp, smoothstep, approxEq, rectContains, rectIntersects, visibleInView, } from './util/math.js';
 export { rgba, hexToRgba, rgbaToHexString, rgbaToCssString, colorLerp, COLOR_WHITE, COLOR_BLACK, COLOR_TRANSPARENT, COLOR_KNOT_STR, COLOR_KNOT_DEX, COLOR_KNOT_INT, COLOR_KNOT_CENTER, } from './util/color.js';
 export { EntityAllocator, NULL_ENTITY, entityIndex, entityGeneration, makeEntity, } from './entity.js';
@@ -44,6 +44,20 @@ export { ParticleSimulationSystem, POOL_PARTICLE, } from './systems/particle-sim
 export { ParticleEmitterSystem, POOL_EMITTER, } from './systems/particle-emitter-system.js';
 export { ParticleRenderSystem } from './systems/particle-render-system.js';
 export { AudioBus, RESOURCE_AUDIO_BUS, AUDIO_BUDGET_AMBIENT_FLOOR, AUDIO_BUDGET_ESSENTIAL_FLOOR, } from './audio/audio-bus.js';
+export { SpatialAudioBus, SPATIAL_BUS_NAME, spatialDistance, } from './audio/spatial-audio-bus.js';
+export { RESOURCE_AUDIO_LISTENER, createAudioListenerResource, DEFAULT_LISTENER_FORWARD, DEFAULT_LISTENER_UP, } from './audio/audio-listener-resource.js';
+export { SpatialAudioSystem } from './audio/spatial-audio-system.js';
+// ===== Phase 17 audio - assets + cues + music (Track B) =====
+//
+// LOOM-AUDIO-SPEC §4. Asset cache + URL fetch+decode loader, named
+// cue catalog routing through AudioBus / SpatialAudioBus, and a music
+// director with fade and crossfade. The catalog and music director
+// consume SpatialAudioBus + PositionalPlayOptions + SpatialSourceHandle
+// from Track A's spatial-audio-bus.ts (now both merged into 0.15.0).
+export { AudioAssetCache, createAudioAssetCache, RESOURCE_AUDIO_ASSET_CACHE, } from './audio/audio-asset-cache.js';
+export { AudioAssetLoader } from './audio/audio-asset-loader.js';
+export { CueCatalog, RESOURCE_CUE_CATALOG, } from './audio/cue-catalog.js';
+export { MusicDirector, RESOURCE_MUSIC_DIRECTOR, } from './audio/music-director.js';
 export { InputManager, RESOURCE_INPUT_MANAGER, RESOURCE_INPUT, } from './input/input-manager.js';
 export { InputSystem } from './systems/input-system.js';
 export { VeilBudgetSystem } from './systems/veil-budget-system.js';
@@ -64,6 +78,7 @@ export { SSEZoneBridge } from './director/zone/sse-zone-bridge.js';
 export { RESOURCE_ZONE_EVENT_LOG, ZONE_RING_SIZE, createZoneEventLog, getOrCreateZoneEntry, pushZoneEvent, } from './director/zone/zone-event-log.js';
 export { RESOURCE_DIRECTOR_ZONE_STATE, createDirectorZoneStateResource, getOrCreateZoneStateMap, applyZoneStateChanges, replaceZoneStateFromSnapshot, } from './director/zone/zone-state-resource.js';
 export { ZoneEventSystem } from './director/zone/zone-event-system.js';
+export { ZoneAudioSystem, RESOURCE_AUDIO_LISTENER_STUB, RESOURCE_CUE_CATALOG_STUB, RESOURCE_MUSIC_DIRECTOR_STUB, } from './audio/zone-audio-system.js';
 // Combat (Phase 7): health, damage, simple AI, attack. Engine-side
 // primitives that the actual Survivor port will use. The full
 // Survivor wave engine sits on top of these in subsequent sessions.
