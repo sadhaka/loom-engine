@@ -7,6 +7,67 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.58.0 - 2026-05-09
+
+**InventoryGrid - slot-based inventory with stack support.**
+Items, consumables, equipment, quest tokens - all share the slot-
+grid pattern. InventoryGrid is a fixed-capacity array of slots;
+each slot holds either nothing or `{ itemId, count }`. Stackable
+items merge when added; non-stackable items consume one slot per
+unit.
+
+The inventory does NOT own item *definitions* - those live in a
+consumer-side catalog. The inventory only deals with item ids and
+stack semantics derived from per-id `maxStack` config.
+
+### Added
+
+- `src/runtime/inventory-grid.ts` - `InventoryGrid` class:
+  - `add(itemId, count)` - returns `{ added, overflow }`. Top-up
+    existing stacks first, then fills empty slots up to maxStack.
+  - `remove(itemId, count)` - removes from highest-index slots
+    first; returns actual count removed (may be < count).
+  - `takeSlot(index)` - returns + clears the slot.
+  - `move(from, to)` - empty target = wholesale transfer; same-
+    item = stack merge up to maxStack; different items = swap.
+  - `getSlot(index)` returns a defensive copy.
+  - `has(itemId)` / `totalOf(itemId)` / `occupiedCount()` /
+    `freeSlots()` / `capacity()`.
+  - `clear()` / `dispose()`.
+  - `toSnapshot()` / `fromSnapshot(snap)` for save data.
+- Optional `itemInfo(itemId)` callback returning `{ maxStack? }`;
+  default 1 (non-stackable). Throwing isolated -> defaults to 1.
+- Optional `onChanged(slotIndex)` notification on slot mutation;
+  throwing isolated.
+- `InventorySlot`, `ItemInfo`, `InventoryGridOptions`,
+  `AddResult` types exported.
+- `RESOURCE_INVENTORY_GRID` constant.
+
+### Tests
+
+1411 -> 1441 (30 new in tests/inventory-grid.test.ts):
+- RESOURCE_INVENTORY_GRID stable string.
+- create rejects non-positive capacity; starts empty.
+- add non-stackable; add returns added/overflow.
+- add stackable merges + spills + overflows on full inventory.
+- 0/negative count + empty itemId rejected.
+- getSlot returns copy; out-of-bounds returns null.
+- has + totalOf reflect contents.
+- remove decrements + clears empty slots; over-remove returns
+  actual.
+- takeSlot returns + clears; empty/OOB returns null.
+- move into empty / same-item merge / different-item swap;
+  same-slot no-op; from-empty no-op.
+- clear empties; snapshot+fromSnapshot roundtrip; rejects
+  malformed; truncates+clears tail.
+- onChanged fires; throwing isolated.
+- dispose locks ops.
+- Throwing itemInfo defaults to non-stackable.
+
+### Backwards compatibility
+
+Pure addition.
+
 ## 0.57.0 - 2026-05-09
 
 **TileMap - 2D tile grid backed by Uint16Array.** ZoneCatalog

@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.57.0';
+export const LOOM_ENGINE_VERSION = '0.58.0';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -337,6 +337,14 @@ export type {
 // 0.57.0 - 2D tile grid (Uint16Array-backed).
 export { TileMap, RESOURCE_TILE_MAP } from './runtime/tile-map.js';
 export type { TileMapOptions, TileMapSnapshot } from './runtime/tile-map.js';
+// 0.58.0 - slot-based inventory grid with stack support.
+export { InventoryGrid, RESOURCE_INVENTORY_GRID } from './runtime/inventory-grid.js';
+export type {
+  InventorySlot,
+  ItemInfo,
+  InventoryGridOptions,
+  AddResult,
+} from './runtime/inventory-grid.js';
 export {
   ResourceRegistry,
   createTimeResource,
