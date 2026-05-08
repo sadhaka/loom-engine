@@ -7,6 +7,65 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.27.0 - 2026-05-08
+
+**CameraController - smooth follow / shake / bounds clamp / fit-rect.**
+Higher-level camera behaviors on top of the existing CameraView. The
+controller writes back into the same CameraView so render systems
+see no API change.
+
+### Added
+
+- `src/renderer/camera-controller.ts` - `CameraController` class:
+  - `followTarget(x, y, smoothing?)` - per-frame target update; the
+    controller lerps toward it each tick using exponential smoothing.
+  - `clearFollow()` - stop following.
+  - `snapTo(x, y)` - immediate reposition; clears follow target.
+  - `shake(amplitude, durationMs)` - additive screen shake; linear
+    amplitude decay; replaces any active shake.
+  - `getShakeOffset()` - read the current applied shake offset (for
+    HUD elements that should also shake).
+  - `setBounds(rect | null)` - clamp the visible rect inside the
+    given world bounds. null disables. Tiny worlds (smaller than
+    viewport) center on bounds midpoint.
+  - `fit(rect, paddingPx?)` - one-shot zoom + center to show the
+    rect with paddingPx pixels of slack. Picks the tighter axis.
+  - `update(dtSeconds)` - apply pending follow + shake decay each
+    frame.
+- `CameraControllerOptions` (defaultSmoothing + randomFn injection
+  seam for deterministic shake tests).
+- `RESOURCE_CAMERA_CONTROLLER` constant.
+
+### Tests
+
+686 -> 698 (12 new in tests/camera-controller.test.ts):
+- snapTo immediate reposition.
+- followTarget lerps with smoothing factor; converges over time.
+- clearFollow stops the lerp.
+- shake decays to zero offset over duration.
+- shake replaces an active shake; invalid duration cancels.
+- setBounds clamps view center; setBounds(null) disables.
+- fit centers + zooms; fit honors padding.
+- Tiny world centers on bounds midpoint when bounds < viewport.
+- Invalid dt rejected (no NaN propagation).
+
+### Backwards compatibility
+
+Pure addition. CameraView shape unchanged; render systems read it
+the same way. Engine consumers opt in:
+
+```ts
+import { CameraController, createCamera } from '@sadhaka/loom-engine';
+
+var view = createCamera(canvas.width, canvas.height);
+var ctrl = new CameraController(view);
+
+ctrl.followTarget(player.x, player.y);
+// ... in render loop:
+ctrl.update(dtSeconds);
+device.setCamera(view);
+```
+
 ## 0.26.0 - 2026-05-08
 
 **WorldSnapshot - opt-in save/load via persistable resources.** Lets

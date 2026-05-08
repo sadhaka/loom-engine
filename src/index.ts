@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.26.0';
+export const LOOM_ENGINE_VERSION = '0.27.0';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -118,6 +118,12 @@ export type {
   IPersistableResource,
   WorldSnapshot,
 } from './runtime/world-snapshot.js';
+// 0.27.0 - camera controller (follow / shake / bounds / fit).
+export {
+  CameraController,
+  RESOURCE_CAMERA_CONTROLLER,
+} from './renderer/camera-controller.js';
+export type { CameraControllerOptions } from './renderer/camera-controller.js';
 export {
   ResourceRegistry,
   createTimeResource,
