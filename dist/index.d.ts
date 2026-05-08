@@ -1,4 +1,4 @@
-export declare const LOOM_ENGINE_VERSION = "0.52.0";
+export declare const LOOM_ENGINE_VERSION = "0.53.0";
 export type { Vec2, Vec3, Rect } from './util/math.js';
 export { vec2, vec3, rect, clamp, lerp, smoothstep, approxEq, rectContains, rectIntersects, visibleInView, } from './util/math.js';
 export type { ColorRGBA } from './util/color.js';
@@ -68,6 +68,8 @@ export { StateMachine, RESOURCE_STATE_MACHINE } from './runtime/state-machine.js
 export type { StateConfig, StateMachineOptions } from './runtime/state-machine.js';
 export { CooldownManager, RESOURCE_COOLDOWN_MANAGER } from './runtime/cooldown-manager.js';
 export type { CooldownManagerOptions } from './runtime/cooldown-manager.js';
+export { LRUCache, RESOURCE_LRU_CACHE } from './runtime/lru-cache.js';
+export type { LRUCacheOptions } from './runtime/lru-cache.js';
 export { ResourceRegistry, createTimeResource, createVeilBudgetResource, RESOURCE_TIME, RESOURCE_CAMERA, RESOURCE_DEVICE, RESOURCE_VEIL_BUDGET, } from './resources.js';
 export { SpriteRenderSystem } from './systems/sprite-render-system.js';
 export { Engine, registerBackend, isBackendRegistered } from './engine.js';
