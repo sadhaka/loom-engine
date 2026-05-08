@@ -7,6 +7,75 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.23.0 - 2026-05-08
+
+**Render pipeline batching primitive: RenderBatch.** Lays foundation
+for grouping sprite draws by (layer, atlas) without forcing existing
+render systems to migrate. Opt-in: a system that wants to amortise
+state changes calls batch.submit() instead of device.drawSprite()
+directly, then flushTo() once at end-of-frame. Existing systems are
+unmodified.
+
+### Why this scope (not full pipeline rewrite)
+
+Today's Canvas2D backend has no real GPU state machine - drawSprite
+just calls drawImage. The benefits of batching are:
+1. Foundation for the future WebGL2 backend where uniform/texture
+   binding state changes per-call dominate.
+2. Lets a HUD-rendering system explicitly express painter order
+   without each system reaching into the device.
+3. Per-frame batching enables future per-batch sort / dedupe /
+   instancing transforms without touching consumer systems.
+
+### Added
+
+- `src/renderer/render-batch.ts` - `RenderBatch` class. Submission
+  surface: `submit(layer, atlas, frame, x, y, z, tint?)`. Drainage:
+  `flushTo(device, callback)` calls callback per (layer, atlas)
+  group in layer-ascending order then submission order. Atlas
+  grouping is by reference equality so non-adjacent same-atlas
+  submissions land in separate groups (painter order preserved).
+  `clear()` drops the queue without flushing. `stats()` for
+  diagnostics.
+- Layer constants: `RENDER_LAYER_BACKGROUND` (-100),
+  `RENDER_LAYER_TERRAIN` (0), `RENDER_LAYER_ENTITIES` (100),
+  `RENDER_LAYER_FX` (200), `RENDER_LAYER_HUD` (1000). Consumers
+  can use any int; these are conventions for the demo's painter
+  order.
+- `RESOURCE_RENDER_BATCH` constant for world-attached batch.
+- `BatchFlushCallback` type exported.
+
+### Backwards compatibility
+
+Pure additions. Existing pools, systems, render path unchanged.
+Engine consumers opt in by:
+
+```ts
+import { RenderBatch, RENDER_LAYER_ENTITIES } from '@sadhaka/loom-engine';
+
+const batch = new RenderBatch();
+// In a system:
+batch.submit(RENDER_LAYER_ENTITIES, atlasRef, frame, x, y, z);
+// At end of frame:
+batch.flushTo(device, (layer, atlas, entries) => {
+  // Issue native draws for the group.
+});
+```
+
+### Tests
+
+645 -> 654 (9 new in tests/render-batch.test.ts):
+- Empty flush is a no-op.
+- Consecutive same-atlas submits merge into one group.
+- Non-adjacent same-atlas submits land in separate groups (painter
+  order).
+- Layers iterate ascending regardless of submit order.
+- Tint pass-through round-trips.
+- Flush clears the queue.
+- clear() drops queue without flushing.
+- Stats track submits + groups + entries.
+- Same-number layers coalesce into one bucket.
+
 ## 0.22.0 - 2026-05-08
 
 **ECS query primitives: ComponentSignature + QueryCache.** Lays the

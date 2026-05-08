@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.22.0';
+export const LOOM_ENGINE_VERSION = '0.23.0';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -90,6 +90,17 @@ export {
   QueryCache,
   RESOURCE_QUERY_CACHE,
 } from './runtime/query-cache.js';
+// 0.23.0 - render batching primitive.
+export {
+  RenderBatch,
+  RENDER_LAYER_BACKGROUND,
+  RENDER_LAYER_TERRAIN,
+  RENDER_LAYER_ENTITIES,
+  RENDER_LAYER_FX,
+  RENDER_LAYER_HUD,
+  RESOURCE_RENDER_BATCH,
+} from './renderer/render-batch.js';
+export type { BatchFlushCallback } from './renderer/render-batch.js';
 export {
   ResourceRegistry,
   createTimeResource,
