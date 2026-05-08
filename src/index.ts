@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.42.0';
+export const LOOM_ENGINE_VERSION = '0.43.0';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -216,6 +216,21 @@ export type {
   MemoryReport,
   MemoryBudgetOptions,
 } from './runtime/memory-budget.js';
+// 0.43.0 - particle curves (emit-rate / color-over-life / size-over-life).
+export {
+  emitRateAt,
+  particlesToEmit,
+  colorAtAge,
+  sizeAtAge,
+  RESOURCE_PARTICLE_CURVES,
+} from './runtime/particle-curves.js';
+export type {
+  EmitRateOptions,
+  EmitRateShape,
+  ColorStop,
+  SizeOverLifeOptions,
+  SizeShape,
+} from './runtime/particle-curves.js';
 export {
   ResourceRegistry,
   createTimeResource,

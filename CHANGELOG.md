@@ -7,6 +7,109 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.43.0 - 2026-05-09
+
+**ParticleCurves - emit-rate / color-over-life / size-over-life
+utility curves.** ParticleEmitterPool / ParticleEmitterSystem
+emit at a constant rate with constant per-particle color and
+size. Modern engines shape these over time: emit rate ramps up at
+boss-spawn then decays; particle color tints from white-hot to
+ember-orange to smoke-grey; particle size grows fast at birth then
+shrinks before death.
+
+Rather than rewrite the emitter / pool layout (a breaking change
+to per-particle SoA Float32Arrays), 0.43.0 ships a UTILITY module:
+pure-math helpers consumers call from per-frame code. A future
+emitter refactor can absorb these curves; today, the engine
+surface stays additive.
+
+### Added
+
+Three primitives, all pure functions (tree-shake-friendly, no
+class state):
+
+- **Emit-rate curves**:
+  - `emitRateAt(opts, t)` — given normalized time t in [0, 1],
+    returns particles-per-second.
+  - Shapes: `'constant'`, `'linearRamp'`, `'pulse'` (peaks at
+    midpoint), `'sustainFade'` (ramp -> hold -> decay).
+  - `particlesToEmit(opts, t0, t1, durationSeconds, accumulator)` —
+    integrates rate * dt across a frame; accumulator carries
+    fractional remainders so emission rates < 1/s emit cleanly
+    over multiple frames.
+
+- **Color over life**:
+  - `colorAtAge(stops, age)` — linear-segment blend across an array
+    of `{ t, color: ColorRGBA }` keyframe stops. Reuses 0.05
+    `colorLerp`.
+  - Out-of-range `age` clamps to first / last stop. Returns a fresh
+    `ColorRGBA` each call; consumers can mutate without aliasing.
+
+- **Size over life**:
+  - `sizeAtAge(opts, t)` — multiplier on a particle's base size.
+  - Shapes: `'constant'`, `'easeIn'`, `'easeOut'`, `'step'` (binary
+    threshold), `'growThenShrink'` (peaks at `peakAt`, defaults
+    0.5).
+
+All shapes accept an optional `easing` (any 0.29.0 `EasingName` or
+custom `EasingFn`) and reuse the 0.40.0 back / elastic / bounce
+curves transparently.
+
+- `EmitRateOptions`, `EmitRateShape`, `ColorStop`,
+  `SizeOverLifeOptions`, `SizeShape` types exported.
+- `RESOURCE_PARTICLE_CURVES` constant.
+
+### Tests
+
+1018 -> 1045 (27 new in tests/particle-curves.test.ts):
+- RESOURCE_PARTICLE_CURVES stable string.
+- emitRate: constant / linearRamp / pulse / sustainFade endpoints
+  and midpoints; t outside [0, 1] clamps; peakRate < 0 clamps.
+- particlesToEmit: integrates rate * dt across a frame; accumulator
+  carries fractional particles; zero duration / zero dt returns 0.
+- colorAtAge: empty stops returns white; single stop ignores age;
+  two-stop midpoint blend; three-stop segment selection; below /
+  above range clamps; returns fresh objects.
+- sizeAtAge: constant / easeOut / easeIn endpoints; step threshold;
+  growThenShrink peaks at peakAt (default 0.5); t outside [0, 1]
+  clamps; default scales = 1; custom easing function.
+
+### Backwards compatibility
+
+Pure addition. No emitter / pool changes. Consumers wire from
+their per-frame emitter code:
+
+```ts
+import {
+  emitRateAt, particlesToEmit, colorAtAge, sizeAtAge,
+  rgba,
+} from '@sadhaka/loom-engine';
+
+var emitOpts = {
+  shape: 'sustainFade' as const,
+  peakRate: 80, startRate: 0, sustainFraction: 0.4,
+};
+var fireballColors = [
+  { t: 0,   color: rgba(1.0, 1.0, 1.0, 1) }, // white-hot birth
+  { t: 0.3, color: rgba(1.0, 0.5, 0.0, 1) }, // orange flame
+  { t: 0.7, color: rgba(0.5, 0.0, 0.0, 0.7) }, // dim red
+  { t: 1,   color: rgba(0.2, 0.2, 0.2, 0) }, // smoke fade
+];
+var sizeOpts = {
+  shape: 'growThenShrink' as const,
+  startScale: 0.2, endScale: 1.5, peakAt: 0.3,
+};
+
+// Per frame for the emitter:
+var spawnAcc = { value: 0 };
+var n = particlesToEmit(emitOpts, t0, t1, lifetimeSec, spawnAcc);
+for (var i = 0; i < n; i++) emitNewParticle(...);
+
+// Per particle update:
+particle.color = colorAtAge(fireballColors, particle.age);
+particle.scale = particle.baseSize * sizeAtAge(sizeOpts, particle.age);
+```
+
 ## 0.42.0 - 2026-05-09
 
 **MemoryBudget - per-pool / per-resource memory size estimator.**
