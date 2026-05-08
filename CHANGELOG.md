@@ -7,6 +7,62 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.52.0 - 2026-05-09
+
+**CooldownManager - per-key cooldown tracking.** Skills, item-uses,
+ability triggers, chat throttles, and reconnect attempts share the
+same shape: "this thing was used at time T; refuse it again until
+T + delay." Each subsystem rolls its own per-key Map. CooldownManager
+factors that out into a tick-driven trackable resource.
+
+### Added
+
+- `src/runtime/cooldown-manager.ts` - `CooldownManager` class:
+  - `start(key, durationMs)` — begins a cooldown; replaces any
+    active cooldown on the same key.
+  - `tick(dtMs)` — reduces every active cooldown by dtMs. Keys
+    that cross zero are removed and `onReady` fires.
+  - `isReady(key)` / `isOnCooldown(key)` / `remaining(key)` /
+    `totalFor(key)` / `fractionElapsed(key)`.
+  - `clear(key)` — force ready immediately (fires onReady).
+  - `clearAll()` — clear every active cooldown.
+  - `tryUse(key, durationMs)` — atomic ready-check + start;
+    returns true if key was ready and the cooldown began.
+  - `activeCount()` / `activeKeys()` introspection.
+  - `dispose()` — locks subsequent ops.
+- Optional `onReady(key)` callback fires once when each key
+  crosses zero (or is cleared); throwing isolated.
+- Defensive: empty key ignored; zero / negative duration treated
+  as ready; NaN / negative dt ignored; tick(0) is a no-op.
+- Replay-deterministic: identical dt sequences produce identical
+  readiness sequences (test asserts).
+- `CooldownManagerOptions` type exported.
+- `RESOURCE_COOLDOWN_MANAGER` constant.
+
+### Tests
+
+1261 -> 1286 (25 new in tests/cooldown-manager.test.ts):
+- RESOURCE_COOLDOWN_MANAGER stable string; starts ready; activeCount.
+- start places key on cooldown; tick reduces remaining; crossing
+  zero -> ready; restart replaces; zero/negative duration treated
+  as ready; empty key ignored.
+- tick(0) / NaN / negative dt no-ops.
+- onReady fires on cross-zero; throwing isolated; once per cycle.
+- clear forces ready + fires onReady; clear missing returns false.
+- clearAll empties + fires onReady for each.
+- activeCount / activeKeys reflect state.
+- fractionElapsed: 0 at start, 1 when ready.
+- tryUse: ready -> true + start; on cooldown -> false; after ready
+  re-fires.
+- totalFor reflects total or 0.
+- dispose makes ops no-op.
+- Realistic example: skill rotation tracking.
+- Determinism: same dt sequence -> same readiness sequence.
+
+### Backwards compatibility
+
+Pure addition.
+
 ## 0.51.0 - 2026-05-09
 
 **StateMachine - generic finite state machine.** Many engine
