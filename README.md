@@ -241,15 +241,46 @@ npm run test          # tsx tests/*.test.ts
 npm run clean         # remove dist + compiled demo
 ```
 
-## Run the demo
+## Run the demos
 
 ```sh
 npm run build:all
 python -m http.server 8765
-# browse http://localhost:8765/demo/index.html
+# browse http://localhost:8765/demo/
 ```
 
-Controls:
+`http://localhost:8765/demo/` is the gallery index. The same tree is
+published to [loom-engine.pages.dev/demo/](https://loom-engine.pages.dev/demo/)
+on every push to `main`.
+
+## Examples
+
+Three minimal, copy-paste-ready starters live under `demo/`. Each is
+roughly 150 lines of TypeScript, imports from `@sadhaka/loom-engine`
+(resolved via `importmap` to the local engine bundle), and runs in
+the browser without a build step on the consumer side.
+
+- **[Survivor Mini](./demo/survivor-mini/)** - 100-line autobattler.
+  Player at center auto-fires at the nearest mob; mobs spawn from
+  random screen edges and pursue. Showcases ECS pools (Transform /
+  Sprite / Health / Pursue / RangedAttack), `MOB_CATALOG`, projectile
+  physics, system-phase ordering.
+- **[Plaza Mini](./demo/plaza-mini/)** - walkable iso plaza wired to
+  a mock Director bridge. WASD to walk; the narrator overlay below
+  the canvas pulses every five seconds with a synthetic
+  `narrator.line` event drained from `MockDirectorBridge`. Demonstrates
+  iso projection, input snapshot, the bridge / event-log / DOM-overlay
+  boundary.
+- **[Dialogue Mini](./demo/dialogue-mini/)** - branching dialogue
+  tree, no movement, no combat. Click a choice or press 1 / 2 / 3.
+  Demonstrates that the same ECS / resource model that runs the action
+  demos also fits a UI-only game: custom `Resource`, custom `System`
+  reading both `InputSnapshot` and DOM events, DOM as the primary UI.
+
+The legacy reference demos (Phase 6 director, Phase 7 combat, Phase 8
+ARPG slice) stay accessible from the gallery index.
+
+Controls in the legacy director demo (`demo/director.html`):
 - **Arrow keys / WASD**: pan camera
 - **Click**: burst 24 particles + play SFX chirp (after first click, AudioContext unlocks)
 - **Hover**: stats panel shows the iso tile under the cursor
