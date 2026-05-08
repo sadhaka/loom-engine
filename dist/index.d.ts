@@ -1,4 +1,4 @@
-export declare const LOOM_ENGINE_VERSION = "0.58.0";
+export declare const LOOM_ENGINE_VERSION = "0.59.0";
 export type { Vec2, Vec3, Rect } from './util/math.js';
 export { vec2, vec3, rect, clamp, lerp, smoothstep, approxEq, rectContains, rectIntersects, visibleInView, } from './util/math.js';
 export type { ColorRGBA } from './util/color.js';
@@ -80,6 +80,8 @@ export { TileMap, RESOURCE_TILE_MAP } from './runtime/tile-map.js';
 export type { TileMapOptions, TileMapSnapshot } from './runtime/tile-map.js';
 export { InventoryGrid, RESOURCE_INVENTORY_GRID } from './runtime/inventory-grid.js';
 export type { InventorySlot, ItemInfo, InventoryGridOptions, AddResult, } from './runtime/inventory-grid.js';
+export { StatStack, RESOURCE_STAT_STACK } from './runtime/stat-stack.js';
+export type { Modifier, ModifierKind, StatStackOptions, } from './runtime/stat-stack.js';
 export { ResourceRegistry, createTimeResource, createVeilBudgetResource, RESOURCE_TIME, RESOURCE_CAMERA, RESOURCE_DEVICE, RESOURCE_VEIL_BUDGET, } from './resources.js';
 export { SpriteRenderSystem } from './systems/sprite-render-system.js';
 export { Engine, registerBackend, isBackendRegistered } from './engine.js';
