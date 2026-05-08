@@ -100,8 +100,12 @@ export class ZoneEventSystem implements System {
       ? world.resources.get<KnotContextResource>(RESOURCE_KNOT_CONTEXT)
       : undefined;
     const time = world.resources.get<TimeResource>(RESOURCE_TIME);
-    const nowMs = (time ? time.elapsed * 1000 : 0)
-      + (typeof performance !== 'undefined' ? performance.now() : 0);
+    // Deterministic clock - TimeResource only. We previously summed in
+    // performance.now() which made knot fade timings non-reproducible
+    // across replays. Both DirectorSystem and ZoneEventSystem now use
+    // the same coordinate (time.elapsed * 1000) so beginFade / tickFade
+    // remain in sync.
+    const nowMs = time ? time.elapsed * 1000 : 0;
 
     const events = bridge.pollEvents();
     if (events.length === 0) return;
