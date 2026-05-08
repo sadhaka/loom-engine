@@ -235,6 +235,8 @@ export {
   createAudioAssetCache,
   RESOURCE_AUDIO_ASSET_CACHE,
 } from './audio/audio-asset-cache.js';
+export type { AudioAssetManifest } from './audio/audio-asset-loader.js';
+export { AudioAssetLoader } from './audio/audio-asset-loader.js';
 
 // Input (Phase 5): unified keyboard / mouse / touch with frame-
 // coherent snapshot resource.
