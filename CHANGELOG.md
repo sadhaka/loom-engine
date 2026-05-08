@@ -7,6 +7,102 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.18.0 - 2026-05-08
+
+**Replay determinism polish** (Phase E5, on top of E3 + E4). Closes
+the loop opened by 0.17.0's seeded RNG: deterministic clock everywhere
+in the tick path, ordering audit, snapshot fixture for regression
+detection, and an end-to-end smoke that proves "two worlds, same
+seed, same outcome".
+
+### Why
+
+0.17.0 routed Math.random through a seeded entropy resource. That
+fixed RNG drift but left a second source of non-determinism: every
+tick-driven system was reading `performance.now()` for damage / fade
+/ cooldown timestamps. Two HeadlessTickers with the same seed but
+different real-time elapsed since process start would diverge on the
+first health.applyDamage / KnotContext.beginFade call. 0.18.0 routes
+all in-tick clock reads through TimeResource.elapsed * 1000 so the
+clock is part of the seeded contract.
+
+### Changed
+
+- `src/director/zone/zone-event-system.ts` - knot fade `nowMs` no
+  longer adds `performance.now()` to TimeResource.elapsed * 1000.
+  Audit also confirmed the system iterates `bridge.pollEvents()` in
+  arrival order; no Set / Map.entries / Object.keys walks; no entropy
+  reads.
+- `src/director/director-system.ts` - same nowMs cleanup. Now in the
+  same coordinate as ZoneEventSystem so beginFade / tickFade stay
+  in sync across replays.
+- `src/systems/attack-system.ts` - applyDamage timestamp from
+  TimeResource.
+- `src/systems/damage-system.ts` - kill timestamp from TimeResource.
+- `src/systems/projectile-system.ts` - projectile-impact damage
+  timestamp from TimeResource.
+- `src/systems/pursue-system.ts` - contact-damage cooldown clock
+  from TimeResource.
+- `src/systems/ranged-attack-system.ts` - cooldown + projectile spawn
+  timestamps from TimeResource.
+- `src/systems/peer-presence-system.ts` - peer interpolation clock
+  from TimeResource.
+- `src/audio/cue-catalog.ts` - new `CueCatalogOptions.now` injection
+  seam. CueCatalog.create({ now }) accepts a TimeResource-driven
+  closure; the default fallback to performance.now() / Date.now()
+  is unchanged so existing call sites keep working.
+
+### Added
+
+- `tests/zone-event-system-determinism.test.ts` - 7 tests. Two
+  seeded tickers + same trace -> identical state snapshots; reverse
+  trace -> divergent state (system is arrival-order sensitive);
+  TPS 30 vs 120 keeps semantic state identical; entropy-blind
+  tripwire (seed 1 vs seed 2 produce same zone state).
+- `tests/no-nondeterminism.test.ts` - 8 tripwire tests. Greps the
+  src/ tree and asserts: Math.random count = 0; Date.now in
+  src/systems/ = 0; Date.now outside the documented whitelist
+  (cue-catalog default fallback, plugin-context, multiplayer
+  bridges) = 0; new Date().getTime = 0; performance.now in
+  src/systems/ = 0; director-system + zone-event-system no longer
+  call performance.now.
+- `tests/fixtures/expected-final-state-seed-42.json` - hand-checked
+  snapshot of the canonical trace replay with seed=42. Pinned in
+  git; future PRs that change a system update the fixture or fail
+  the test.
+- `tests/fixtures/_regen-replay-snapshot.ts` - regen helper. Runs
+  the same buildSnapshot routine as the test and writes the JSON.
+- `tests/replay-snapshot.test.ts` - 4 tests. Live replay deep-equals
+  the fixture; fixture metadata intact; eventsApplied = 20; live
+  replay reproducible across two runs.
+- `tests/determinism-smoke.test.ts` - 7 tests. Two HeadlessTickers
+  with same seed run a 5-entity pursuit scenario for 200 ticks and
+  produce byte-identical resource snapshots (TimeResource, entropy,
+  transforms, health, DeathLog). Per-tick reproducibility verified
+  at 20 sample-points. Different seeds produce same outcome
+  (entropy-blind for these systems).
+
+### Tests
+
+574 / 574 pass (548 baseline + 26 new). Breakdown of new tests:
+- 7 zone-event determinism
+- 8 no-nondeterminism tripwire
+- 4 replay-snapshot
+- 7 determinism-smoke
+
+### Open / deferred
+
+- src/director/snapshot-recovery.ts still reads performance.now() in
+  `applySnapshot`. That code is OUT of the per-tick loop (one-shot
+  recovery boot path) so it does not affect replay determinism.
+  Wired through the whitelist in tests/no-nondeterminism.test.ts.
+- src/director/ai/plugin-context.ts uses Date.now as the default
+  plugin clock. Plugins are async + opt-in + run on consumer
+  timers, NOT the world tick. Whitelisted.
+- The HMAC-signed fuzzer (Phase E4) is unchanged. Its protocol-level
+  randomness comes from the seeded entropy resource introduced in
+  0.17.0.
+
 ## 0.17.0 - 2026-05-08
 
 **Deterministic ECS via seeded RNG** (Phase E3, test infrastructure
