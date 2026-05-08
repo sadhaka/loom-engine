@@ -1,4 +1,4 @@
-export declare const LOOM_ENGINE_VERSION = "0.44.0";
+export declare const LOOM_ENGINE_VERSION = "0.45.0";
 export type { Vec2, Vec3, Rect } from './util/math.js';
 export { vec2, vec3, rect, clamp, lerp, smoothstep, approxEq, rectContains, rectIntersects, visibleInView, } from './util/math.js';
 export type { ColorRGBA } from './util/color.js';
@@ -52,6 +52,8 @@ export { emitRateAt, particlesToEmit, colorAtAge, sizeAtAge, RESOURCE_PARTICLE_C
 export type { EmitRateOptions, EmitRateShape, ColorStop, SizeOverLifeOptions, SizeShape, } from './runtime/particle-curves.js';
 export { linearAttenuation, inverseAttenuation, exponentialAttenuation, attenuationByModel, AttenuationRegistry, RESOURCE_ATTENUATION_REGISTRY, } from './audio/spatial-audio-curves.js';
 export type { AttenuationOptions, AttenuationFn, DistanceModelName, } from './audio/spatial-audio-curves.js';
+export { SaveSlots, RESOURCE_SAVE_SLOTS } from './runtime/save-slots.js';
+export type { SlotMetadata, SaveSlotsOptions, SaveSlotInput, LoadedSlot, } from './runtime/save-slots.js';
 export { ResourceRegistry, createTimeResource, createVeilBudgetResource, RESOURCE_TIME, RESOURCE_CAMERA, RESOURCE_DEVICE, RESOURCE_VEIL_BUDGET, } from './resources.js';
 export { SpriteRenderSystem } from './systems/sprite-render-system.js';
 export { Engine, registerBackend, isBackendRegistered } from './engine.js';
