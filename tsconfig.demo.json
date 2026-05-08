@@ -5,7 +5,11 @@
     "rootDir": "./demo",
     "declaration": false,
     "declarationMap": false,
-    "noEmit": false
+    "noEmit": false,
+    "baseUrl": ".",
+    "paths": {
+      "@sadhaka/loom-engine": ["./dist/index.d.ts"]
+    }
   },
   "include": ["demo/**/*.ts"],
   "exclude": ["dist", "tests", "node_modules", "src"]

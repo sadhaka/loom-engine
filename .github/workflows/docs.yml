@@ -1,12 +1,23 @@
-name: Deploy TypeDoc to gh-pages branch
+name: Deploy TypeDoc + demo gallery to gh-pages branch
 
-# Phase 9.3 + 11A.2: build the public-API reference from src/index.ts
-# and publish it to the gh-pages branch on every push to main.
-# Cloudflare Pages serves the gh-pages branch at loom-engine.pages.dev
-# (GitHub Pages itself is unavailable: private repo on free user plan).
+# Phase 9.3 + 11A.2 + 14.2: build the public-API reference from
+# src/index.ts AND the examples gallery in demo/, then publish both
+# to the gh-pages branch on every push to main. Cloudflare Pages
+# serves the gh-pages branch at loom-engine.pages.dev (GitHub Pages
+# itself is unavailable: private repo on free user plan).
 #
-# - npm run docs:ci writes a clean tree to ./docs-build/
-# - peaceiris/actions-gh-pages publishes that tree to gh-pages
+# Tree layout published to gh-pages (and therefore loom-engine.pages.dev):
+#   /                       TypeDoc site root (api reference)
+#   /demo/                  examples gallery index
+#   /demo/<name>/           individual demos (survivor-mini, plaza-mini, ...)
+#   /dist/                  engine bundle that demos resolve via importmap
+#
+# - npm run build:all compiles the engine (-> dist/) AND every demo
+#   (-> demo/<name>/main.js)
+# - npm run docs:ci writes a clean TypeDoc tree to ./docs-build/
+# - We copy demo/ and dist/ into docs-build/ so the demos can resolve
+#   their `@sadhaka/loom-engine` importmap target on the deployed site
+# - peaceiris/actions-gh-pages publishes the merged tree to gh-pages
 # - Cloudflare Pages auto-deploys on every gh-pages push (1-2 min)
 # - workflow_dispatch lets us re-deploy from the Actions UI on demand
 # - PRs only build (no deploy) so we catch typedoc warnings before merge
@@ -55,8 +66,16 @@ jobs:
       - name: Run tests
         run: npm test
 
+      - name: Build engine + demos
+        run: npm run build:all
+
       - name: Build TypeDoc site
         run: npm run docs:ci
+
+      - name: Stage demo gallery + engine bundle into TypeDoc tree
+        run: |
+          cp -r demo docs-build/demo
+          cp -r dist docs-build/dist
 
       - name: Deploy to gh-pages
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -67,4 +86,4 @@ jobs:
           publish_branch: gh-pages
           user_name: 'github-actions[bot]'
           user_email: 'github-actions[bot]@users.noreply.github.com'
-          commit_message: 'docs: deploy TypeDoc for ${{ github.sha }}'
+          commit_message: 'docs: deploy TypeDoc + demo gallery for ${{ github.sha }}'

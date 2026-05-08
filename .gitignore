@@ -6,11 +6,20 @@ demo/*.js
 demo/*.js.map
 demo/*.d.ts
 demo/*.d.ts.map
+# Phase 14.2: nested examples gallery (demo/<name>/main.ts -> main.js)
+demo/*/main.js
+demo/*/main.js.map
+demo/*/main.d.ts
+demo/*/main.d.ts.map
 
 # TypeDoc output (Phase 9.3) - HTML site is generated, never tracked.
 # `npm run docs` writes here; `npm run docs:ci` writes to docs-build/.
 docs/
 docs-build/
+# Phase 14.3 exception: hand-written methodology doc lives in docs/
+# alongside the generated TypeDoc output. typedoc.json sets
+# cleanOutputDir:false so local `npm run docs` does not wipe it.
+!docs/PERF-BENCH-METHODOLOGY.md
 
 # Dependencies
 node_modules/
@@ -35,3 +44,16 @@ coverage/
 
 # Temporary commit message files (use git -F to avoid heredoc quote issues)
 .commit-msg-*.txt
+
+# Phase 14.3 bench output - JSON + MD reports per run, kept locally
+# per developer. Commit a specific snapshot only when comparing
+# baselines explicitly (git add -f tools/bench-results/<name>.md).
+tools/bench-results/
+# Phase 14.3 browser-bench compiled artifacts. Source is .ts; the
+# .js / .js.map siblings are produced by `npx tsc -p tools/tsconfig.bench.json`.
+tools/perf-suite.js
+tools/perf-suite.js.map
+tools/perf-report.js
+tools/perf-report.js.map
+tools/perf-bench-browser.js
+tools/perf-bench-browser.js.map
