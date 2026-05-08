@@ -177,13 +177,16 @@ test('tween: stats track active + completed + cancelled', function () {
   assert.equal(tw.stats().cancelled, 1);
 });
 
-test('tween: Easings table has 13 named functions', function () {
-  // linear + 4 quadratic + 4 cubic + 4 sine (no ease-in-out variant)
-  // wait: linear (1) + easeIn/Out/InOut x quad/cubic/quart/sine (12)
-  // Actually: 1 + 3 quad + 3 cubic + 3 quart + 3 sine = 13.
+test('tween: Easings table has 22 named functions', function () {
+  // 0.29.0 base set:    1 + 3 quad + 3 cubic + 3 quart + 3 sine = 13.
+  // 0.40.0 extension:   3 back + 3 elastic + 3 bounce             = 9.
+  // Total: 22.
   var keys = Object.keys(Easings);
-  assert.equal(keys.length, 13);
+  assert.equal(keys.length, 22);
   assert.ok(typeof Easings.easeInQuad === 'function');
   assert.ok(typeof Easings.easeOutCubic === 'function');
   assert.ok(typeof Easings.easeInOutSine === 'function');
+  assert.ok(typeof Easings.easeOutBack === 'function');
+  assert.ok(typeof Easings.easeOutElastic === 'function');
+  assert.ok(typeof Easings.easeOutBounce === 'function');
 });

@@ -60,7 +60,168 @@ export const Easings = {
   easeInOutSine: function (t: number): number {
     return -(Math.cos(Math.PI * t) - 1) / 2;
   },
+
+  // 0.40.0 - back / elastic / bounce curves (Robert Penner). All
+  // accept t in [0, 1] but their range may briefly leave [0, 1]:
+  // back curves overshoot past 1 (or under 0); elastic oscillates;
+  // bounce stays in [0, 1] but is non-monotonic. Useful for menu
+  // pop-in, spring damp, drop-and-settle motion.
+
+  easeInBack: function (t: number): number {
+    var c1 = 1.70158;
+    var c3 = c1 + 1;
+    return c3 * t * t * t - c1 * t * t;
+  },
+  easeOutBack: function (t: number): number {
+    var c1 = 1.70158;
+    var c3 = c1 + 1;
+    var u = t - 1;
+    return 1 + c3 * u * u * u + c1 * u * u;
+  },
+  easeInOutBack: function (t: number): number {
+    var c1 = 1.70158;
+    var c2 = c1 * 1.525;
+    if (t < 0.5) {
+      return (Math.pow(2 * t, 2) * ((c2 + 1) * 2 * t - c2)) / 2;
+    }
+    return (Math.pow(2 * t - 2, 2) * ((c2 + 1) * (t * 2 - 2) + c2) + 2) / 2;
+  },
+
+  easeInElastic: function (t: number): number {
+    if (t <= 0) return 0;
+    if (t >= 1) return 1;
+    var c4 = (2 * Math.PI) / 3;
+    return -Math.pow(2, 10 * t - 10) * Math.sin((t * 10 - 10.75) * c4);
+  },
+  easeOutElastic: function (t: number): number {
+    if (t <= 0) return 0;
+    if (t >= 1) return 1;
+    var c4 = (2 * Math.PI) / 3;
+    return Math.pow(2, -10 * t) * Math.sin((t * 10 - 0.75) * c4) + 1;
+  },
+  easeInOutElastic: function (t: number): number {
+    if (t <= 0) return 0;
+    if (t >= 1) return 1;
+    var c5 = (2 * Math.PI) / 4.5;
+    if (t < 0.5) {
+      return -(Math.pow(2, 20 * t - 10) * Math.sin((20 * t - 11.125) * c5)) / 2;
+    }
+    return (Math.pow(2, -20 * t + 10) * Math.sin((20 * t - 11.125) * c5)) / 2 + 1;
+  },
+
+  easeOutBounce: function (t: number): number {
+    var n1 = 7.5625;
+    var d1 = 2.75;
+    if (t < 1 / d1) {
+      return n1 * t * t;
+    }
+    if (t < 2 / d1) {
+      var u1 = t - 1.5 / d1;
+      return n1 * u1 * u1 + 0.75;
+    }
+    if (t < 2.5 / d1) {
+      var u2 = t - 2.25 / d1;
+      return n1 * u2 * u2 + 0.9375;
+    }
+    var u3 = t - 2.625 / d1;
+    return n1 * u3 * u3 + 0.984375;
+  },
+  easeInBounce: function (t: number): number {
+    return 1 - Easings.easeOutBounce(1 - t);
+  },
+  easeInOutBounce: function (t: number): number {
+    if (t < 0.5) {
+      return (1 - Easings.easeOutBounce(1 - 2 * t)) / 2;
+    }
+    return (1 + Easings.easeOutBounce(2 * t - 1)) / 2;
+  },
 } as const;
+
+// 0.40.0 - cubic-bezier easing factory (CSS-style).
+//
+// CSS animation-timing-function takes four control values:
+//   cubic-bezier(x1, y1, x2, y2)
+// defining a curve from (0,0) to (1,1) with two interior control
+// points (x1, y1) and (x2, y2). x1 and x2 must be in [0, 1]; y1
+// and y2 may be outside [0, 1] for overshoot effects.
+//
+// Given x = t (time in [0, 1]), we solve for the parametric value s
+// such that bezier_x(s) = t, then return bezier_y(s). The solver
+// uses Newton-Raphson with a bisection fallback - converges to ~1e-6
+// accuracy in <8 iterations for typical control points.
+//
+// Useful CSS presets:
+//   ease         = cubicBezier(0.25, 0.1, 0.25, 1.0)
+//   easeIn       = cubicBezier(0.42, 0,    1.0,  1.0)
+//   easeOut      = cubicBezier(0,    0,    0.58, 1.0)
+//   easeInOut    = cubicBezier(0.42, 0,    0.58, 1.0)
+export function cubicBezier(
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+): EasingFn {
+  // Clamp x components to [0, 1] - the curve is undefined as a
+  // function-of-x outside that range. y components may overshoot.
+  var cx1 = clampUnit(x1);
+  var cx2 = clampUnit(x2);
+  return function (t: number): number {
+    if (t <= 0) return 0;
+    if (t >= 1) return 1;
+    var s = solveBezierParam(t, cx1, cx2);
+    return bezierComponent(s, y1, y2);
+  };
+}
+
+function clampUnit(v: number): number {
+  if (v < 0) return 0;
+  if (v > 1) return 1;
+  return v;
+}
+
+// Bezier component for given parameter s in [0, 1] with control
+// points (P0=0, P1=p1, P2=p2, P3=1). Used for both x and y.
+function bezierComponent(s: number, p1: number, p2: number): number {
+  var u = 1 - s;
+  return 3 * u * u * s * p1
+       + 3 * u * s * s * p2
+       + s * s * s;
+}
+
+// Derivative of bezierComponent w.r.t. s.
+function bezierComponentDerivative(s: number, p1: number, p2: number): number {
+  var u = 1 - s;
+  return 3 * u * u * p1
+       + 6 * u * s * (p2 - p1)
+       + 3 * s * s * (1 - p2);
+}
+
+// Solve bezier_x(s) = t for s. Newton-Raphson with bisection
+// fallback for stability.
+function solveBezierParam(t: number, x1: number, x2: number): number {
+  var EPS = 1e-6;
+  // Newton-Raphson: ~5 iterations for typical curves.
+  var s = t;
+  for (var i = 0; i < 8; i++) {
+    var x = bezierComponent(s, x1, x2) - t;
+    if (Math.abs(x) < EPS) return s;
+    var dx = bezierComponentDerivative(s, x1, x2);
+    if (Math.abs(dx) < EPS) break;
+    s = s - x / dx;
+  }
+  // Bisection fallback for poorly-conditioned curves.
+  var lo = 0;
+  var hi = 1;
+  s = t;
+  for (var j = 0; j < 64; j++) {
+    var fx = bezierComponent(s, x1, x2) - t;
+    if (Math.abs(fx) < EPS) return s;
+    if (fx < 0) lo = s;
+    else hi = s;
+    s = (lo + hi) / 2;
+  }
+  return s;
+}
 
 export type EasingName = keyof typeof Easings;
 

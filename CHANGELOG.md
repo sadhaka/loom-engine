@@ -7,6 +7,80 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.40.0 - 2026-05-09
+
+**Easings - cubicBezier factory + back / elastic / bounce curves.**
+Extends 0.29.0 Tween's `Easings` table with the curves every
+animation library ships and adds a `cubicBezier(x1, y1, x2, y2)`
+factory for CSS-style custom curves. The Newton-Raphson solver
+inside cubicBezier converges to ~1e-6 accuracy in <8 iterations
+for typical control points; bisection fallback guarantees
+convergence on poorly-conditioned curves.
+
+### Added
+
+- `Easings.easeIn/Out/InOutBack` - overshoot curves (Robert Penner).
+  `easeOutBack` rises past 1 then settles; `easeInBack` dips below 0
+  before rising. Useful for menu pop-in / spring damp.
+- `Easings.easeIn/Out/InOutElastic` - oscillating curves around the
+  endpoint. Useful for "boing" effects on UI.
+- `Easings.easeIn/Out/InOutBounce` - non-monotonic bouncing decay
+  inside [0, 1]. Useful for drop-and-settle motion.
+- `cubicBezier(x1, y1, x2, y2)` - returns an `EasingFn` matching the
+  CSS `cubic-bezier()` semantics. y1 / y2 may exceed [0, 1] for
+  overshoot. x1 / x2 are clamped to [0, 1] (curve undefined as a
+  function-of-x outside that range).
+
+### Tests
+
+944 -> 965 (21 new in tests/bezier-easing.test.ts; the existing
+`tween: Easings table has N named functions` assertion bumped from
+13 -> 22):
+- cubicBezier endpoints land at 0 and 1.
+- Linear control points approximate y=x identity.
+- ease-out front-loads progress; ease-in back-loads.
+- Monotonic curves stay monotonic across samples.
+- x outside [0, 1] is clamped; y can overshoot for spring effects.
+- Integrates with Tween via custom EasingFn; output samples land
+  exactly at end value.
+- t outside [0, 1] clamps to 0 / 1.
+- easeBack: easeOutBack overshoots past 1; easeInBack dips below 0;
+  endpoints land at 0 / 1.
+- easeElastic: endpoints clamp; easeOutElastic oscillates around end.
+- easeBounce: hits exactly 1 at t=1; stays in [0, 1] (no overshoot);
+  non-monotonic bouncing pattern; easeInBounce mirrors easeOutBounce;
+  easeInOutBounce midpoint near 0.5.
+- Tween resolves new easing names by string.
+- Every new easing is callable and produces finite values across
+  the [0, 1] sample range.
+
+### Backwards compatibility
+
+Pure addition. Existing easings unchanged. Engine consumers opt in:
+
+```ts
+import { Tween, cubicBezier, Easings } from '@sadhaka/loom-engine';
+
+var tw = new Tween();
+
+// Use a named back curve.
+tw.to(0, 100, 0.5, function (v) { hud.scale = v / 100; }, {
+  easing: 'easeOutBack',
+});
+
+// Build a custom CSS-style ease.
+var quickStart = cubicBezier(0, 0.6, 0.4, 1);
+tw.to(0, 1, 0.3, function (v) { menu.alpha = v; }, {
+  easing: quickStart,
+});
+
+// CSS preset shorthand:
+//   ease         = cubicBezier(0.25, 0.1, 0.25, 1.0)
+//   easeIn       = cubicBezier(0.42, 0,    1.0,  1.0)
+//   easeOut      = cubicBezier(0,    0,    0.58, 1.0)
+//   easeInOut    = cubicBezier(0.42, 0,    0.58, 1.0)
+```
+
 ## 0.39.0 - 2026-05-08
 
 **InputChord - combo / sequence / doubleTap / hold pattern recognizer
