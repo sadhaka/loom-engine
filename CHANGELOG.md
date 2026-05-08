@@ -7,6 +7,136 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.15.0 - 2026-05-08
+
+**Audio engine: positional 3D + asset loader + cue catalog + music
+director + zone-event integration shell** (Phase 17.1 + 17.2 + 17.3).
+Engine surface for the audio subsystem locked at
+[LOOM-AUDIO-SPEC.md](LOOM-AUDIO-SPEC.md). Phase 5 AudioBus mixer
+remains untouched and locked; consumers who do not opt into the new
+surfaces see identical behavior to 0.14.0.
+
+### Why
+
+Phase 16 made multiplayer Director events shared across peers in a
+zone. Phase 17 makes those events audible: the boss spawns at (x, y),
+every peer hears the spawn from the correct direction relative to
+their listener pose, music crossfades to combat, and per-peer
+footsteps sell the other player's presence. The Director is no
+longer just visible - it's spatial and reactive.
+
+### Added
+
+- **Spatializer + AudioListener** (Track A, §3 of spec):
+  - `SpatialAudioBus` composes the existing AudioBus, adds a `'spatial'`
+    sub-bus (priority 'ambient', VE-budget gated), and routes per-source
+    Web Audio `PannerNode`s into it.
+  - `playPositional(buffer, opts)` returns a `SpatialSourceHandle` with
+    `stop()`, `setPosition(x, y, z?)`, `fadeOut(durMs)`, `isPlaying()`.
+    Reuses the PannerNode for `setPosition` (no realloc on movement).
+  - `playPositionalTone(freq, durMs, opts)` for code-only demos.
+  - `AudioListenerPose` / `AudioListenerResource` + `RESOURCE_AUDIO_LISTENER`
+    + `createAudioListenerResource()` factory + default forward and up
+    vectors.
+  - `SpatialAudioSystem` (PHASE_RENDER, AFTER camera/transform sync)
+    pushes the local character's transform into the listener pose each
+    frame. Tolerates missing local character (no-op).
+  - `spatialDistance(...)` pure helper for distance math.
+
+- **Asset loader + cue catalog + music director** (Track B, §4):
+  - `AudioAssetCache` - in-memory `Map<string, AudioBuffer>` with
+    `get/has/set/drop/clear/list`. Re-loading the same name overwrites.
+  - `AudioAssetLoader.create(audioBus, cache)` - `load(url, name?)` does
+    fetch + `decodeAudioData` + cache write. Default name is URL
+    basename without extension. `preload(manifest)` rejects on first
+    failure. `inflightCount()` for "still loading" UI gates. Failure
+    does NOT pollute cache.
+  - `CueCatalog` - named cue events with predefined wiring.
+    `register(name, def)`, `play(name, opts) -> SpatialSourceHandle | null`,
+    `stopAll(name)`. Spatial cues route through `SpatialAudioBus`,
+    non-spatial through `audioBus.playOneShot`. Cooldown enforced via
+    per-cue last-play timestamp. Defaults merging.
+  - `MusicDirector` - `playMusic(name, fadeInMs)`, `stopMusic(fadeOutMs)`,
+    `crossfadeMusic(name, fadeMs)`, `currentMusic()`. Routes through
+    `audioBus.input('music')`. `linearRampToValueAtTime` envelopes;
+    `setTimeout` resolves the fade-out promise after the ramp completes.
+
+- **Zone-event audio integration shell** (Track C engine side, §5):
+  - `ZoneAudioSystem` (PHASE_RENDER, AFTER ZoneEventSystem) drains
+    `ZoneEventLog.recent` for the local zone and dispatches each event
+    to a registered mapping handler. `registerMapping(mapping)` /
+    `unregisterMapping(eventType)`. Engine ships zero mappings;
+    consumers (e.g. TWT) register their own (boss_spawn cue, knot
+    music crossfade, etc.).
+  - `ZoneAudioMapping` + `ZoneCuePlay` + `ZoneAudioContext` types.
+
+### Changed
+
+- `LOOM_ENGINE_VERSION` constant in `src/index.ts` now reads `'0.15.0'`
+  (was stale at `'0.13.0'` since Phase 16 - smoke + webgl2 version
+  pinning tests updated to match).
+- `src/index.ts` re-export blocks expanded with three new audio
+  sections: spatializer + listener (Track A), assets/cues/music
+  (Track B), zone-event integration (Track C).
+
+### Tests
+
+487 / 487 pass (252 baseline + 57 zone + 62 plugin + 116 audio across
+Tracks A/B + the ZoneAudioSystem suite). Zero regressions on Phase 5,
+Phase 16, or anything earlier. Coverage:
+
+- Spatializer: PannerNode wiring, positionXYZ assignment, connect chain,
+  setPosition reuse (no realloc), fade-out promise resolution, handle
+  idempotent stop, null on suspended context, null on budget mute,
+  distance model + ref/max distance + rolloffFactor passthrough.
+- Audio listener: factory shape, lastUpdateFrame tracking, default
+  vectors, pose mutation.
+- SpatialAudioSystem: phase ordering, pose pushed exactly once per
+  tick, no-op on null local character, multi-tick lastUpdateFrame.
+- Falloff math: zero distance, beyond max, NaN guards.
+- Asset cache: get/has/set/drop/clear/list, name collision overwrite.
+- Asset loader: load resolves with AudioBuffer (mock), preload reject
+  on first failure, success path inserts all, inflightCount tracks,
+  name override, failure no cache pollution.
+- Cue catalog: register/unregister/has/list, spatial vs non-spatial
+  routing, cooldown enforcement, defaults merging, missing-asset null,
+  unregistered-cue null, register overwrite.
+- Cue stopAll: handle invalidation per cue, isolation from other cues,
+  no-op on empty.
+- Music director: playMusic resets prior, stopMusic resolves after fade,
+  crossfade transitions both gains, currentMusic getter, missing-asset
+  no-op.
+- ZoneAudioSystem: registerMapping wiring, dispatch on event drain,
+  missing mapping silent skip, missing cue catalog silent skip,
+  multiple mappings dispatch in registration order.
+
+### Spec ambiguities resolved during implementation
+
+- Spatial source `onended` now triggers handle cleanup so naturally-
+  ended buffers don't leak nodes.
+- `SPATIAL_BUS_NAME = 'spatial'` exported as a named constant so
+  consumers don't depend on the literal string.
+- `SpatialAudioSystem.setLocalCharacterEntity(entity)` (engine works
+  in entity ids; consumer translates from character_id at the app
+  layer - same pattern as `PeerPool.setLocalCharacterId`).
+- `register()` mid-dispatch in CueCatalog: registry snapshot at
+  dispatch start so newly-registered cues fire on the next dispatch.
+- `dispose()` and logger errors isolated the same way hook errors are
+  (carried over from Phase 16 plugin SPI pattern).
+- Music `fadeIn=0` skips the ramp entirely (no zero-duration ramp).
+- AudioAssetLoader name basename strips both query string and fragment.
+
+### Open / deferred
+
+- TWT consumer mappings + 9 synthesized demo cues + bundle integration
+  (Track C TWT side): in flight on the docker repo; ships separately
+  via week-19-visual.
+- Stock CC0 audio replacing synthesized cues: deferred to Phase 17.5
+  follow-up. The catalog API is asset-agnostic so the swap is mechanical.
+- Streaming music tracks: deferred per spec §8.2. AudioBuffer-only v1.
+- Custom JS spatialization: deferred per spec §8.3. PannerNode-only v1.
+- Listener rotation: deferred per spec §8.4. Fixed forward+up v1.
+
 ## 0.14.0 - 2026-05-08
 
 **Director Protocol v2: zone-scoped events + AI plugin SPI** (Phase
