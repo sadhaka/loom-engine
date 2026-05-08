@@ -7,6 +7,63 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.57.0 - 2026-05-09
+
+**TileMap - 2D tile grid backed by Uint16Array.** ZoneCatalog
+(Phase 8) defines per-zone tile palettes; the engine had no actual
+tile-grid container until now. TileMap is a tiny rectangle of u16
+tile ids stored row-major, with bounds-checked accessors, fill /
+flood-fill helpers, range queries, and a base64 snapshot path for
+save data.
+
+Tile id 0 is conventional for "empty"; consumers assign meaning.
+Multiple TileMaps can layer (background / terrain / decoration /
+collision); the engine doesn't impose a layer model here.
+
+### Added
+
+- `src/runtime/tile-map.ts` - `TileMap` class:
+  - `TileMap.create({ width, height, defaultTile?, data? })`.
+  - `width()` / `height()` / `cellCount()` / `inBounds(x, y)`.
+  - `get(x, y)` returns 0 for out-of-bounds (silent), tile id
+    otherwise.
+  - `set(x, y, tile)` is silent no-op on out-of-bounds; tile id
+    clamped to `[0, 65535]`.
+  - `fill(tile)` / `fillRect(x, y, w, h, tile)` (bounds-clipped).
+  - `replaceAll(from, to)` returns count of cells changed.
+  - `floodFill(sx, sy, replacement)` - 4-connected flood fill;
+    no-op if start tile already equals replacement.
+  - `forEach(cb)` - throwing isolated.
+  - `findAll(predicate)` - returns matching cells.
+  - `toSnapshot()` / `fromSnapshot(snap)` - base64 round-trip
+    safe across PersistentStorage; rejects malformed input.
+  - `raw()` - direct Uint16Array access for renderer fast paths.
+- Float coordinates floor to integer cells.
+- `TileMapOptions`, `TileMapSnapshot` types exported.
+- `RESOURCE_TILE_MAP` constant.
+
+### Tests
+
+1385 -> 1411 (26 new in tests/tile-map.test.ts):
+- RESOURCE_TILE_MAP stable string.
+- create + size accessors; rejects non-positive size.
+- Defaults to zeros; defaultTile fills initial state; data
+  initializes; data length mismatch throws.
+- get/set out-of-bounds (return 0 / silent no-op).
+- set + get roundtrip; tile id clamps to Uint16.
+- Float coordinates floor.
+- inBounds reflects valid range.
+- fill / fillRect (clipped); replaceAll.
+- floodFill 4-connected; same-replacement no-op; out-of-bounds 0.
+- forEach visits every cell; throwing isolated.
+- findAll returns matching cells.
+- snapshot + fromSnapshot roundtrip; rejects malformed input.
+- raw() exposes underlying typed array (mutation visible).
+
+### Backwards compatibility
+
+Pure addition.
+
 ## 0.56.0 - 2026-05-09
 
 **SceneManager - named scenes with async enter / exit + tick.**
