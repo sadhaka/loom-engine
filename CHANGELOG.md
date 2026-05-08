@@ -7,6 +7,88 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.48.0 - 2026-05-09
+
+**TimerScheduler - engine-clock-driven setTimeout / setInterval.**
+Browser `setTimeout` / `setInterval` fire on the wall clock - they
+don't respect the engine's frame pacing or 0.25.0 EngineClock pause
+/ timeScale. Replays don't reproduce them either: a setTimeout at
+500ms from a recorded session won't land at the same world-tick on
+replay because the browser's scheduler is non-deterministic.
+
+TimerScheduler is a setTimeout / setInterval analog driven by
+`tick(dtMs)`. Time advances ONLY when the consumer ticks; every
+scheduled callback fires at exactly the dt boundary that crosses
+its threshold. Combined with EngineClock as the dt source, this
+is replay-deterministic.
+
+### Added
+
+- `src/runtime/timer-scheduler.ts` - `TimerScheduler` class:
+  - `setTimeout(fn, delayMs)` — one-shot. Fires once at the first
+    tick where elapsed >= delayMs from schedule time.
+  - `setInterval(fn, delayMs)` — repeating. Fires every delayMs of
+    accumulated tick time. Catches up if a single tick crosses
+    multiple thresholds (capped by `maxFiresPerTick`, default 64).
+    `delayMs <= 0` is dropped to avoid an infinite loop.
+  - `clearTimeout(handle | id)` / `clearInterval(handle | id)`.
+  - `cancelAll()` — wipes every active timer.
+  - `has(id)` / `pendingCount()` / `stats()` introspection.
+  - `tick(dtMs)` — advance scheduled time. NaN / negative dt
+    ignored. Newly-scheduled timers from inside a callback do NOT
+    fire in the same tick (snapshot semantics).
+  - `dispose()` — locks subsequent ops; returns no-op handles for
+    new schedule calls.
+- Defensive: throwing callback isolated; clearTimeout(null /
+  undefined / unknown id) is a safe no-op.
+- Replay-deterministic: identical dt sequences produce identical
+  fire counts (test asserts).
+- `TimerHandle`, `TimerSchedulerOptions` types exported.
+- `RESOURCE_TIMER_SCHEDULER` constant.
+
+### Tests
+
+1155 -> 1185 (30 new in tests/timer-scheduler.test.ts):
+- RESOURCE_TIMER_SCHEDULER stable string; starts empty.
+- setTimeout: fires once after delay; once even on overshoot;
+  cancellable via handle / id; clearTimeout on null safe; clear
+  after fire safe; delayMs <= 0 fires next tick.
+- setInterval: fires every delayMs; steady cadence under variable
+  dt; maxFiresPerTick caps burst; maxFires=0 disables cap;
+  clearInterval stops fires; delayMs=0 dropped.
+- Multiple timers: independent firing.
+- cancelAll cancels every active timer.
+- Newly-scheduled timer from inside callback doesn't fire same tick.
+- Throwing callback isolated.
+- NaN / negative dt ignored.
+- pendingCount / has / stats accurate.
+- dispose makes scheduling no-op.
+- Unique ids.
+- handle.isActive reflects state.
+- Determinism: same dt sequence -> same fire count.
+
+### Backwards compatibility
+
+Pure addition. Engine consumers opt in:
+
+```ts
+import { TimerScheduler } from '@sadhaka/loom-engine';
+
+var timers = TimerScheduler.create();
+
+// One-shot: respawn the boss in 30 seconds of game time.
+timers.setTimeout(function () { spawnBoss(); }, 30000);
+
+// Repeating: tick AI every 250ms of game time.
+var aiHandle = timers.setInterval(function () { aiSystem.step(); }, 250);
+
+// Per frame, drive from EngineClock-aware dt:
+timers.tick(deltaTimeMs);
+
+// Cancel later:
+timers.clearInterval(aiHandle);
+```
+
 ## 0.47.0 - 2026-05-09
 
 **TweenChain - sequential composition of tweens, delays, and callbacks.**
