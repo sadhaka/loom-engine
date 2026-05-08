@@ -1,4 +1,4 @@
-export declare const LOOM_ENGINE_VERSION = "0.49.0";
+export declare const LOOM_ENGINE_VERSION = "0.50.0";
 export type { Vec2, Vec3, Rect } from './util/math.js';
 export { vec2, vec3, rect, clamp, lerp, smoothstep, approxEq, rectContains, rectIntersects, visibleInView, } from './util/math.js';
 export type { ColorRGBA } from './util/color.js';
@@ -62,6 +62,8 @@ export { TimerScheduler, RESOURCE_TIMER_SCHEDULER } from './runtime/timer-schedu
 export type { TimerHandle, TimerSchedulerOptions } from './runtime/timer-scheduler.js';
 export { linearPath, catmullRomPath, hermitePath, RESOURCE_SPLINE, } from './runtime/spline.js';
 export type { Vec2Like, HermiteKey, SplineOptions, } from './runtime/spline.js';
+export { LogRingBuffer, RESOURCE_LOG_RING_BUFFER } from './runtime/log-ring-buffer.js';
+export type { LogLevel, LogEntry, LogRingBufferOptions, LogFilter, } from './runtime/log-ring-buffer.js';
 export { ResourceRegistry, createTimeResource, createVeilBudgetResource, RESOURCE_TIME, RESOURCE_CAMERA, RESOURCE_DEVICE, RESOURCE_VEIL_BUDGET, } from './resources.js';
 export { SpriteRenderSystem } from './systems/sprite-render-system.js';
 export { Engine, registerBackend, isBackendRegistered } from './engine.js';
