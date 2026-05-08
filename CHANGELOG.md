@@ -7,6 +7,64 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.16.0 - 2026-05-08
+
+**Visual boss rendering primitives** (Phase 18.1, engine side). Engine
+surface for the renderer-agnostic boss entity per
+[LOOM-BOSS-RENDER-SPEC.md](LOOM-BOSS-RENDER-SPEC.md). Closes the loop
+opened by Phase 16 (zone protocol fanout) and Phase 17 (zone audio
+cues): renderers can now poll a typed boss entity each frame instead
+of parsing SSE envelopes themselves. v1 supports at most one active
+boss per zone (matches Phase 16 spec).
+
+### Added
+
+- `ZoneBossEntity` shape: `{boss_id, name, type, hp_max, hp_current,
+  dmg, x, y, knot_flavor, spawned_at_ms, last_tick_ms, recent_hits}`.
+  recent_hits is a bounded ring of `RECENT_HITS_RING_SIZE = 32`
+  entries for floating-damage-number renderers.
+- `ZoneBossEntityResource` (per-zone Map; null entry means no active
+  boss). `RESOURCE_ZONE_BOSS_ENTITY` key + `createZoneBossEntityResource()`
+  factory.
+- `buildEntityFromSpawn(env)` helper supporting both `zone.boss.spawn`
+  and `zone.snapshot` envelopes (the latter when `data.active_boss` is
+  non-null).
+- `applyTick(entity, env)` helper; mutates HP + position + appends
+  recent_hits (capped at RECENT_HITS_RING_SIZE).
+- `ZoneBossEntitySystem` (PHASE_LOGIC, runs after ZoneEventSystem)
+  with per-zone `lastProcessedEventId` cursor strategy. Reads
+  `ZoneEventLog`, applies new boss events to the entity resource.
+  Tolerates missing log / entity resources (no-op).
+
+### Tests
+
+514 / 514 pass (487 baseline + 17 new resource tests + 12 new system
+tests). Zero v1 / Phase 16 / Phase 17 regressions. Coverage:
+
+- Resource: factory shape, byZone Map isolation per zone, null-spawn-
+  null lifecycle, buildEntityFromSpawn maps all 12 fields, applyTick
+  updates HP+pos+appends, applyTick caps recent_hits at ring size,
+  buildEntityFromSpawn supports zone.snapshot's active_boss path.
+- System: spawn populates entity in correct zone, tick updates HP+pos+
+  appends hit, mismatched boss_id on tick is ignored, end clears entity
+  to null when boss_id matches, end with mismatched boss_id leaves
+  active boss intact, snapshot with active_boss replaces wholesale,
+  snapshot with null active_boss clears entity, recent_hits ring caps
+  at RECENT_HITS_RING_SIZE under hit-storm, multi-zone isolation,
+  cursor advances per-zone preventing double-apply, cursor is per-zone
+  not global, tolerates missing log / entity resources.
+
+### Changed
+
+- `LOOM_ENGINE_VERSION` 0.15.0 -> 0.16.0. Smoke + webgl2 version
+  pinning tests bumped accordingly.
+
+### Open / deferred
+
+- Multi-boss per zone (v1 supports one). Deferred per spec §1.2.
+- TWT-side renderer (Three.js mesh + DOM HUD): in flight on docker
+  repo; ships separately to week-19-visual.
+
 ## 0.15.0 - 2026-05-08
 
 **Audio engine: positional 3D + asset loader + cue catalog + music
