@@ -7,6 +7,63 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.25.0 - 2026-05-08
+
+**EngineClock - pause / step / timeScale controls.** Self-contained
+timing wrapper around the consumer's render loop -> world.update
+chain. Lets a debug HUD pause the world, single-step frames, or run
+slow-mo / fast-forward without touching world or system code.
+
+### Added
+
+- `src/runtime/engine-clock.ts` - `EngineClock` class. Surface:
+  `pause()`, `resume()`, `isPaused()`, `setTimeScale(s)`,
+  `timeScale()`, `tick(realDtMs)` -> simulated dt, `step(stepMs?)`
+  for fixed-dt stepping while paused, `totalSimulatedMs()`,
+  `totalRealMs()`, `totalSteps()`, `resetCounters()`.
+- Pause + timeScale=0 both make tick() return 0; only step()
+  bypasses the pause gate (the explicit "advance one frame while
+  paused" affordance).
+- `EngineClockOptions` (timeScale + defaultStepMs) for construction.
+- `RESOURCE_ENGINE_CLOCK` constant for world-attached clock.
+
+### Usage pattern
+
+```ts
+import { EngineClock } from '@sadhaka/loom-engine';
+var clock = new EngineClock();
+
+function frame(realDtMs) {
+  var simDt = clock.tick(realDtMs);
+  world.update(simDt);
+}
+
+// Debug stepping:
+clock.pause();
+function onStepButton() {
+  var dt = clock.step();
+  world.update(dt);
+}
+```
+
+### Tests
+
+665 -> 676 (11 new in tests/engine-clock.test.ts):
+- tick passes through dt at scale=1.
+- pause makes tick return 0; resume restores.
+- timeScale multiplies sim dt; clamping rejects negative / NaN /
+  Infinity to 0.
+- timeScale=0 acts like pause (real ms still tracked).
+- step() emits dt even while paused; bumps counters; ignores
+  invalid stepMs.
+- tick() rejects invalid realDtMs.
+- defaultStepMs reflects constructor; invalid clamps to ~16.67.
+- resetCounters wipes timing but preserves pause + scale.
+
+### Backwards compatibility
+
+Pure addition. World, systems, render loop untouched.
+
 ## 0.24.0 - 2026-05-08
 
 **DebugHUD primitive.** Self-contained stats overlay any consumer
