@@ -7,6 +7,103 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.45.0 - 2026-05-09
+
+**SaveSlots - multi-slot save manager on top of PersistentStorage +
+WorldSnapshot.** PersistentStorage (0.38.0) provides JSON-safe
+key/value; WorldSnapshot (0.26.0) produces a versioned envelope of
+every persistable resource. Most games want one more layer: NAMED
+slots ('autosave', 'quicksave', 'manual-1' ... 'manual-9') with
+metadata (label, timestamp, engine version, optional thumbnail
+data URL, optional play time, arbitrary user metadata) alongside
+the snapshot itself.
+
+The SaveSlots facade owns no persistence directly - it composes a
+PersistentStorage instance and adds the slot semantics. Slots
+serialize via the same JSON path PersistentStorage already uses,
+so a curious dev can still read the raw key without an opaque
+format.
+
+### Added
+
+- `src/runtime/save-slots.ts` - `SaveSlots` class:
+  - `save(id, input, nowFn?)` -> SlotMetadata. `input` carries the
+    snapshot, optional label, thumbnailDataUrl, playtimeSeconds,
+    and arbitrary userMeta record.
+  - `load(id)` -> `{ meta, snapshot } | null`. Returns null on
+    missing OR malformed envelope (defensive against corrupted
+    storage; will not throw on boot).
+  - `loadMeta(id)` -> SlotMetadata-only convenience for save UIs.
+  - `delete(id)` / `has(id)` / `listIds()`.
+  - `listAll(sortBy?: 'recent' | 'name')` -> SlotMetadata[].
+    Default 'recent' sorts savedAtMs descending.
+  - `rename(id, newId)` / `duplicate(id, newId, nowFn?)` - both
+    refuse to overwrite an existing destination; both return
+    booleans.
+  - `clearAll()` - removes every slot under this prefix; foreign
+    keys outside the prefix are untouched.
+  - `dispose()` - locks subsequent ops.
+- Thumbnail cap (default 256kB) - over-cap thumbnails are silently
+  dropped from the metadata (the slot itself still saves).
+- Custom `prefix` (default `'slots/'`) lets multiple SaveSlots
+  instances share one storage without collision.
+- `SlotMetadata`, `SaveSlotsOptions`, `SaveSlotInput`, `LoadedSlot`
+  types exported.
+- `RESOURCE_SAVE_SLOTS` constant.
+
+### Tests
+
+1074 -> 1101 (27 new in tests/save-slots.test.ts):
+- RESOURCE_SAVE_SLOTS stable string.
+- save + load roundtrip preserves snapshot + metadata.
+- save with empty id / no snapshot throws.
+- load missing returns null; corrupted envelope returns null.
+- has / delete; delete on missing returns false.
+- listIds returns slots only (foreign keys excluded).
+- listAll sorts by recency (default) or by name.
+- rename moves slot; refuses overwrite; missing source returns
+  false; same-id no-op.
+- duplicate copies with fresh timestamp; refuses overwrite +
+  missing + same-id.
+- clearAll removes only slot keys (foreign survives).
+- Thumbnail under cap preserved; over cap dropped silently.
+- userMeta + playtimeSeconds preserved.
+- loadMeta returns metadata-only.
+- dispose locks ops.
+- Custom prefix isolates two facades on the same storage.
+- meta.engineVersion captured from snapshot.
+- Rename preserves metadata + snapshot.
+
+### Backwards compatibility
+
+Pure addition. Engine consumers opt in:
+
+```ts
+import {
+  SaveSlots, PersistentStorage, LocalStorageBackend,
+  serializeWorldSnapshot,
+} from '@sadhaka/loom-engine';
+
+var ps = PersistentStorage.create({
+  backend: new LocalStorageBackend({ prefix: 'twt:' }),
+});
+var slots = SaveSlots.create({ storage: ps });
+
+// Save:
+var snap = serializeWorldSnapshot(world.resources, '0.45.0');
+await slots.save('quicksave', {
+  snapshot: snap,
+  label: 'Plaza, Hero lvl 7',
+  thumbnailDataUrl: canvas.toDataURL('image/jpeg', 0.6),
+  playtimeSeconds: hud.playtime,
+  userMeta: { zone: 'plaza', heroClass: 'lash' },
+});
+
+// List for save UI:
+var all = await slots.listAll('recent');
+all.forEach((m) => uiAddSlot(m.id, m.label, m.savedAtMs, m.thumbnailDataUrl));
+```
+
 ## 0.44.0 - 2026-05-09
 
 **SpatialAudioCurves - distance attenuation curve evaluation.**

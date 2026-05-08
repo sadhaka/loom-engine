@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.44.0';
+export const LOOM_ENGINE_VERSION = '0.45.0';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -245,6 +245,14 @@ export type {
   AttenuationFn,
   DistanceModelName,
 } from './audio/spatial-audio-curves.js';
+// 0.45.0 - multi-slot save manager on top of PersistentStorage + WorldSnapshot.
+export { SaveSlots, RESOURCE_SAVE_SLOTS } from './runtime/save-slots.js';
+export type {
+  SlotMetadata,
+  SaveSlotsOptions,
+  SaveSlotInput,
+  LoadedSlot,
+} from './runtime/save-slots.js';
 export {
   ResourceRegistry,
   createTimeResource,

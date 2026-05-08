@@ -167,6 +167,10 @@ const DATE_NOW_WHITELIST = [
   // engine clock). Out-of-tick from a determinism standpoint -
   // which step runs in which frame is up to the consumer's driver.
   'runtime/frame-budget-scheduler.ts',   // defaultNowMs fallback (clock seam)
+  // Phase 0.45 SaveSlots. Save / duplicate accept an optional nowFn
+  // for deterministic replays; default falls back to Date.now for
+  // wall-clock save timestamps. Out-of-tick (consumer-triggered).
+  'runtime/save-slots.ts',               // Date.now fallback (clock seam)
 ];
 
 function isWhitelisted(file: string, list: string[]): boolean {
