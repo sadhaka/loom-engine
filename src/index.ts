@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.33.0';
+export const LOOM_ENGINE_VERSION = '0.34.0';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -148,6 +148,14 @@ export {
   pack32,
   unpack32,
 } from './util/color.js';
+// 0.34.0 - declarative asset preloader with progress events.
+export { AssetPreloader, RESOURCE_ASSET_PRELOADER } from './runtime/asset-preloader.js';
+export type {
+  AssetProgressEvent,
+  AssetLoadedEvent,
+  AssetErrorEvent,
+  AssetDoneEvent,
+} from './runtime/asset-preloader.js';
 export {
   ResourceRegistry,
   createTimeResource,

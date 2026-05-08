@@ -7,6 +7,63 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.34.0 - 2026-05-08
+
+**AssetPreloader - declarative asset loading with progress events.**
+The engine has individual asset helpers (asset-loader, audio-asset-
+loader, sprite-sheet-loader); AssetPreloader bundles them into a
+manifest the consumer hands over once + listens for events. Useful
+for a loading screen.
+
+### Added
+
+- `src/runtime/asset-preloader.ts` - `AssetPreloader` class:
+  - `add(id, loader)` - queue an asset; loader returns a Promise.
+  - `on('progress' | 'asset' | 'error' | 'done', handler)` and the
+    typed shortcuts onProgress / onAsset / onError / onDone.
+  - `start()` -> Promise<AssetDoneEvent>. Idempotent; second call
+    returns the existing done result.
+  - `get(id)` - fetch successful result post-done.
+  - `stats()` - introspection.
+- Failed loaders don't halt the queue: every entry attempts; the
+  'done' event reports succeeded + failed + errors[].
+- Throwing event handler doesn't block siblings or queue progress.
+- `AssetProgressEvent`, `AssetLoadedEvent`, `AssetErrorEvent`,
+  `AssetDoneEvent` types exported.
+- `RESOURCE_ASSET_PRELOADER` constant.
+
+### Tests
+
+788 -> 804 (16 new in tests/asset-preloader.test.ts):
+- Empty queue -> done with zero counts.
+- Single asset loads + done fires.
+- Progress event per asset.
+- Asset event per successful load.
+- Failed loader fires error + done counts failed.
+- Failed loader does NOT halt queue.
+- add() after start() throws.
+- Duplicate id / empty id / missing loader throw on add.
+- get() returns null for failed; undefined for unknown.
+- Stats reflect state at each phase.
+- Throwing handler doesn't block siblings.
+- Unsubscribe via returned function.
+- Second start() returns same done result.
+
+### Backwards compatibility
+
+Pure addition. Engine consumers opt in:
+
+```ts
+import { AssetPreloader } from '@sadhaka/loom-engine';
+
+var pre = new AssetPreloader();
+pre.add('hero', () => fetch('/img/hero.png'));
+pre.add('music', () => loadAudio('/snd/loom.ogg'));
+pre.onProgress((ev) => updateBar(ev.fraction));
+var done = await pre.start();
+console.log('loaded', done.succeeded, 'failed', done.failed);
+```
+
 ## 0.33.0 - 2026-05-08
 
 **Color utility extensions.** The existing src/util/color.ts already
