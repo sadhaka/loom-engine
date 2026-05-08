@@ -7,6 +7,68 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.21.0 - 2026-05-08
+
+**IManagedResource lifecycle hooks.** Resources owning external state
+(workers, listeners, network bridges, audio contexts, pools) can now
+participate in attach / detach / dispose lifecycle without the engine
+core needing to know about each resource type.
+
+### Added
+
+- `IManagedResource` interface with three optional methods:
+  `onAttach(world)`, `onDetach(world)`, `dispose()`. All optional; a
+  resource declares only the hooks it needs.
+- `LifecycleWorld` structural type forward-declared to avoid the
+  circular import resources.ts <-> world.ts. The concrete World is
+  structurally compatible.
+- `ResourceRegistry.bindWorld(world)` - one-time binding so the
+  registry can pass the world to lifecycle hooks. World constructor
+  calls this immediately after registry creation.
+- `ResourceRegistry.attach(key, value)` - lifecycle-aware setter.
+  Calls onAttach if present. If a row already exists at that key, it
+  is detached + disposed first so hook ordering is well-defined.
+- `ResourceRegistry.detach(key)` - lifecycle-aware remover. Calls
+  onDetach + dispose (in that order) before deleting. Errors in any
+  hook are logged but don't block subsequent hook calls or the row
+  removal.
+- `ResourceRegistry.disposeAll()` - iterates every registered resource
+  and calls detach on each. Used by World.dispose() during shutdown.
+- `World.dispose()` - graceful shutdown. Phase 1 calls every
+  system's optional `onDispose(world)` so systems can release
+  handles before resources go away. Phase 2 disposes all resources.
+  Phase 3 clears the systems map and pools. Idempotent.
+
+### Backwards compatibility
+
+The legacy `set()` / `remove()` paths bypass the new hooks. Existing
+resources that don't declare lifecycle methods see zero behaviour
+change. Only opt-in callers using `attach()` / `detach()` /
+`disposeAll()` trigger hooks. This keeps every existing 0.20.x test
+passing without modification.
+
+### Tests
+
+617 -> 631 (14 new in tests/resource-lifecycle.test.ts):
+- attach calls onAttach with bound world.
+- detach calls onDetach + dispose then removes.
+- detach on missing key returns false; no hooks called.
+- Re-attach detaches prior value first (defined hook ordering).
+- Legacy set/remove do NOT call hooks (back-compat).
+- disposeAll iterates every resource.
+- Resources without IManagedResource methods skip silently.
+- Errors in onAttach / onDetach / dispose are logged but don't block.
+- World.dispose disposes resources + notifies systems via onDispose.
+- World.dispose is idempotent.
+- Standalone ResourceRegistry without bindWorld skips hooks (still
+  registers the row).
+
+### Public surface
+
+`IManagedResource` and `LifecycleWorld` types exported from
+`@sadhaka/loom-engine`. `ResourceRegistry` already exported; gains
+`bindWorld`, `attach`, `detach`, `disposeAll` methods.
+
 ## 0.20.1 - 2026-05-08
 
 **SSEZoneBridge networking polish.** Mirrors the 0.20.0

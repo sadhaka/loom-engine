@@ -7,9 +7,52 @@
 // Inspired by Bevy's Resource pattern (see PRIOR-ART.md). Bevy uses
 // type-as-key via Rust's TypeId; in TS we use string keys with a
 // generic accessor.
+//
+// 0.21.0 - lifecycle hooks. Resources MAY implement IManagedResource
+// to participate in attach / detach / dispose. Existing resources are
+// untouched (backwards-compatible); new resources that own external
+// state (workers, listeners, network bridges, audio contexts, pools)
+// can declare hooks the registry calls at the right moments.
+
+// Forward-declared minimal world interface for lifecycle hooks. The
+// concrete World class in world.ts is structurally compatible. Using
+// a structural type here avoids the circular import that would arise
+// from `import type { World } from './world.js'`.
+export interface LifecycleWorld {
+  resources: ResourceRegistry;
+}
+
+// Optional lifecycle hooks for managed resources.
+//
+// onAttach: called once when the resource is registered via
+//           ResourceRegistry.attach(). Use to spawn workers, register
+//           DOM listeners, allocate pools, open network bridges.
+// onDetach: called by detach() / disposeAll() before removal. Pair
+//           of onAttach.
+// dispose:  called after onDetach. Final cleanup; the resource is
+//           about to be unreferenced.
+//
+// All three are optional. A resource that cares about only one (e.g.
+// just dispose) can declare just that method. The legacy set() /
+// remove() path bypasses these hooks; only attach / detach trigger
+// them. This keeps existing code paths intact while opting in.
+export interface IManagedResource {
+  onAttach?(world: LifecycleWorld): void;
+  onDetach?(world: LifecycleWorld): void;
+  dispose?(): void;
+}
 
 export class ResourceRegistry {
   private resources: Map<string, unknown> = new Map();
+  private world: LifecycleWorld | null = null;
+
+  // 0.21.0 - bind a world reference so attach/detach/disposeAll can
+  // pass it to IManagedResource hooks. The World constructor calls
+  // this immediately after creating the registry. Mid-flight rebinds
+  // are not supported (no use case yet).
+  bindWorld(world: LifecycleWorld): void {
+    this.world = world;
+  }
 
   set<T>(key: string, value: T): void {
     this.resources.set(key, value);
@@ -39,6 +82,68 @@ export class ResourceRegistry {
 
   keys(): IterableIterator<string> {
     return this.resources.keys();
+  }
+
+  // -- Phase 0.21.0 lifecycle ----------------------------------------
+
+  // Lifecycle-aware setter. If `value` implements IManagedResource,
+  // calls onAttach(world). Replaces an existing key idempotently;
+  // the displaced value's onDetach + dispose run before the new
+  // value's onAttach so callers can rely on hook ordering.
+  attach<T>(key: string, value: T): void {
+    if (this.resources.has(key)) {
+      this.detach(key);
+    }
+    this.resources.set(key, value);
+    if (!this.world) return;
+    const r = value as unknown as IManagedResource;
+    if (r && typeof r.onAttach === 'function') {
+      try {
+        r.onAttach(this.world);
+      } catch (e) {
+        try { console.error('[ResourceRegistry] onAttach for "' + key + '" threw:', e); }
+        catch { /* ignore */ }
+      }
+    }
+  }
+
+  // Lifecycle-aware remover. Calls onDetach + dispose (in that order)
+  // before deleting. Returns true iff a row was actually removed.
+  // Errors in hooks are logged but do not block the removal.
+  detach(key: string): boolean {
+    const value = this.resources.get(key);
+    if (value === undefined) return false;
+    const r = value as IManagedResource;
+    if (this.world && typeof r?.onDetach === 'function') {
+      try {
+        r.onDetach(this.world);
+      } catch (e) {
+        try { console.error('[ResourceRegistry] onDetach for "' + key + '" threw:', e); }
+        catch { /* ignore */ }
+      }
+    }
+    if (typeof r?.dispose === 'function') {
+      try {
+        r.dispose();
+      } catch (e) {
+        try { console.error('[ResourceRegistry] dispose for "' + key + '" threw:', e); }
+        catch { /* ignore */ }
+      }
+    }
+    return this.resources.delete(key);
+  }
+
+  // Detach and dispose every registered resource. Used by
+  // World.dispose() during graceful shutdown. Iteration order is
+  // insertion order; resources are responsible for handling the
+  // case where a sibling resource has already disposed.
+  disposeAll(): void {
+    // Snapshot keys so detach() can safely mutate the map mid-loop.
+    const snapshot: string[] = [];
+    for (const k of this.resources.keys()) snapshot.push(k);
+    for (const k of snapshot) {
+      this.detach(k);
+    }
   }
 }
 

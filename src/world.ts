@@ -41,6 +41,9 @@ export class World {
   constructor() {
     this.entities = new EntityAllocator();
     this.resources = new ResourceRegistry();
+    // 0.21.0 - bind world reference so resource lifecycle hooks
+    // (onAttach / onDetach) receive the world that owns them.
+    this.resources.bindWorld(this);
     for (const phase of SYSTEM_PHASES_IN_ORDER) {
       this.systemsByPhase.set(phase, []);
     }
@@ -110,6 +113,38 @@ export class World {
 
   destroyEntity(e: EntityId): boolean {
     return this.entities.destroy(e);
+  }
+
+  // 0.21.0 - graceful shutdown. Disposes every IManagedResource
+  // (calling onDetach + dispose in registration order), then clears
+  // the system phase map and the entity allocator. Idempotent: a
+  // second dispose() is a no-op since the registry is already empty.
+  // Systems can implement an `onDispose(world)` method that we call
+  // before shutting down resources, mirroring the resource lifecycle
+  // for symmetric cleanup.
+  dispose(): void {
+    // Phase 1: notify systems first so they can release any handles
+    // they hold to resources before the resources go away.
+    for (const phase of SYSTEM_PHASES_IN_ORDER) {
+      const list = this.systemsByPhase.get(phase);
+      if (!list) continue;
+      for (const sys of list) {
+        const s = sys as unknown as { onDispose?: (world: World) => void };
+        if (typeof s.onDispose === 'function') {
+          try {
+            s.onDispose(this);
+          } catch (e) {
+            try { console.error('[World] system onDispose threw:', e); }
+            catch { /* ignore */ }
+          }
+        }
+      }
+      list.length = 0;
+    }
+    // Phase 2: dispose resources in registration order.
+    this.resources.disposeAll();
+    // Phase 3: clear pools (no lifecycle for pools yet; just drop).
+    (this as { pools: Map<string, unknown> }).pools = new Map();
   }
 }
 
