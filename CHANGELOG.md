@@ -7,6 +7,65 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.32.0 - 2026-05-08
+
+**ObjectPool - generic reusable object pool to cut GC pressure.**
+Allocating short-lived objects every frame (damage numbers,
+particles, projectiles, hit-flash overlays) creates GC pressure
+that surfaces as frame-rate hitches. ObjectPool lets a system
+pre-allocate N instances and reuse them.
+
+### Added
+
+- `src/runtime/object-pool.ts` - `ObjectPool<T>` class:
+  - Constructor opts: `factory`, optional `reset(obj)`, optional
+    `initialSize`, optional `maxSize` (cap).
+  - `acquire()` - pops free instance OR allocates fresh OR returns
+    null at cap.
+  - `release(obj)` - calls `reset()` if configured, then returns
+    object to free list.
+  - `warm(count)` - pre-allocate more (capped by maxSize).
+  - `clear()` - drop everything; subsequent acquire allocates fresh.
+  - `freeCount()` / `inUseCount()` / `totalAllocated()` /
+    `stats()` - introspection.
+- Throwing `reset()` is caught + logged; release still adds to free.
+- maxSize cap rejects acquire with null; counter tracks cap hits.
+
+### Tests
+
+756 -> 769 (13 new in tests/object-pool.test.ts):
+- Factory required.
+- acquire allocates from factory when free list empty.
+- release returns object; subsequent acquire reuses.
+- reset() called on release; no reset() means released state persists.
+- initialSize pre-fills.
+- maxSize caps total allocations; capRejects counter increments.
+- warm() pre-allocates more (capped).
+- clear() drops everything.
+- Stats counters track acquires + releases + capRejects.
+- Throwing reset is caught; release still adds to free.
+- Large initial > maxSize is clamped.
+
+### Backwards compatibility
+
+Pure addition. Engine consumers opt in:
+
+```ts
+import { ObjectPool } from '@sadhaka/loom-engine';
+
+var pool = new ObjectPool<DamageNumber>({
+  factory: () => ({ x: 0, y: 0, life: 0 }),
+  reset: (p) => { p.x = 0; p.y = 0; p.life = 0; },
+  initialSize: 64,
+});
+
+// Hot path:
+var p = pool.acquire();
+if (p) { p.x = hitX; p.y = hitY; p.life = 1.0; }
+// ... later
+pool.release(p);
+```
+
 ## 0.31.0 - 2026-05-08
 
 **InputActions - declarative key/action bindings.** Existing
