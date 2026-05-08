@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.35.0';
+export const LOOM_ENGINE_VERSION = '0.36.0';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -164,6 +164,16 @@ export type {
   DuckOptions,
   MixerSnapshot,
 } from './audio/audio-mixer.js';
+// 0.36.0 - frame budget scheduler (soft-deadline task queue).
+export {
+  FrameBudgetScheduler,
+  RESOURCE_FRAME_BUDGET_SCHEDULER,
+} from './runtime/frame-budget-scheduler.js';
+export type {
+  FrameBudgetTaskDef,
+  FrameBudgetStats,
+  FrameBudgetSchedulerOptions,
+} from './runtime/frame-budget-scheduler.js';
 export {
   ResourceRegistry,
   createTimeResource,

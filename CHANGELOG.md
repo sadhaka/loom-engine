@@ -7,6 +7,101 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.36.0 - 2026-05-08
+
+**FrameBudgetScheduler - soft-deadline task queue for off-frame work.**
+The engine routinely needs to run heavy work that does not fit in a
+single 16ms frame: precomputing occlusion grids, baking nav-mesh
+tiles, processing a long event queue, hydrating snapshot data,
+JIT-loading sprite atlases. Doing it all on the main thread freezes
+the frame and surfaces as a hitch in the browser.
+
+FrameBudgetScheduler accepts step functions and runs as many as fit
+in `budgetMs` per `tick()`. Each step returns true when done (drops
+out of the queue), or false to keep itself queued for the next tick.
+The currently-executing step is NEVER preempted - the scheduler
+only stops queueing more after the budget is exhausted.
+
+### Added
+
+- `src/runtime/frame-budget-scheduler.ts` - `FrameBudgetScheduler` class:
+  - `schedule(task)` -> taskId. Optional `id`, `priority`, `step`,
+    `onComplete`, `onCancel`. Synthetic id `task#NNN` if none given.
+  - `cancel(id)` -> boolean. Fires `onCancel` if the task existed.
+  - `tick()` -> `FrameBudgetStats`. Drains tasks in priority desc /
+    insert order (FIFO at ties) until `budgetMs` is reached.
+  - `flush()` -> `FrameBudgetStats`. Drain everything ignoring budget
+    (useful at shutdown / loading screens).
+  - `setBudgetMs(ms)` / `getBudgetMs()` - runtime budget tuning.
+  - `has(id)` / `pendingCount()` - introspection for debug HUD.
+  - `dispose()` - cancels remaining tasks (firing `onCancel` for each)
+    and makes subsequent operations no-ops.
+- Throwing step is treated as "done" - the task is dropped without
+  firing onComplete or onCancel, so a misbehaving step cannot stick
+  in the queue forever.
+- Custom `now: () => number` for deterministic replays (defaults to
+  `performance.now()` with `Date.now()` fallback).
+- `FrameBudgetTaskDef`, `FrameBudgetStats`, `FrameBudgetSchedulerOptions`
+  types exported.
+- `RESOURCE_FRAME_BUDGET_SCHEDULER` constant.
+
+### Tests
+
+837 -> 861 (24 new in tests/frame-budget-scheduler.test.ts):
+- RESOURCE_FRAME_BUDGET_SCHEDULER stable string.
+- Default budget 8ms.
+- Empty queue tick returns zeroed stats.
+- schedule + tick runs the step.
+- Step returning false stays for next tick.
+- Budget exceeded stops queueing more steps + overBudget flag.
+- cancel removes pending task + fires onCancel.
+- cancel unknown id returns false.
+- onComplete fires once when step returns true.
+- Priority - higher runs first.
+- Same priority - FIFO ordering.
+- schedule without id assigns synthetic monotonic id.
+- Re-scheduling an existing id replaces the task.
+- setBudgetMs updates the budget for the next tick.
+- setBudgetMs ignores non-positive values.
+- Stats.spentMs reflects wall time inside step calls.
+- Throwing step drops the task without onComplete / onCancel.
+- flush drains everything ignoring budget.
+- dispose cancels remaining tasks and stops further work.
+- Progressive task across multiple ticks completes.
+- Stats.pendingCount reflects queue after the tick.
+- Cancel during next-tick continuation removes step from queue.
+- Completed task is not in byId map post-tick.
+- pendingCount reflects count regardless of priority.
+
+### Backwards compatibility
+
+Pure addition. Engine consumers opt in:
+
+```ts
+import { FrameBudgetScheduler } from '@sadhaka/loom-engine';
+
+var sched = FrameBudgetScheduler.create({ budgetMs: 4 });
+
+// Bake a 32x32 nav-mesh chunk over many frames - one row per step.
+var row = 0;
+sched.schedule({
+  id: 'navmesh-bake',
+  priority: 5,
+  step: function () {
+    bakeRow(row);
+    row++;
+    return row >= 32;
+  },
+  onComplete: function () { console.log('nav-mesh ready'); },
+});
+
+// Each frame:
+var stats = sched.tick();
+if (stats.overBudget) {
+  // Diagnostics: queue is backed up.
+}
+```
+
 ## 0.35.0 - 2026-05-08
 
 **AudioMixer - engine-side fade / crossfade / snapshot / duck on top

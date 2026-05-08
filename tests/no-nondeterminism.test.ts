@@ -161,6 +161,12 @@ const DATE_NOW_WHITELIST = [
   // performance is unavailable (Node SSR boot path). Consumers
   // wanting deterministic timing pass nowFn via DebugHUDOptions.
   'debug/debug-hud.ts',                  // fps tracker default clock fallback
+  // Phase 0.36 FrameBudgetScheduler. Soft-deadline task queue;
+  // defaultNowMs is the fallback when the consumer does not pass
+  // their own `now` (deterministic replays inject one bound to the
+  // engine clock). Out-of-tick from a determinism standpoint -
+  // which step runs in which frame is up to the consumer's driver.
+  'runtime/frame-budget-scheduler.ts',   // defaultNowMs fallback (clock seam)
 ];
 
 function isWhitelisted(file: string, list: string[]): boolean {
