@@ -8,7 +8,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.12.0';
+export const LOOM_ENGINE_VERSION = '0.13.0';
 export { vec2, vec3, rect, clamp, lerp, smoothstep, approxEq, rectContains, rectIntersects, visibleInView, } from './util/math.js';
 export { rgba, hexToRgba, rgbaToHexString, rgbaToCssString, colorLerp, COLOR_WHITE, COLOR_BLACK, COLOR_TRANSPARENT, COLOR_KNOT_STR, COLOR_KNOT_DEX, COLOR_KNOT_INT, COLOR_KNOT_CENTER, } from './util/color.js';
 export { EntityAllocator, NULL_ENTITY, entityIndex, entityGeneration, makeEntity, } from './entity.js';
@@ -75,4 +75,10 @@ export { createZoneState, beginTransition, tickTransition, isTransitioning, RESO
 export { ZONE_CATALOG } from './zone/zone-catalog.js';
 export { InteractablePool, POOL_INTERACTABLE, INTERACTABLE_FLAG_ACTIVE, } from './components/interactable.js';
 export { InteractionSystem, createLastInteraction, RESOURCE_LAST_INTERACTION, } from './systems/interaction-system.js';
+export { RESOURCE_MULTIPLAYER_BRIDGE, RESOURCE_PEER_POOL, BROADCAST_HZ, BROADCAST_MIN_INTERVAL_MS, } from './network/multiplayer-bridge.js';
+export { PeerPool } from './network/peer-pool.js';
+export { MockMultiplayerBridge } from './network/mock-multiplayer-bridge.js';
+export { SSEMultiplayerBridge } from './network/sse-multiplayer-bridge.js';
+export { PeerSpritePool, POOL_PEER_SPRITE } from './components/peer-sprite.js';
+export { PeerPresenceSystem, PeerRenderSystem, } from './systems/peer-presence-system.js';
 //# sourceMappingURL=index.js.map

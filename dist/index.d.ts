@@ -1,4 +1,4 @@
-export declare const LOOM_ENGINE_VERSION = "0.12.0";
+export declare const LOOM_ENGINE_VERSION = "0.13.0";
 export type { Vec2, Vec3, Rect } from './util/math.js';
 export { vec2, vec3, rect, clamp, lerp, smoothstep, approxEq, rectContains, rectIntersects, visibleInView, } from './util/math.js';
 export type { ColorRGBA } from './util/color.js';
@@ -87,4 +87,15 @@ export type { InteractableKind, InteractableConfig, } from './components/interac
 export { InteractablePool, POOL_INTERACTABLE, INTERACTABLE_FLAG_ACTIVE, } from './components/interactable.js';
 export type { LastInteractionResource, InteractionSystemOptions, } from './systems/interaction-system.js';
 export { InteractionSystem, createLastInteraction, RESOURCE_LAST_INTERACTION, } from './systems/interaction-system.js';
+export type { IMultiplayerBridge, MultiplayerBridgeStatus, MultiplayerBridgeStats, PresenceMessage, PresenceUpdate, PresenceDepart, PresenceSnapshot, } from './network/multiplayer-bridge.js';
+export { RESOURCE_MULTIPLAYER_BRIDGE, RESOURCE_PEER_POOL, BROADCAST_HZ, BROADCAST_MIN_INTERVAL_MS, } from './network/multiplayer-bridge.js';
+export type { PeerEntry, RenderedPeerView } from './network/peer-pool.js';
+export { PeerPool } from './network/peer-pool.js';
+export type { MockMultiplayerBridgeOptions } from './network/mock-multiplayer-bridge.js';
+export { MockMultiplayerBridge } from './network/mock-multiplayer-bridge.js';
+export type { SSEMultiplayerBridgeOptions } from './network/sse-multiplayer-bridge.js';
+export { SSEMultiplayerBridge } from './network/sse-multiplayer-bridge.js';
+export type { PeerSpriteEntry, PeerSpritePoolOptions } from './components/peer-sprite.js';
+export { PeerSpritePool, POOL_PEER_SPRITE } from './components/peer-sprite.js';
+export { PeerPresenceSystem, PeerRenderSystem, } from './systems/peer-presence-system.js';
 //# sourceMappingURL=index.d.ts.map
