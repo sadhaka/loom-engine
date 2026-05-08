@@ -73,6 +73,11 @@ import {
   type TimeResource,
 } from './resources.js';
 import { clamp } from './util/math.js';
+import {
+  createEntropy,
+  RESOURCE_ENTROPY,
+  DEFAULT_ENTROPY_SEED,
+} from './runtime/entropy.js';
 
 export interface EngineOptions {
   canvas: HTMLCanvasElement;
@@ -84,6 +89,12 @@ export interface EngineOptions {
   // tests where AudioContext isn't available. Defaults to false in
   // browser, true in Node.
   skipAudio?: boolean;
+  // Optional seed for the engine-level entropy resource. Math.random()
+  // is forbidden in src/ (audit list in src/runtime/entropy.ts);
+  // every engine RNG call routes through RESOURCE_ENTROPY. Default
+  // is DEFAULT_ENTROPY_SEED so engine output is deterministic out of
+  // the box. Override per-character or per-run for save-game replays.
+  entropySeed?: number;
   // Backend selection. Defaults to 'canvas2d'. The 'webgl2' value
   // requires WebGL2Device to be imported (which self-registers via
   // the backend registry below); otherwise Engine.create throws a
@@ -209,6 +220,11 @@ export class Engine {
     world.resources.set(RESOURCE_CAMERA, camera);
     world.resources.set(RESOURCE_DEVICE, device);
     world.resources.set(RESOURCE_VEIL_BUDGET, createVeilBudgetResource());
+    // Seeded entropy. The engine never calls Math.random() directly;
+    // any randomness goes through this resource so replays / save-state
+    // / network sync can reproduce the same stream.
+    const seed = typeof opts.entropySeed === 'number' ? opts.entropySeed : DEFAULT_ENTROPY_SEED;
+    world.resources.set(RESOURCE_ENTROPY, createEntropy(seed));
     world.resources.set(RESOURCE_INPUT_MANAGER, input);
     world.resources.set(RESOURCE_INPUT, input.snapshot());
     world.resources.set(RESOURCE_TAP_WALK, createTapWalkTarget());

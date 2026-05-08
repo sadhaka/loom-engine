@@ -7,6 +7,78 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.17.0 - 2026-05-08
+
+**Deterministic ECS via seeded RNG** (Phase E3, test infrastructure
+hardening). The engine no longer calls `Math.random()` from `src/` -
+every random draw routes through a seeded PRNG resource so trace
+replays, save-state restoration, and network-sync scenarios all
+produce identical output for the same seed. Closes the determinism
+gap that made the trace-replay harness (Phase E2) unable to assert
+exact particle / VFX state across runs.
+
+### Why
+
+`Math.random()` is non-reproducible across runs and across V8 builds.
+Any test that asserts on a value derived from RNG was either flaky
+(if the assertion was tight) or trivially passing (if loosened to a
+range). With the seeded resource, the same seed produces the same
+stream byte-for-byte, so trace replay can diff exact world state.
+
+### Added
+
+- `src/runtime/entropy.ts` - `Entropy` class implementing `IEntropy`
+  via inlined mulberry32 (200-byte public-domain PRNG, no deps).
+  Surface: `random()` / `int(min,max)` / `pick(arr)` / `getState()` /
+  `setState(s)` / `reseed(seed)`.
+- `RESOURCE_ENTROPY` resource key (`'loom.entropy'`).
+- `DEFAULT_ENTROPY_SEED = 0x9e3779b9` (golden-ratio fraction; stable
+  default seed used by `Engine.create` when consumer omits it).
+- `Engine.create({ entropySeed })` wires the resource on every fresh
+  engine instance. Override the seed per-character or per-run for
+  save-game replays.
+
+### Changed
+
+- `src/systems/particle-emitter-system.ts` - the only `src/` site
+  that called `Math.random()` (cone direction sampling at line 58 +
+  60, particle speed at line 142). All three now route through the
+  world's `RESOURCE_ENTROPY` resource. A module-level fallback
+  Entropy keeps bare-bones `World` instances (without `Engine.create`)
+  working without throwing.
+- `LOOM_ENGINE_VERSION` 0.16.0 -> 0.17.0. Smoke + webgl2 version
+  pinning tests bumped accordingly.
+
+### Tests
+
+540 / 540 pass (525 baseline + 15 new entropy tests). Coverage:
+
+- Same seed produces same sequence (1000-call equality across two
+  fresh streams).
+- Different seeds diverge within 4 calls.
+- Output range: [0, 1) verified across 10000 draws.
+- `getState()`/`setState()` round-trips - the next sample after
+  restore matches the next sample before restore.
+- `reseed()` resets the stream.
+- `int()` honours inclusive bounds + integer contract; throws on
+  inverted range; `int(n, n)` always returns n.
+- `pick()` covers all elements of a 4-element array within 4000 draws
+  (chi-squared sanity); throws on empty input.
+- NaN seed coerces deterministically (no crash, two NaN-seeded
+  streams agree); seed 0 produces a usable stream.
+- `RESOURCE_ENTROPY` and `DEFAULT_ENTROPY_SEED` constants pinned -
+  renaming or bumping is a breaking change for consumers.
+
+### Open / deferred
+
+- `crypto.getRandomValues` not used - mulberry32 is fast and
+  reproducible but NOT cryptographic. Authoritative server-side dice
+  rolls still use Python's `random.SystemRandom` on the backend.
+- VFX systems other than the particle emitter currently have no RNG
+  draws. If future systems add one (mob AI tie-breakers, projectile
+  spread, audio-stinger jitter), they MUST go through `IEntropy`.
+  The audit comment in `entropy.ts` is the tripwire.
+
 ## 0.16.0 - 2026-05-08
 
 **Visual boss rendering primitives** (Phase 18.1, engine side). Engine

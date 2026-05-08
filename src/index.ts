@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.16.0';
+export const LOOM_ENGINE_VERSION = '0.17.0';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -95,6 +95,19 @@ export { SpriteRenderSystem } from './systems/sprite-render-system.js';
 // Engine facade
 export { Engine, registerBackend, isBackendRegistered } from './engine.js';
 export type { EngineOptions, DeviceFactory } from './engine.js';
+
+// Seeded entropy (Phase 0.17 deterministic ECS). The engine never
+// calls Math.random() directly - any randomness goes through this
+// resource so replays / save-state / network sync can reproduce the
+// same stream. Engine.create registers one with DEFAULT_ENTROPY_SEED
+// out of the box; consumers override per-character or per-run.
+export type { IEntropy } from './runtime/entropy.js';
+export {
+  Entropy,
+  createEntropy,
+  RESOURCE_ENTROPY,
+  DEFAULT_ENTROPY_SEED,
+} from './runtime/entropy.js';
 
 // Renderer (low-level, still exposed for direct device access in
 // Director-bridge and similar scenarios).
