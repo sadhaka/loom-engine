@@ -7,6 +7,73 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.56.0 - 2026-05-09
+
+**SceneManager - named scenes with async enter / exit + tick.**
+Most games are organized as scenes: title -> game -> pause overlay
+-> game-over -> credits. Each wants its own setup (load assets,
+register systems, hook input) and teardown (release assets,
+restore HUD). SceneManager factors that pattern into a small
+registry with a single active scene at a time, async enter/exit
+hooks (so loading screens compose), and an update tick.
+
+Distinct from StateMachine (0.51): SceneManager assumes async
+enter/exit, tracks load progress via the "transitioning" status,
+and exposes hooks for HUD loaders. Use StateMachine for in-game
+state (idle/walking/jumping); SceneManager for high-level scene
+orchestration.
+
+### Added
+
+- `src/runtime/scene-manager.ts` - `SceneManager` class:
+  - `register(name, scene)` / `unregister(name)` / `has(name)` /
+    `sceneNames()`.
+  - `transitionTo(name, params?)` - async, awaits onExit then
+    onEnter; resolves with the scene name; rejects on unknown /
+    failed onEnter / concurrent transition.
+  - `current()` / `getStatus()` (`'idle' | 'entering' | 'active' |
+    'exiting'`) / `isTransitioning()`.
+  - `update(dtMs)` - calls active scene's onUpdate; no-op while
+    transitioning / idle.
+  - `leave()` - drop active scene back to idle.
+  - `dispose()` - locks subsequent ops.
+- Lifecycle callbacks (all isolated): `onSceneEntered`,
+  `onSceneExited`, `onTransitionStart`, `onTransitionError`.
+- `params` arg threaded through onEnter for scene-specific data
+  (difficulty, save slot, etc.).
+- Defensive: failed onEnter rolls back to idle; throwing onExit
+  doesn't block the transition; same-scene transition is a no-op
+  success; unregistering active scene returns to idle without
+  firing onExit (consumer should leave() first if cleanup matters).
+- `SceneConfig`, `SceneStatus`, `SceneManagerOptions` types
+  exported.
+- `RESOURCE_SCENE_MANAGER` constant.
+
+### Tests
+
+1361 -> 1385 (24 new in tests/scene-manager.test.ts):
+- RESOURCE_SCENE_MANAGER stable string; starts idle.
+- register + has + sceneNames; ignores empty name + falsy config.
+- transitionTo activates scene; unknown rejects; same-scene no-op.
+- onEnter receives params; async onEnter awaited (status =
+  'entering' during).
+- onExit fires on transition away.
+- onSceneEntered / onSceneExited / onTransitionStart fire in order.
+- failed onEnter rejects + fires onTransitionError + rolls to idle.
+- Throwing onExit does not block transition.
+- Concurrent transition rejects.
+- update calls active onUpdate; no-op while not active; NaN /
+  negative dt ignored.
+- leave returns to idle + fires onExit; idle leave is no-op.
+- unregister active scene returns to idle without firing onExit.
+- dispose locks ops.
+- Realistic title->game->over example.
+- Re-registering replaces config; next exit uses new config.
+
+### Backwards compatibility
+
+Pure addition.
+
 ## 0.55.0 - 2026-05-09
 
 **Pathfinder - A* on a grid.** Mob nav, NPC walk paths, room-to-
