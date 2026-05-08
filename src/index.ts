@@ -222,6 +222,20 @@ export {
   AUDIO_BUDGET_ESSENTIAL_FLOOR,
 } from './audio/audio-bus.js';
 
+// ===== Phase 17 audio - assets + cues + music (Track B) =====
+//
+// LOOM-AUDIO-SPEC §4. Asset cache + URL fetch+decode loader, named
+// cue catalog routing through AudioBus / SpatialAudioBus, and a music
+// director with fade and crossfade. The catalog and music director
+// import SpatialAudioBus types from Track A's spatial-audio-bus.ts;
+// when Track A has not merged in this branch, those modules carry
+// local stub types marked with TODO[phase-17-merge] for swap.
+export {
+  AudioAssetCache,
+  createAudioAssetCache,
+  RESOURCE_AUDIO_ASSET_CACHE,
+} from './audio/audio-asset-cache.js';
+
 // Input (Phase 5): unified keyboard / mouse / touch with frame-
 // coherent snapshot resource.
 export type {
