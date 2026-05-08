@@ -209,8 +209,8 @@ test('webgl2 backend registers itself when WebGL2Device is imported', () => {
   assert.ok(isBackendRegistered('canvas2d'));
 });
 
-test('engine version constant agrees with package.json (0.13.0)', () => {
-  assert.equal(LOOM_ENGINE_VERSION, '0.13.0');
+test('engine version constant agrees with package.json (0.15.0)', () => {
+  assert.equal(LOOM_ENGINE_VERSION, '0.15.0');
 });
 
 test('Engine.create with no backend defaults to Canvas2DDevice', () => {
