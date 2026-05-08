@@ -1,4 +1,4 @@
-export declare const LOOM_ENGINE_VERSION = "0.15.0";
+export declare const LOOM_ENGINE_VERSION = "0.16.0";
 export type { Vec2, Vec3, Rect } from './util/math.js';
 export { vec2, vec3, rect, clamp, lerp, smoothstep, approxEq, rectContains, rectIntersects, visibleInView, } from './util/math.js';
 export type { ColorRGBA } from './util/color.js';
@@ -89,6 +89,9 @@ export type { ZoneEventSystemOptions } from './director/zone/zone-event-system.j
 export { ZoneEventSystem } from './director/zone/zone-event-system.js';
 export type { ZoneAudioMapping, ZoneCuePlay, ZoneAudioContext, ZoneAudioSystemOptions, PositionalPlayOptionsStub, AudioListenerPoseStub, AudioListenerResourceStub, CueCatalogStub, MusicDirectorStub, } from './audio/zone-audio-system.js';
 export { ZoneAudioSystem, RESOURCE_AUDIO_LISTENER_STUB, RESOURCE_CUE_CATALOG_STUB, RESOURCE_MUSIC_DIRECTOR_STUB, } from './audio/zone-audio-system.js';
+export type { ZoneBossEntity, ZoneBossEntityResource, ZoneBossHitRecord, } from './director/zone/zone-boss-entity.js';
+export { RESOURCE_ZONE_BOSS_ENTITY, RECENT_HITS_RING_SIZE, createZoneBossEntityResource, buildEntityFromSpawn, applyTick, } from './director/zone/zone-boss-entity.js';
+export { ZoneBossEntitySystem } from './director/zone/zone-boss-entity-system.js';
 export { HealthPool, POOL_HEALTH, HEALTH_FLAG_ACTIVE, HEALTH_FLAG_DEAD, HEALTH_FLAG_INVULNERABLE, } from './components/health.js';
 export { PursuePool, POOL_PURSUE, PURSUE_FLAG_ACTIVE, } from './components/pursue.js';
 export type { KillEvent } from './systems/damage-system.js';
