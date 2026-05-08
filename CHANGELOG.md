@@ -7,6 +7,57 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.24.0 - 2026-05-08
+
+**DebugHUD primitive.** Self-contained stats overlay any consumer
+can drop in without rolling their own fps tracker / line layout.
+
+### Added
+
+- `src/debug/debug-hud.ts` - `DebugHUD` class. Tracks a rolling
+  60-sample fps window via beginFrame() per render frame; exposes
+  `fps()`, `fpsRange()`, `frameCount()`. Custom stat lines via
+  `addLine(label, value | thunk)` - thunks re-evaluate every render
+  so dynamic counters (entity count, plugin stats, batch entries)
+  stay live without re-registration. `toText()` returns a string
+  snapshot; `attachToDom(parent)` mounts a top-left absolute-
+  positioned overlay div with sane default styling. `render()`
+  refreshes the DOM + returns the snapshot.
+- `nowFn` injection seam (defaults to `performance.now`) so tests
+  can drive deterministic clocks.
+- Static `RESOURCE_DEBUG_HUD` constant for world-attached HUDs.
+- `DebugHUDOptions` type exported.
+
+### Tests
+
+654 -> 665 (11 new in tests/debug-hud.test.ts):
+- fps starts at 0; beginFrame computes from clock delta.
+- Rolling window averages mixed-rate frames.
+- fpsRange reports min + max.
+- frameCount monotonically increments.
+- addLine + toText round-trip (static + thunk values).
+- Dynamic thunk re-evaluates on each render.
+- clearLines drops custom lines, keeps built-ins.
+- Thunk that throws renders <error>.
+- render() returns same text as toText().
+- attachToDom requires a DOM (headless throws).
+
+### Backwards compatibility
+
+Pure addition. Engine consumers opt in:
+
+```ts
+import { DebugHUD } from '@sadhaka/loom-engine';
+
+const hud = new DebugHUD();
+hud.addLine('entities', () => String(world.countEntities()));
+hud.attachToDom(document.body);
+
+// Inside render loop:
+hud.beginFrame();
+hud.render();
+```
+
 ## 0.23.0 - 2026-05-08
 
 **Render pipeline batching primitive: RenderBatch.** Lays foundation

@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.23.0';
+export const LOOM_ENGINE_VERSION = '0.24.0';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -101,6 +101,9 @@ export {
   RESOURCE_RENDER_BATCH,
 } from './renderer/render-batch.js';
 export type { BatchFlushCallback } from './renderer/render-batch.js';
+// 0.24.0 - debug HUD primitive.
+export { DebugHUD, RESOURCE_DEBUG_HUD } from './debug/debug-hud.js';
+export type { DebugHUDOptions } from './debug/debug-hud.js';
 export {
   ResourceRegistry,
   createTimeResource,

@@ -156,6 +156,11 @@ const DATE_NOW_WHITELIST = [
   // for production use.
   'director/sse-director-bridge.ts',     // health metric timestamps
   'director/zone/sse-zone-bridge.ts',    // health metric timestamps + replay debounce
+  // Phase 0.24 DebugHUD. Diagnostic overlay only; the fps tracker
+  // defaults to performance.now and falls back to Date.now when
+  // performance is unavailable (Node SSR boot path). Consumers
+  // wanting deterministic timing pass nowFn via DebugHUDOptions.
+  'debug/debug-hud.ts',                  // fps tracker default clock fallback
 ];
 
 function isWhitelisted(file: string, list: string[]): boolean {
