@@ -1,0 +1,166 @@
+{
+  "schema": "loom.replay-snapshot.v1",
+  "seed": 42,
+  "zoneId": "iron_reach",
+  "zoneLog": {
+    "eventsApplied": 20,
+    "activeBossId": null,
+    "lastNarratorLine": "The reach awaits the next disturbance.",
+    "lastNarratorTtlMs": 1500,
+    "recent": [
+      {
+        "id": 20,
+        "type": "zone.narrator",
+        "zone_id": "iron_reach"
+      },
+      {
+        "id": 19,
+        "type": "zone.snapshot",
+        "zone_id": "iron_reach"
+      },
+      {
+        "id": 18,
+        "type": "zone.state",
+        "zone_id": "iron_reach"
+      },
+      {
+        "id": 17,
+        "type": "zone.narrator",
+        "zone_id": "iron_reach"
+      },
+      {
+        "id": 16,
+        "type": "zone.knot",
+        "zone_id": "iron_reach"
+      },
+      {
+        "id": 15,
+        "type": "zone.boss.end",
+        "zone_id": "iron_reach"
+      },
+      {
+        "id": 14,
+        "type": "zone.boss.tick",
+        "zone_id": "iron_reach"
+      },
+      {
+        "id": 13,
+        "type": "zone.boss.tick",
+        "zone_id": "iron_reach"
+      },
+      {
+        "id": 12,
+        "type": "zone.boss.tick",
+        "zone_id": "iron_reach"
+      },
+      {
+        "id": 11,
+        "type": "zone.narrator",
+        "zone_id": "iron_reach"
+      },
+      {
+        "id": 10,
+        "type": "zone.boss.tick",
+        "zone_id": "iron_reach"
+      },
+      {
+        "id": 9,
+        "type": "zone.state",
+        "zone_id": "iron_reach"
+      },
+      {
+        "id": 8,
+        "type": "zone.boss.tick",
+        "zone_id": "iron_reach"
+      },
+      {
+        "id": 7,
+        "type": "zone.knot",
+        "zone_id": "iron_reach"
+      },
+      {
+        "id": 6,
+        "type": "zone.boss.tick",
+        "zone_id": "iron_reach"
+      },
+      {
+        "id": 5,
+        "type": "zone.boss.tick",
+        "zone_id": "iron_reach"
+      },
+      {
+        "id": 4,
+        "type": "zone.boss.spawn",
+        "zone_id": "iron_reach"
+      },
+      {
+        "id": 3,
+        "type": "zone.narrator",
+        "zone_id": "iron_reach"
+      },
+      {
+        "id": 2,
+        "type": "zone.state",
+        "zone_id": "iron_reach"
+      },
+      {
+        "id": 1,
+        "type": "zone.knot",
+        "zone_id": "iron_reach"
+      }
+    ]
+  },
+  "zoneStateMap": [
+    [
+      "door.gate_north",
+      "open"
+    ]
+  ],
+  "knotContext": {
+    "knot": "dex",
+    "mood": "ambient",
+    "target": {
+      "primary": {
+        "r": 0.35294117647058826,
+        "g": 0.788235294117647,
+        "b": 0.8392156862745098,
+        "a": 1
+      },
+      "secondary": {
+        "r": 0.23137254901960785,
+        "g": 0.5568627450980392,
+        "b": 0.6039215686274509,
+        "a": 1
+      },
+      "accent": {
+        "r": 0.8745098039215686,
+        "g": 0.9725490196078431,
+        "b": 1,
+        "a": 1
+      }
+    },
+    "current": {
+      "primary": {
+        "r": 0.6901960784313725,
+        "g": 0.2901960784313726,
+        "b": 0.1411764705882353,
+        "a": 1
+      },
+      "secondary": {
+        "r": 0.35294117647058826,
+        "g": 0.788235294117647,
+        "b": 0.8392156862745098,
+        "a": 1
+      },
+      "accent": {
+        "r": 1,
+        "g": 0.8470588235294118,
+        "b": 0.41568627450980394,
+        "a": 1
+      }
+    },
+    "fadeStartMs": 266.6666666666667,
+    "fadeDurationMs": 1200
+  },
+  "entropyState": 42
+}
