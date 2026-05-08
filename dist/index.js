@@ -8,7 +8,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.39.0';
+export const LOOM_ENGINE_VERSION = '0.40.0';
 export { vec2, vec3, rect, clamp, lerp, smoothstep, approxEq, rectContains, rectIntersects, visibleInView, } from './util/math.js';
 export { rgba, hexToRgba, rgbaToHexString, rgbaToCssString, colorLerp, COLOR_WHITE, COLOR_BLACK, COLOR_TRANSPARENT, COLOR_KNOT_STR, COLOR_KNOT_DEX, COLOR_KNOT_INT, COLOR_KNOT_CENTER, } from './util/color.js';
 export { EntityAllocator, NULL_ENTITY, entityIndex, entityGeneration, makeEntity, } from './entity.js';
@@ -33,7 +33,9 @@ export { CameraController, RESOURCE_CAMERA_CONTROLLER, } from './renderer/camera
 // 0.28.0 - generic event bus.
 export { EventBus, RESOURCE_EVENT_BUS } from './runtime/event-bus.js';
 // 0.29.0 - tween system.
-export { Tween, Easings, RESOURCE_TWEEN } from './runtime/tween.js';
+// 0.40.0 extends Easings with back / elastic / bounce + adds the
+// cubicBezier(x1,y1,x2,y2) factory for CSS-style custom curves.
+export { Tween, Easings, cubicBezier, RESOURCE_TWEEN } from './runtime/tween.js';
 // 0.30.0 - spatial hash for nearby-entity queries.
 export { SpatialHash, RESOURCE_SPATIAL_HASH } from './runtime/spatial-hash.js';
 // 0.31.0 - declarative input actions.

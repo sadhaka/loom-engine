@@ -1,4 +1,4 @@
-export declare const LOOM_ENGINE_VERSION = "0.39.0";
+export declare const LOOM_ENGINE_VERSION = "0.40.0";
 export type { Vec2, Vec3, Rect } from './util/math.js';
 export { vec2, vec3, rect, clamp, lerp, smoothstep, approxEq, rectContains, rectIntersects, visibleInView, } from './util/math.js';
 export type { ColorRGBA } from './util/color.js';
@@ -25,7 +25,7 @@ export { CameraController, RESOURCE_CAMERA_CONTROLLER, } from './renderer/camera
 export type { CameraControllerOptions } from './renderer/camera-controller.js';
 export { EventBus, RESOURCE_EVENT_BUS } from './runtime/event-bus.js';
 export type { EventHandler } from './runtime/event-bus.js';
-export { Tween, Easings, RESOURCE_TWEEN } from './runtime/tween.js';
+export { Tween, Easings, cubicBezier, RESOURCE_TWEEN } from './runtime/tween.js';
 export type { TweenHandle, TweenOptions, EasingFn, EasingName } from './runtime/tween.js';
 export { SpatialHash, RESOURCE_SPATIAL_HASH } from './runtime/spatial-hash.js';
 export { InputActions, RESOURCE_INPUT_ACTIONS } from './input/input-actions.js';

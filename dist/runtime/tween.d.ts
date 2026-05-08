@@ -13,7 +13,17 @@ export declare const Easings: {
     readonly easeInSine: (t: number) => number;
     readonly easeOutSine: (t: number) => number;
     readonly easeInOutSine: (t: number) => number;
+    readonly easeInBack: (t: number) => number;
+    readonly easeOutBack: (t: number) => number;
+    readonly easeInOutBack: (t: number) => number;
+    readonly easeInElastic: (t: number) => number;
+    readonly easeOutElastic: (t: number) => number;
+    readonly easeInOutElastic: (t: number) => number;
+    readonly easeOutBounce: (t: number) => number;
+    readonly easeInBounce: (t: number) => number;
+    readonly easeInOutBounce: (t: number) => number;
 };
+export declare function cubicBezier(x1: number, y1: number, x2: number, y2: number): EasingFn;
 export type EasingName = keyof typeof Easings;
 export interface TweenHandle {
     cancel(): void;
