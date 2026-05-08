@@ -18,6 +18,7 @@ export declare class AudioBus {
     isUnlocked(): boolean;
     input(name: string): AudioNode;
     hasBus(name: string): boolean;
+    listBuses(): ReadonlyArray<string>;
     addBus(name: string, opts?: BusOptions): void;
     removeBus(name: string): void;
     setMasterGain(gain: number): void;

@@ -106,6 +106,12 @@ export class AudioBus {
     hasBus(name) {
         return this.buses.has(name);
     }
+    // Enumerate registered bus names. Stable insertion order via Map.
+    // Added in 0.35.0 so AudioMixer can snapshot all buses without
+    // tracking them externally; existing AudioBus consumers ignored it.
+    listBuses() {
+        return Array.from(this.buses.keys());
+    }
     addBus(name, opts = {}) {
         if (this.buses.has(name))
             return; // idempotent
