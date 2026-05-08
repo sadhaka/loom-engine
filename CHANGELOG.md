@@ -7,6 +7,69 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.29.0 - 2026-05-08
+
+**Tween system - animate scalar values over time with easings.**
+Camera zoom, HUD fade, color transitions, particle alpha decay, audio
+volume swells - any "value from A to B over T seconds with curve"
+needs the same scheduler. Tween provides it.
+
+### Added
+
+- `src/runtime/tween.ts` - `Tween` class:
+  - `to(from, to, durationSeconds, onUpdate, options?)` -> `TweenHandle`.
+    Schedules an animation; calls `onUpdate(value)` each frame.
+  - Options: `easing` (name string OR custom `(t) => number` fn) +
+    `onComplete` callback.
+  - `update(dtSeconds)` per-frame entry point.
+  - `cancelAll()` and per-tween `handle.cancel()`.
+  - `activeCount()` + `stats()` for diagnostics.
+- `Easings` table with 13 standard curves: linear + easeIn / easeOut /
+  easeInOut variants of quad / cubic / quart / sine. Custom curves
+  accepted via callable `(t) => number`.
+- Zero / negative duration snaps immediately to `to` and fires
+  onComplete in the same call - useful for "toggle state with no
+  transition".
+- Throwing `onUpdate` / `onComplete` callbacks are caught + logged;
+  one bad subscriber doesn't break the loop.
+- Cancelled tweens do NOT fire `onComplete` - explicit "I aborted
+  this" semantic.
+- `RESOURCE_TWEEN` constant. `TweenHandle`, `TweenOptions`,
+  `EasingFn`, `EasingName` types exported.
+
+### Tests
+
+711 -> 726 (15 new in tests/tween.test.ts):
+- Linear interpolates from -> to over duration.
+- Completes after duration; no further updates.
+- onComplete fires once at the end.
+- Zero duration snaps immediately + completes.
+- Cancel stops further updates; onComplete does NOT fire.
+- handle.isActive reflects status.
+- Multiple tweens run in parallel.
+- cancelAll cancels every running tween.
+- Easing customizable via name AND callable.
+- Unknown easing name falls back to linear.
+- Invalid dt rejected (no NaN propagation).
+- Throwing onUpdate is caught; tween still completes.
+- Stats track active + completed + cancelled.
+- Easings table has 13 named functions.
+
+### Backwards compatibility
+
+Pure addition. Engine consumers opt in:
+
+```ts
+import { Tween, Easings } from '@sadhaka/loom-engine';
+
+var tw = new Tween();
+tw.to(0, 100, 1.0, function (v) { hud.opacity = v; },
+  { easing: 'easeOutCubic' });
+
+// In render loop:
+tw.update(dtSeconds);
+```
+
 ## 0.28.0 - 2026-05-08
 
 **EventBus - generic typed pub/sub for the engine.** Systems and

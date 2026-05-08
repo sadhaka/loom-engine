@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.28.0';
+export const LOOM_ENGINE_VERSION = '0.29.0';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -127,6 +127,9 @@ export type { CameraControllerOptions } from './renderer/camera-controller.js';
 // 0.28.0 - generic event bus.
 export { EventBus, RESOURCE_EVENT_BUS } from './runtime/event-bus.js';
 export type { EventHandler } from './runtime/event-bus.js';
+// 0.29.0 - tween system.
+export { Tween, Easings, RESOURCE_TWEEN } from './runtime/tween.js';
+export type { TweenHandle, TweenOptions, EasingFn, EasingName } from './runtime/tween.js';
 export {
   ResourceRegistry,
   createTimeResource,
