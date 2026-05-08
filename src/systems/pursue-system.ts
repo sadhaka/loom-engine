@@ -17,6 +17,7 @@ import { TransformPool } from '../components/transform.js';
 import { PursuePool, POOL_PURSUE, PURSUE_FLAG_ACTIVE } from '../components/pursue.js';
 import { HealthPool, POOL_HEALTH } from '../components/health.js';
 import { makeEntity } from '../entity.js';
+import { RESOURCE_TIME, type TimeResource } from '../resources.js';
 
 export class PursueSystem implements System {
   readonly name: string = 'pursue';
@@ -28,7 +29,10 @@ export class PursueSystem implements System {
     const health = world.getPool<HealthPool>(POOL_HEALTH);
 
     const hwm = pursuit.getHighWaterMark();
-    const now = typeof performance !== 'undefined' ? performance.now() : 0;
+    // Deterministic clock - TimeResource not performance.now(). Pursue
+    // contact-damage cooldown checks reproduce across replays.
+    const time = world.resources.get<TimeResource>(RESOURCE_TIME);
+    const now = time ? time.elapsed * 1000 : 0;
 
     for (let i = 1; i < hwm; i++) {
       const f = pursuit.flags[i] ?? 0;

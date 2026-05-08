@@ -25,6 +25,7 @@ import {
 import { ProjectilePool, POOL_PROJECTILE } from '../vfx/projectile-pool.js';
 import { HealthPool, POOL_HEALTH } from '../components/health.js';
 import { makeEntity } from '../entity.js';
+import { RESOURCE_TIME, type TimeResource } from '../resources.js';
 
 export class RangedAttackSystem implements System {
   readonly name: string = 'ranged-attack';
@@ -38,7 +39,10 @@ export class RangedAttackSystem implements System {
     if (!transforms || !projectiles || !health) return;
 
     const hwm = ranged.getHighWaterMark();
-    const now = typeof performance !== 'undefined' ? performance.now() : 0;
+    // Deterministic clock - TimeResource so cooldowns + projectile
+    // spawn timestamps reproduce under trace replay.
+    const time = world.resources.get<TimeResource>(RESOURCE_TIME);
+    const now = time ? time.elapsed * 1000 : 0;
 
     for (let i = 1; i < hwm; i++) {
       const f = ranged.flags[i] ?? 0;

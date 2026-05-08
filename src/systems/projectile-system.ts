@@ -23,6 +23,7 @@ import { TransformPool } from '../components/transform.js';
 import { HealthPool, POOL_HEALTH } from '../components/health.js';
 import { POOL_TRANSFORM } from '../world.js';
 import { makeEntity } from '../entity.js';
+import { RESOURCE_TIME, type TimeResource } from '../resources.js';
 
 export class ProjectileSystem implements System {
   readonly name: string = 'projectile';
@@ -36,7 +37,10 @@ export class ProjectileSystem implements System {
 
     const hwm = pool.getHighWaterMark();
     if (hwm === 0) return;
-    const now = typeof performance !== 'undefined' ? performance.now() : 0;
+    // Deterministic clock from TimeResource so projectile-impact
+    // damage timestamps reproduce across replays.
+    const time = world.resources.get<TimeResource>(RESOURCE_TIME);
+    const now = time ? time.elapsed * 1000 : 0;
 
     for (let i = 0; i < hwm; i++) {
       const f = pool.flags[i] ?? 0;

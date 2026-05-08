@@ -25,6 +25,7 @@ import { POOL_TRANSFORM, POOL_SPRITE } from '../world.js';
 import { POOL_EMITTER } from './particle-emitter-system.js';
 import { POOL_ANIMATION } from './animation-system.js';
 import { makeEntity } from '../entity.js';
+import { RESOURCE_TIME, type TimeResource } from '../resources.js';
 
 // Optional kill-event log. Gameplay code reads this each tick to
 // trigger loot drops, score updates, audio cues, etc.
@@ -56,7 +57,11 @@ export class DamageSystem implements System {
     const deathLog = world.resources.get<DeathLog>(RESOURCE_DEATH_LOG);
 
     const hwm = health.getHighWaterMark();
-    const now = typeof performance !== 'undefined' ? performance.now() : 0;
+    // Deterministic clock - TimeResource instead of performance.now()
+    // so kill timestamps reproduce across HeadlessTicker runs with the
+    // same seed + tick stream.
+    const time = world.resources.get<TimeResource>(RESOURCE_TIME);
+    const now = time ? time.elapsed * 1000 : 0;
 
     for (let i = 1; i < hwm; i++) {
       const f = health.flags[i] ?? 0;

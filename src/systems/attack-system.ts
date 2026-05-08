@@ -28,7 +28,11 @@ import {
   type InputSnapshot,
 } from '../input/input-manager.js';
 import { type CameraView } from '../renderer/camera.js';
-import { RESOURCE_CAMERA } from '../resources.js';
+import {
+  RESOURCE_CAMERA,
+  RESOURCE_TIME,
+  type TimeResource,
+} from '../resources.js';
 import { isoToTile } from '../renderer/iso-projection.js';
 import { vec2 } from '../util/math.js';
 import { type EntityId, makeEntity } from '../entity.js';
@@ -98,7 +102,11 @@ export class AttackSystem implements System {
 
     if (bestIdx < 0) return;
     const target = makeEntity(bestIdx, 0);
-    const now = typeof performance !== 'undefined' ? performance.now() : 0;
+    // Deterministic clock - TimeResource (engine-driven) instead of
+    // performance.now(). Same seed + same tick stream => same `now`,
+    // so trace replays observe identical applyDamage timestamps.
+    const time = world.resources.get<TimeResource>(RESOURCE_TIME);
+    const now = time ? time.elapsed * 1000 : 0;
     const applied = health.applyDamage(target, this.opts.damage, now);
     if (applied > 0) {
       this.lastTargetIndex = bestIdx;

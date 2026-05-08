@@ -54,10 +54,12 @@ export type CuePlayOptions =
   Partial<PositionalPlayOptions>
   & { gain?: number; rate?: number; x?: number; y?: number };
 
-// Time source. Real implementation uses performance.now(); tests can
-// inject a deterministic clock by overriding this through the public
-// constructor seam later. v1 uses the global clock for simplicity.
-function nowMs(): number {
+// Default time source. Real implementation uses performance.now() /
+// Date.now(). For deterministic replays, callers pass a `now` override
+// through CueCatalog.create({ now }) - typically a closure that reads
+// TimeResource.elapsed * 1000 from the world. With no override the
+// catalog behaves like prior versions.
+function defaultNowMs(): number {
   if (typeof performance !== 'undefined' && typeof performance.now === 'function') {
     return performance.now();
   }
@@ -69,6 +71,16 @@ interface CooldownEntry {
   lastPlayMs: number;
 }
 
+// Optional second-arg shape for CueCatalog.create. v1 takes a single
+// `now` override; future hooks can land here without breaking the
+// existing call sites.
+export interface CueCatalogOptions {
+  // Deterministic clock callback. Defaults to defaultNowMs() which
+  // falls back to performance.now() / Date.now(). Replays / smoke
+  // tests pass a TimeResource-driven clock so cooldowns reproduce.
+  now?: () => number;
+}
+
 export class CueCatalog {
   private audioBus: AudioBus;
   private spatialBus: SpatialAudioBus;
@@ -78,19 +90,28 @@ export class CueCatalog {
   // Live spatial source handles per cue name. Cleared on stopAll(name).
   // Non-spatial one-shots are NOT tracked - they end naturally.
   private liveHandles: Map<string, Set<SpatialSourceHandle>> = new Map();
+  private nowMs: () => number;
 
-  private constructor(audioBus: AudioBus, spatialBus: SpatialAudioBus, cache: AudioAssetCache) {
+  private constructor(
+    audioBus: AudioBus,
+    spatialBus: SpatialAudioBus,
+    cache: AudioAssetCache,
+    now: () => number,
+  ) {
     this.audioBus = audioBus;
     this.spatialBus = spatialBus;
     this.cache = cache;
+    this.nowMs = now;
   }
 
   static create(
     audioBus: AudioBus,
     spatialBus: SpatialAudioBus,
     cache: AudioAssetCache,
+    options?: CueCatalogOptions,
   ): CueCatalog {
-    return new CueCatalog(audioBus, spatialBus, cache);
+    var now = options && typeof options.now === 'function' ? options.now : defaultNowMs;
+    return new CueCatalog(audioBus, spatialBus, cache, now);
   }
 
   register(name: string, def: CueDefinition): void {
@@ -129,7 +150,7 @@ export class CueCatalog {
     // soon after the prior successful play.
     if (def.cooldownMs !== undefined && def.cooldownMs > 0) {
       var entry = this.cooldowns.get(name) ?? { lastPlayMs: -Infinity };
-      var t = nowMs();
+      var t = this.nowMs();
       if (t - entry.lastPlayMs < def.cooldownMs) {
         return null;
       }
@@ -227,7 +248,7 @@ export class CueCatalog {
   }
 
   private markPlayed(name: string): void {
-    this.cooldowns.set(name, { lastPlayMs: nowMs() });
+    this.cooldowns.set(name, { lastPlayMs: this.nowMs() });
   }
 }
 
