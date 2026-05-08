@@ -252,6 +252,10 @@ export {
   CueCatalog,
   RESOURCE_CUE_CATALOG,
 } from './audio/cue-catalog.js';
+export {
+  MusicDirector,
+  RESOURCE_MUSIC_DIRECTOR,
+} from './audio/music-director.js';
 
 // Input (Phase 5): unified keyboard / mouse / touch with frame-
 // coherent snapshot resource.
