@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.18.0';
+export const LOOM_ENGINE_VERSION = '0.19.0';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -623,3 +623,43 @@ export {
   PeerPresenceSystem,
   PeerRenderSystem,
 } from './systems/peer-presence-system.js';
+
+// ===== Phase 0.19 client-side plugin SDK =====
+//
+// TypeScript companion of api/loom_ai_plugin_runtime.py. Lets Founders
+// author client-side Loom plugins reacting to zone-events without
+// forking the engine. Same names + semantics as the Python runtime
+// where they apply on the client (no per-character v1 stream; no
+// asyncio - Promise-based throughout).
+//
+// LOOM-DIRECTOR-PROTOCOL-V3 sec.3.1 explicitly reserves this slot.
+// The registry routes window dispatched arpg:zone-* CustomEvents
+// through every registered plugin's onZoneEvent hook, with optional
+// narrow conveniences (onBossSpawn / onBossEnd / onLootDrop) and the
+// full Phase 25 hardening surface (tick budgets, storage caps,
+// scopes, ops counters, hot reload via dynamic import).
+export type {
+  IClientPlugin,
+  PluginContext as ClientPluginContext,
+  PluginStorage as ClientPluginStorage,
+  PluginLogger as ClientPluginLogger,
+  PluginOpsStats,
+  PluginDescribeRow,
+  PluginScope,
+  IPluginEntropy,
+  EmittedEvents as ClientEmittedEvents,
+  PeerInfo as ClientPeerInfo,
+  ClientPluginRegistryOptions,
+} from './plugins/index.js';
+export {
+  ClientPluginRegistry,
+  MapPluginStorage as ClientMapPluginStorage,
+  ConsolePluginLogger as ClientConsolePluginLogger,
+  PluginEntropy,
+  PluginError,
+  ALL_SCOPES as CLIENT_PLUGIN_SCOPES,
+  DEFAULT_PLUGIN_STORAGE_MAX_BYTES as CLIENT_PLUGIN_DEFAULT_STORAGE_MAX_BYTES,
+  DEFAULT_PLUGIN_TICK_BUDGET_MS as CLIENT_PLUGIN_DEFAULT_TICK_BUDGET_MS,
+  setWithTtl as clientPluginSetWithTtl,
+  getWithTtlCheck as clientPluginGetWithTtlCheck,
+} from './plugins/index.js';

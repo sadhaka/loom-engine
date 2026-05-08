@@ -144,6 +144,11 @@ const DATE_NOW_WHITELIST = [
   'director/ai/plugin-context.ts',  // plugin context default (out-of-tick)
   'network/mock-multiplayer-bridge.ts',  // test bridge default constructor
   'network/sse-multiplayer-bridge.ts',   // browser SSE timeline bookkeeping
+  // Phase 0.19 client-side plugin SDK. The plugin runtime is
+  // out-of-tick (driven by SSE event arrivals); plugin authors who
+  // need replay-tight clocks override now via ClientPluginRegistryOptions.
+  'plugins/types.ts',           // PluginEntropy default seed fallback
+  'plugins/client-registry.ts', // default opts.now + TTL helpers + reload cache-bust
 ];
 
 function isWhitelisted(file: string, list: string[]): boolean {

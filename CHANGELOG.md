@@ -7,6 +7,82 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.19.0 - 2026-05-08
+
+**Client-side plugin SDK** (LOOM-DIRECTOR-PROTOCOL-V3 sec.3.1).
+TypeScript companion of the Python `loom_ai_plugin_runtime`. Lets
+Founders author client-side Loom plugins reacting to zone-events
+without forking the engine. Same names + semantics as the Python
+runtime where they apply on the client (no per-character v1 stream;
+no asyncio - Promise + async/await throughout).
+
+### Why
+
+The Python plugin runtime in `api/loom_ai_plugin_runtime.py` is a
+clean abstraction for server-side plugin authors but stops at the
+HTTP boundary - a Founder writing a client-side HUD widget reacting
+to `zone.boss.tick` had to monkey-patch the ARPG-loom IIFE. v3
+sec.3.1 carved out the slot for a TS companion; this release fills
+it. Authors moving between server-side (Python) and client-side
+(TypeScript) plugins now share a vocabulary.
+
+### Added
+
+- `src/plugins/types.ts` - TypeScript Protocol equivalents:
+  `IClientPlugin`, `PluginContext`, `PluginStorage`, `PluginLogger`,
+  `PluginOpsStats`, `PluginDescribeRow`, `EmittedEvents`, `PeerInfo`,
+  `PluginError`, `PluginEntropy`, scope constants. Mirrors
+  `loom_ai_plugin_runtime.py` shape-for-shape.
+- `src/plugins/client-registry.ts` - `ClientPluginRegistry` with the
+  same surface as the Python `AIPluginRegistry`:
+  - `register / unregister / reload / list / describe`,
+  - per-plugin `MapPluginStorage` wrapped in a counting wrapper
+    (storage cap + ops counters),
+  - per-plugin tick budget enforced via `Promise.race` timeout,
+  - per-plugin scope gates (`read_zones / read_characters /
+    read_events`) gating `getZonePeers / getZoneState /
+    getZoneEventsTail`,
+  - `PluginError(retryable=true)` triggers ONE retry before drop,
+  - error isolation: a hook throw drops only that plugin's
+    contribution for that dispatch,
+  - lifecycle hooks: `onZoneEvent`, `onPreTick / onPostTick`,
+    narrow `onBossSpawn / onBossEnd / onLootDrop` conveniences,
+    `dispose`,
+  - DOM bridge auto-attaches to `arpg:zone-*` CustomEvents on
+    `globalThis.window` so any host already dispatching the ARPG-loom
+    custom events gets plugin routing for free,
+  - `reload(name, moduleSpecifier)` re-imports the plugin module via
+    dynamic import with a cache-bust query.
+  - TTL storage helpers (`setWithTtl / getWithTtlCheck`) layered
+    over any PluginStorage.
+- `src/plugins/index.ts` - bare exports surface.
+- `tests/plugins/client-registry.test.ts` - 18 tests covering
+  register/replace, dispatch order, error isolation, retry,
+  tick-budget timeout, scope gates, storage cap, ops counters,
+  describe shape, dispose, DOM bridge, spatial helpers, entropy
+  determinism, TTL helpers, scope set.
+- `tests/plugins/example-hud-plugin.test.ts` - 3 tests demonstrating
+  the canonical use case: a boss HUD plugin that mounts on
+  `zone.boss.spawn`, updates on `zone.boss.tick`, unmounts on
+  `zone.boss.end`, and flushes overlays in `dispose()`.
+
+### Changed
+
+- `src/index.ts` exports the new client-plugin surface
+  (`ClientPluginRegistry`, `PluginError`, `PluginEntropy`,
+  `IClientPlugin`, etc.).
+- `LOOM_ENGINE_VERSION` -> `0.19.0`.
+- `package.json` -> `0.19.0`.
+- `tests/no-nondeterminism.test.ts` whitelists `plugins/types.ts`
+  and `plugins/client-registry.ts` for `Date.now()` reads (plugin
+  runtime is out-of-tick, mirror of `director/ai/plugin-context.ts`).
+
+### Test count
+
+574 -> 595 (21 new).
+
+---
+
 ## 0.18.0 - 2026-05-08
 
 **Replay determinism polish** (Phase E5, on top of E3 + E4). Closes
