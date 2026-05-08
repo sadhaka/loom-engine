@@ -8,7 +8,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.50.0';
+export const LOOM_ENGINE_VERSION = '0.51.0';
 export { vec2, vec3, rect, clamp, lerp, smoothstep, approxEq, rectContains, rectIntersects, visibleInView, } from './util/math.js';
 export { rgba, hexToRgba, rgbaToHexString, rgbaToCssString, colorLerp, COLOR_WHITE, COLOR_BLACK, COLOR_TRANSPARENT, COLOR_KNOT_STR, COLOR_KNOT_DEX, COLOR_KNOT_INT, COLOR_KNOT_CENTER, } from './util/color.js';
 export { EntityAllocator, NULL_ENTITY, entityIndex, entityGeneration, makeEntity, } from './entity.js';
@@ -77,6 +77,8 @@ export { TimerScheduler, RESOURCE_TIMER_SCHEDULER } from './runtime/timer-schedu
 export { linearPath, catmullRomPath, hermitePath, RESOURCE_SPLINE, } from './runtime/spline.js';
 // 0.50.0 - log ring buffer (severity-filtered fixed-capacity log).
 export { LogRingBuffer, RESOURCE_LOG_RING_BUFFER } from './runtime/log-ring-buffer.js';
+// 0.51.0 - generic finite state machine.
+export { StateMachine, RESOURCE_STATE_MACHINE } from './runtime/state-machine.js';
 export { ResourceRegistry, createTimeResource, createVeilBudgetResource, RESOURCE_TIME, RESOURCE_CAMERA, RESOURCE_DEVICE, RESOURCE_VEIL_BUDGET, } from './resources.js';
 // Default systems
 export { SpriteRenderSystem } from './systems/sprite-render-system.js';
