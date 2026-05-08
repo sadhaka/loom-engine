@@ -1,4 +1,4 @@
-export declare const LOOM_ENGINE_VERSION = "0.31.0";
+export declare const LOOM_ENGINE_VERSION = "0.32.0";
 export type { Vec2, Vec3, Rect } from './util/math.js';
 export { vec2, vec3, rect, clamp, lerp, smoothstep, approxEq, rectContains, rectIntersects, visibleInView, } from './util/math.js';
 export type { ColorRGBA } from './util/color.js';
@@ -29,6 +29,8 @@ export { Tween, Easings, RESOURCE_TWEEN } from './runtime/tween.js';
 export type { TweenHandle, TweenOptions, EasingFn, EasingName } from './runtime/tween.js';
 export { SpatialHash, RESOURCE_SPATIAL_HASH } from './runtime/spatial-hash.js';
 export { InputActions, RESOURCE_INPUT_ACTIONS } from './input/input-actions.js';
+export { ObjectPool } from './runtime/object-pool.js';
+export type { ObjectPoolOptions } from './runtime/object-pool.js';
 export { ResourceRegistry, createTimeResource, createVeilBudgetResource, RESOURCE_TIME, RESOURCE_CAMERA, RESOURCE_DEVICE, RESOURCE_VEIL_BUDGET, } from './resources.js';
 export { SpriteRenderSystem } from './systems/sprite-render-system.js';
 export { Engine, registerBackend, isBackendRegistered } from './engine.js';
