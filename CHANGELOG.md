@@ -7,6 +7,100 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 1.3.5 - 2026-05-09
+
+**🟪 Wave 1.3 milestone — NarrativeMemory: cross-session NPC
+recall ledger.** THE uniquely-Loom primitive: what NPCs REMEMBER
+about the player across sessions. PersonaTrait (1.3.0) is who
+they are. EmotionState (1.3.2) is how they feel right now.
+RelationshipGraph (1.3.1) is who they care about. NarrativeMemory
+is what they REMEMBER and recall when prompted.
+
+Each fact: a (character, subject) pair with kind, content,
+salience (vividness), tags, recorded time. Recall ranks by
+salience × weight + recency × weight, filtered by tags / kind /
+minSalience. Facts decay over time per their kind's half-life.
+Cross-session: serialize to JSON, restore on next play.
+
+### Added
+
+- `src/runtime/narrative-memory.ts` - `NarrativeMemory<T>` class
+  (type-generic over the per-fact payload):
+  - `create<T>({ defaultKind?, onRemember?, onForget? })`.
+  - **Kind specs**:
+    - `defineKind({ id, decayHalfLifeMs?, autoPurgeBelow? })`.
+      Default decay 86400000 (1 day); autoPurge 0.05.
+    - `decayHalfLifeMs: 0` = permanent (trauma).
+    - `autoPurgeBelow: 0` = never auto-purge.
+    - `hasKind` / `kindIds`.
+  - **Fact CRUD**:
+    - `remember({ id, characterId, subjectId, kind, content, recordedAt, salience, tags?, data? })`
+      - auto-defines unknown kind. Replaces if id exists.
+    - `forget(factId)` / `forgetAbout(characterId, subjectId)`.
+    - `has(factId)` / `get(factId)`.
+    - `adjustSalience(factId, delta)` - reinforce / fade.
+  - **Bulk reads**:
+    - `factsAbout(characterId, subjectId)`.
+    - `factsBy(characterId)`.
+    - `factsAboutSubject(subjectId)`.
+    - `list()` / `size()`.
+  - **Recall** (the main read API):
+    - `recall(characterId, subjectId, ctx?)` - returns ranked
+      `RecallResult[]` with `recencyScore` and `rankScore`.
+      ctx: `{ tags?, kind?, minSalience?, limit?, now?, recencyHalfLifeMs?, salienceWeight?, recencyWeight? }`.
+      Default weights 0.6 salience / 0.4 recency.
+    - `topMemory(characterId, subjectId, ctx?)` - convenience
+      for limit:1.
+  - **Decay**:
+    - `tick(dtMs)` - decays every fact's salience per its kind's
+      half-life. Auto-purges facts below threshold; fires onForget
+      with reason 'purge'.
+  - **Cross-session persistence**:
+    - `exportSession(characterId?)` - JSON string of kinds + facts
+      (optionally filtered by character).
+    - `importSession(jsonString)` - merges kinds + facts; same id
+      overwrites.
+  - `clear()` / `dispose()`.
+- All callbacks isolated.
+- NaN / negative dt no-op.
+- `RESOURCE_NARRATIVE_MEMORY` constant.
+
+### Tests
+
+2823 -> 2853 (30 new).
+
+### Backwards compatibility
+
+Pure addition. Pairs with PersonaTrait (1.3.0), RelationshipGraph
+(1.3.1), EmotionState (1.3.2), DialogTree (0.61, dialog can
+branch on recalled memories), DialogChoiceHistory (0.89, what was
+said before).
+
+### 🟪 Milestone — Wave 1.3 AI persona depth complete
+
+**6 versions shipped (1.3.0 → 1.3.5)**: PersonaTrait (long-term
+trait vector), RelationshipGraph (asymmetric per-pair bonds),
+EmotionState (right-now mood gauges), DialogVoice (voice-line
+scheduler), SchedulePlan (NPC daily routines), NarrativeMemory
+(cross-session recall).
+
+Together these make NPCs feel like **PEOPLE**, not state machines.
+The most "uniquely Loom" wave - the layer most game engines don't
+build because most games don't think about NPCs as long-term
+acting agents. The Loom does.
+
+What 1.3 unlocks at the consumer layer:
+- Personality-driven dialog (DialogTree gated by PersonaTrait).
+- Asymmetric relationships (Mira pines, Thane oblivious).
+- Reactive emotion (panic threshold triggers berserker).
+- Lip-synced voice lines with marker hooks.
+- Living-world routines (Stardew-style schedule).
+- True memory across sessions ("you stole from me last week").
+
+Wave 1.4 (audio / cinematic depth) opens next: AmbientLayerMixer,
+AudioDuck, SubtitleQueue, VoiceLineQueue, CinematicLetterbox,
+SoundtrackDirector (1.4 milestone).
+
 ## 1.3.4 - 2026-05-09
 
 **SchedulePlan — NPC daily routine ledger.** The Stardew Valley

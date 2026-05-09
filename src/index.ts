@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '1.3.4';
+export const LOOM_ENGINE_VERSION = '1.3.5';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -807,6 +807,15 @@ export type {
   ScheduleQueryContext,
   SchedulePlanOptions,
 } from './runtime/schedule-plan.js';
+// 1.3.5 CAPSTONE (Wave 1.3 AI persona depth milestone) - cross-session NPC recall ledger.
+export { NarrativeMemory, RESOURCE_NARRATIVE_MEMORY } from './runtime/narrative-memory.js';
+export type {
+  MemoryKindSpec,
+  MemoryFact,
+  RecallContext,
+  RecallResult,
+  NarrativeMemoryOptions,
+} from './runtime/narrative-memory.js';
 export {
   ResourceRegistry,
   createTimeResource,
