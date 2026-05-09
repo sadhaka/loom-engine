@@ -7,6 +7,37 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.89.0 - 2026-05-09
+
+**DialogChoiceHistory — record + replay dialog choices.** DialogTree
+(0.61) tracks current branch position; DialogChoiceHistory records
+the ledger of every choice the player made over time. Use cases:
+branching visualization, "I've already heard this pitch" detection,
+replay verification, analytics, quest gating ("you spared him in
+chapter 1, the bandits remember").
+
+### Added
+
+- `src/runtime/dialog-choice-history.ts` - `DialogChoiceHistory`:
+  - `create({ capacity? })` (default 10000).
+  - `record(nodeId, choiceIndex, choiceLabel?)` - assigns monotonic seq.
+  - `byNode(nodeId)` / `lastChoice(nodeId)`.
+  - `has(nodeId, choiceIndex)` / `count(nodeId, choiceIndex)`
+    / `countByNode(nodeId)` / `totalCount()`.
+  - `list()` / `clear()` / `capacity()`.
+  - `toSnapshot()` / `fromSnapshot(records)` for save / load.
+  - `dispose()` clears + locks ops.
+- Capacity overflow evicts oldest. Pure addition.
+- `RESOURCE_DIALOG_CHOICE_HISTORY` constant.
+
+### Tests
+
+2107 -> 2129 (22 new in tests/dialog-choice-history.test.ts).
+
+### Backwards compatibility
+
+Pure addition.
+
 ## 0.88.0 - 2026-05-09
 
 **TutorialFlow — sequenced UI hints with anchor-target tracking.**

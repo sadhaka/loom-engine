@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.88.0';
+export const LOOM_ENGINE_VERSION = '0.89.0';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -571,6 +571,12 @@ export type {
   TutorialPersistAdapter,
   TutorialFlowOptions,
 } from './runtime/tutorial-flow.js';
+// 0.89.0 - record + replay dialog choices.
+export { DialogChoiceHistory, RESOURCE_DIALOG_CHOICE_HISTORY } from './runtime/dialog-choice-history.js';
+export type {
+  DialogChoiceRecord,
+  DialogChoiceHistoryOptions,
+} from './runtime/dialog-choice-history.js';
 export {
   ResourceRegistry,
   createTimeResource,
