@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.86.0';
+export const LOOM_ENGINE_VERSION = '0.87.0';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -561,6 +561,9 @@ export type {
   FactionStatus,
   FactionReputationOptions,
 } from './runtime/faction-reputation.js';
+// 0.87.0 - N-mob spawn with budget cap.
+export { CrowdSpawner, RESOURCE_CROWD_SPAWNER } from './runtime/crowd-spawner.js';
+export type { SpawnDef, CrowdSpawnerOptions } from './runtime/crowd-spawner.js';
 export {
   ResourceRegistry,
   createTimeResource,

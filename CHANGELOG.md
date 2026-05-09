@@ -7,6 +7,40 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.87.0 - 2026-05-09
+
+**CrowdSpawner — N-mob spawn with budget cap.** Open zones, swarm
+encounters, ambient village NPCs all want "spawn up to N goblins,
+weighted random against a small zombie chance, never exceed 100
+mobs total." CrowdSpawner is the budgeted dispenser: register
+spawn defs with per-id max + weight, request one (random or by
+id), get back a caller-constructed mob or null when full.
+
+### Added
+
+- `src/runtime/crowd-spawner.ts` - `CrowdSpawner<TMob>` class:
+  - `create({ totalBudget?, rng? })` (default budget 100; rng
+    defaults to Math.random).
+  - `registerSpawn({ id, factory, max?, weight? })`.
+  - `unregisterSpawn(id)` / `has(id)` / `size()` / `list()`.
+  - `spawnOne(id)` returns mob or null on max/budget/unknown.
+  - `spawnRandom()` weighted-random pick from spawns with capacity.
+  - `notifyDespawn(id)` returns budget on death.
+  - `activeCountOf(id)` / `getTotalActive()` / `totalBudget()`
+    / `budgetRemaining()`.
+  - `clear()` / `dispose()`.
+- Factory throwing yields null without consuming budget.
+- Pairs with SteeringBehaviors (0.64), Pathfinder (0.55).
+- `RESOURCE_CROWD_SPAWNER` constant.
+
+### Tests
+
+2063 -> 2086 (23 new in tests/crowd-spawner.test.ts).
+
+### Backwards compatibility
+
+Pure addition.
+
 ## 0.86.0 - 2026-05-09
 
 **FactionReputation — per-faction reputation track with tiered
