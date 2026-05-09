@@ -7,6 +7,75 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.80.0 - 2026-05-09
+
+**HealthBar + M9 0.80 milestone — render-state primitive for entity
+HP bars.** Boss fights, mob health, party portraits, NPC interaction
+targeting - all want a "what's this entity's HP and where's it
+floating?" render state. HealthBar is the keyed-by-entity ledger
+that holds position + hp/maxHp + a fade timer + a per-damage pulse.
+The renderer pulls active bars via `forEach()` each frame and draws
+them in whatever style fits.
+
+This is the M9 0.80 milestone - 10 versions shipped this batch
+(0.71 → 0.80) on the combat + UX track, ~1900+ tests.
+
+### Added
+
+- `src/runtime/health-bar.ts` - `HealthBar` class:
+  - `create({ capacity?, fadeAfterMs?, fadeDurationMs?, pulseMs?, removeAfterMs? })`.
+    Defaults: capacity 64, fadeAfterMs 4000, fadeDurationMs 1000,
+    pulseMs 200, removeAfterMs = fadeAfterMs + fadeDurationMs.
+  - `upsert(spawn)` - 1 = added, 0 = updated existing, -1 = full
+    or invalid.
+  - `setPosition(id, x, y)` - move without resetting fade timer.
+  - `applyDelta(id, hpDelta)` - damage / heal; clamps hp to
+    [0, maxHp]; resets fade timer; bumps pulse to 1.
+  - `remove(id)` / `clearAll()` / `has(id)` / `activeCount()` /
+    `capacity()`.
+  - `tick(dtMs)` advances timers; entries past `removeAfterMs` are
+    deleted.
+  - `forEach(cb)` yields render state with computed pct (0..1),
+    alpha (post-fade), pulse (0..1 post-damage flash). Throwing cb
+    isolated.
+  - `dispose()` clears + locks ops.
+- Render state includes `msSinceLastDelta` so renderers can layer
+  their own ramp curves on top.
+- Defensive: NaN / negative dt no-op; non-finite hp clamped to 0;
+  maxHp 0 yields pct 0.
+- `RESOURCE_HEALTH_BAR` constant.
+
+### Tests
+
+1909 -> 1931 (22 new in tests/health-bar.test.ts).
+
+### Milestone — engine 0.80.0
+
+10 versions shipped this M9 batch-2 wave (0.71 → 0.80), 0 breaking
+changes. The 0.71 - 0.80 wave focuses on the combat + UX surface
+beyond the M8 baseline:
+
+- WeatherSystem (0.71): outdoor ambient signal, pairs with TimeOfDay
+- DamageNumberPipeline (0.72): pre-wired DamageFormula → FloatingText
+- BuffLifecycle (0.73): duration-tracked StatStack mods
+- Crafting (0.74): atomic recipe consume + produce on InventoryGrid
+- Achievements (0.75): milestone tracker with progress + unlock
+- AggroTable (0.76): multi-target threat ledger for boss AI
+- Reactivity (0.77): Signal / Computed / Effect for HUD bindings
+- Leaderboard (0.78): local + remote with top-N + around-me queries
+- TextScroll (0.79): typewriter dialog reveal
+- HealthBar (0.80): render-state for entity HP bars
+
+Combined with 0.34 - 0.70's runtime / audio / input / persistence /
+animation / game-systems infra, the engine surface is now broad
+enough to scaffold Loom Survivor v1, the Lastlight world hub, the
+Founders homepage AND any standard ARPG / hub-MMO consumer
+end-to-end without engine forks.
+
+### Backwards compatibility
+
+Pure addition. 0.10-era code compiles unmodified against 0.80.
+
 ## 0.79.0 - 2026-05-09
 
 **TextScroll — typewriter text reveal with skip-on-click.** Dialog
