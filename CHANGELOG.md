@@ -7,6 +7,40 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.82.0 - 2026-05-09
+
+**ThresholdTrigger — value-crossing event emitter.** "When HP drops
+below 25%, emit low-health-warning." "When XP crosses level
+threshold, level up." "When server queue exceeds N, throttle." All
+share a shape: a value over time crosses a threshold in a specified
+direction; emit once per crossing (with hysteresis so a value
+hovering at the line doesn't spam).
+
+### Added
+
+- `src/runtime/threshold-trigger.ts` - `ThresholdTrigger` class:
+  - `create()`.
+  - `register({ id, threshold, direction, hysteresis?, onTrigger?, onRearm?, data? })`.
+    direction is `'below'` or `'above'`.
+  - `unregister(id)` / `has(id)` / `size()` / `list()` (defensive).
+  - `update(id, value)` checks the threshold; fires callbacks on
+    crossing / re-arm.
+  - `reset(id)` force-arms (clears triggered flag).
+  - `isArmed(id)` / `isTriggered(id)` / `lastValueOf(id)`.
+  - `dispose()` clears + locks ops.
+- Hysteresis: re-arm requires value past `threshold ± hysteresis`
+  in the opposite direction.
+- Both callbacks isolated. NaN values rejected.
+- `RESOURCE_THRESHOLD_TRIGGER` constant.
+
+### Tests
+
+1954 -> 1976 (22 new in tests/threshold-trigger.test.ts).
+
+### Backwards compatibility
+
+Pure addition.
+
 ## 0.81.0 - 2026-05-09
 
 **Quadtree — 2D broadphase spatial index.** SpatialHash (0.30) is
