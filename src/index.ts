@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '1.1.1';
+export const LOOM_ENGINE_VERSION = '1.1.2';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -666,6 +666,24 @@ export type {
   ApplyOptions,
   StatusEffectStackOptions,
 } from './runtime/status-effect-stack.js';
+// 1.1.2 (Wave 1.1 combat depth) - pluggable AI decision tree.
+export { BehaviorTree, RESOURCE_BEHAVIOR_TREE } from './runtime/behavior-tree.js';
+export type {
+  BTStatus,
+  BTContext,
+  BTConditionFn,
+  BTActionFn,
+  BTNode,
+  BTSequenceNode,
+  BTSelectorNode,
+  BTParallelNode,
+  BTInverterNode,
+  BTRepeatNode,
+  BTCooldownNode,
+  BTConditionNode,
+  BTActionNode,
+  BehaviorTreeOptions,
+} from './runtime/behavior-tree.js';
 export {
   ResourceRegistry,
   createTimeResource,

@@ -7,6 +7,56 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 1.1.2 - 2026-05-09
+
+**BehaviorTree — pluggable AI decision tree.** StateMachine (0.51)
+handles "agent is in state X, transition on event Y" — great for
+finite, hand-authored flows. BehaviorTree is the hierarchical /
+composite pattern instead: build complex AI from small reusable
+nodes (sequence, selector, condition, action, inverter, repeat,
+cooldown, parallel). The standard model in modern game AI.
+
+### Added
+
+- `src/runtime/behavior-tree.ts` - `BehaviorTree` class:
+  - `create({ root, blackboard?, onStatus? })`.
+  - `tick(dtMs)` returns `BTStatus` (`'success' | 'failure' | 'running'`).
+  - `reset()` clears all running-node state.
+  - `setBlackboardEntry(key, value)` / `getBlackboardEntry(key)` /
+    `getBlackboard()` (defensive copy).
+  - `dispose()` locks ops.
+- Node taxonomy:
+  - `sequence` - run children in order; fail on first failure;
+    success if all succeed; running while one is.
+  - `selector` - try children in order; succeed on first success;
+    fail if all fail.
+  - `parallel` - run all children each tick; configurable
+    `successThreshold` / `failureThreshold`.
+  - `inverter` - flip success <-> failure; running passes through.
+  - `repeat` - run child N times (or `count: -1` = forever).
+  - `cooldown` - rate-limit child; configurable status during
+    cooldown window.
+  - `condition` - leaf; predicate -> success/failure.
+  - `action` - leaf; runner -> success/failure/running.
+- Sequence + selector preserve their child cursor across ticks
+  while a child is running, so multi-frame actions work
+  correctly.
+- Parallel ticks every child every frame.
+- Throwing predicate / action / onStatus isolated; faults map to
+  `'failure'`.
+- NaN / negative dt clamped to 0.
+- `RESOURCE_BEHAVIOR_TREE` constant.
+
+### Tests
+
+2435 -> 2468 (33 new).
+
+### Backwards compatibility
+
+Pure addition. Pairs with StateMachine (0.51) for finite states;
+AggroTable (0.78) for threat ledger; Coroutine (0.69) for
+multi-frame action sequences.
+
 ## 1.1.1 - 2026-05-09
 
 **StatusEffectStack — buff/debuff stacking with DR + immunity
