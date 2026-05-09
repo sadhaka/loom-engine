@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.97.0';
+export const LOOM_ENGINE_VERSION = '0.98.0';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -620,6 +620,15 @@ export type {
   ShowOptions as TooltipShowOptions,
   TooltipQueueOptions,
 } from './runtime/tooltip-queue.js';
+// 0.98.0 - i18n number formatting helper (compact / format / percent / currency).
+export { NumberFormatter, RESOURCE_NUMBER_FORMATTER } from './runtime/number-formatter.js';
+export type {
+  NumberFormatterOptions,
+  FormatOptions as NumberFormatOptions,
+  CompactOptions as NumberCompactOptions,
+  CurrencyOptions as NumberCurrencyOptions,
+  PercentOptions as NumberPercentOptions,
+} from './runtime/number-formatter.js';
 export {
   ResourceRegistry,
   createTimeResource,

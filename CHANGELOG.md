@@ -7,6 +7,51 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.98.0 - 2026-05-09
+
+**NumberFormatter — i18n number formatting helper.** HUD damage
+numbers (10000 -> "10K"), gold totals (1234567 -> "1,234,567"),
+XP, drop counts, currency ("$99.00"), percentages ("85%") - every
+HUD number wants a per-locale formatter that renders raw numbers
+as the user expects. NumberFormatter is the small Intl wrapper
+that does it.
+
+### Added
+
+- `src/runtime/number-formatter.ts` - `NumberFormatter` class:
+  - `create({ locale?, fallbackCompactSuffixes? })`. Default
+    locale `'en-US'`.
+  - `format(value, { minimumFractionDigits?, maximumFractionDigits?, useGrouping? })`
+    locale-aware grouping. en-US "1,234,567" / fr-FR "1 234 567"
+    / de-DE "1.234.567".
+  - `compact(value, { maximumFractionDigits?, threshold? })` -
+    "10K", "1.5M", "1.5B", "1.5T". Default 1 fraction digit,
+    threshold 1000.
+  - `percent(value, { minimumFractionDigits?, maximumFractionDigits? })` -
+    `0.5 -> "50%"`. Input is the ratio (0..1), not a percentage
+    value.
+  - `currency(value, currencyCode, { minimumFractionDigits?, maximumFractionDigits? })` -
+    `99, 'USD' -> "$99.00"` / `1500, 'JPY' -> "¥1,500"`.
+  - `setLocale(locale)` / `getLocale()`.
+- Backed by `Intl.NumberFormat` when available. Falls back to
+  English-style grouping (`,` thousands, `.` decimal) and
+  `K`/`M`/`B`/`T` compact suffixes when Intl is missing.
+- `fallbackCompactSuffixes: { 3: 'K', 6: 'M', 9: 'B', 12: 'T' }` -
+  override the fallback suffixes for non-Intl environments
+  (e.g. ja: `{ 4: '万', 8: '億' }`).
+- Non-finite inputs (NaN / Infinity / -Infinity) return the
+  empty string.
+- `RESOURCE_NUMBER_FORMATTER` constant.
+
+### Tests
+
+2302 -> 2331 (29 new).
+
+### Backwards compatibility
+
+Pure addition. Pairs with Localization (0.46) for string-side
+i18n; this fills the number-side gap.
+
 ## 0.97.0 - 2026-05-09
 
 **TooltipQueue — anchored tooltip primitive with fade-in/out lifecycle.**
