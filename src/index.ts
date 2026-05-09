@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.71.0';
+export const LOOM_ENGINE_VERSION = '0.72.0';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -453,6 +453,16 @@ export type {
   WeatherTransitionOptions,
   WeatherSystemOptions,
 } from './runtime/weather-system.js';
+// 0.72.0 - DamageFormula -> FloatingText pipeline (auto-spawn styled damage numbers).
+export {
+  DamageNumberPipeline,
+  RESOURCE_DAMAGE_NUMBER_PIPELINE,
+} from './runtime/damage-number-pipeline.js';
+export type {
+  DamageNumberStyle,
+  DamageNumberPipelineOptions,
+  FloatingTextEmitter,
+} from './runtime/damage-number-pipeline.js';
 export {
   ResourceRegistry,
   createTimeResource,

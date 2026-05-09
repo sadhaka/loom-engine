@@ -7,6 +7,72 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.72.0 - 2026-05-09
+
+**DamageNumberPipeline — bridge from DamageFormula (0.66) to
+FloatingText (0.37).** Most action / RPG consumers wire
+computeDamage + FloatingText.emit by hand at every attack site -
+same boilerplate, same color/scale rules, every time. The pipeline
+owns that wiring: pass attacker + defender + position, get back the
+DamageResult AND a styled floating-text spawn dispatched
+automatically.
+
+This is the second M9 release, designed for "make combat readable
+at a glance" - normal hits, crits, and blocked / heavily-mitigated
+hits each render with a configurable color + scale, plus a crit
+suffix on the text.
+
+### Added
+
+- `src/runtime/damage-number-pipeline.ts` - `DamageNumberPipeline` class:
+  - `create({ floatingText, compute?, style?, formatText?, blockedAtOrBelow? })`.
+  - `publish(attacker, defender, x, y, opts?)` runs compute + spawns
+    a styled floating text; returns the DamageResult so consumers can
+    also subtract HP / fire onKill / etc.
+  - `publishResult(result, x, y)` skips compute and spawns from an
+    already-computed result (e.g. server-authoritative damage).
+  - `setStyle(style)` partial style update; `getStyle()` returns
+    a defensive copy.
+  - `dispose()` locks ops; subsequent publishes still compute but
+    skip the spawn (or no-op for publishResult).
+- Style: `normalColor` / `critColor` / `blockedColor` /
+  `normalScale` / `critScale` / `lifetimeMs` / `critSuffix`.
+  Defaults: white / warm-gold / grey / 1 / 1.4 / FloatingText
+  default / "!".
+- `blockedAtOrBelow` threshold (default 0): a hit with
+  `result.final <= threshold` uses `blockedColor` and skips the
+  crit branch.
+- Default text format: `Math.round(result.final)` + critSuffix on
+  crit. Custom `formatText` overrides the default and survives
+  `setStyle`.
+- Pool full (FloatingText.emit returns -1) does not throw; publish
+  still returns the DamageResult.
+- `RESOURCE_DAMAGE_NUMBER_PIPELINE` constant.
+
+### Tests
+
+1732 -> 1753 (21 new in tests/damage-number-pipeline.test.ts):
+- RESOURCE constant.
+- publish computes + emits; crit path uses critColor/scale/suffix;
+  blocked path uses blockedColor.
+- publishResult skips compute.
+- custom compute / formatText overrides.
+- setStyle propagates critSuffix to default formatter; does NOT
+  clobber user-provided formatter.
+- getStyle defensive copy.
+- partial style overrides leave defaults in place for unspecified
+  fields.
+- pool full returns -1; publish still returns result.
+- lifetime override propagated to spawn; absent leaves
+  spawn.lifetimeMs absent.
+- dispose locks publish / publishResult / setStyle.
+- Default formatter rounds final to integer.
+- Realistic normal / crit / block flow.
+
+### Backwards compatibility
+
+Pure addition.
+
 ## 0.71.0 - 2026-05-09
 
 **WeatherSystem — discrete weather states with ramped intensity
