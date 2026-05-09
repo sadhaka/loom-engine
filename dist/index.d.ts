@@ -1,4 +1,4 @@
-export declare const LOOM_ENGINE_VERSION = "1.2.0";
+export declare const LOOM_ENGINE_VERSION = "1.2.1";
 export type { Vec2, Vec3, Rect } from './util/math.js';
 export { vec2, vec3, rect, clamp, lerp, smoothstep, approxEq, rectContains, rectIntersects, visibleInView, } from './util/math.js';
 export type { ColorRGBA } from './util/color.js';
@@ -178,6 +178,8 @@ export { GhostReplay, RESOURCE_GHOST_REPLAY } from './runtime/ghost-replay.js';
 export type { GhostFrame, Recording as GhostRecording, GhostSnapshot, StartRecordingOptions as GhostStartRecordingOptions, PlayGhostOptions, GhostReplayOptions, } from './runtime/ghost-replay.js';
 export { PathfindingCache, RESOURCE_PATHFINDING_CACHE } from './runtime/pathfinding-cache.js';
 export type { CachedPathPoint, CachedPathResult, CacheEntry as PathfindingCacheEntry, PathfindingCacheOptions, } from './runtime/pathfinding-cache.js';
+export { RegionGraph, RESOURCE_REGION_GRAPH } from './runtime/region-graph.js';
+export type { RegionGate, ZoneNode, RegionEdge, BidirectionalOptions as RegionBidirectionalOptions, RegionGraphOptions, } from './runtime/region-graph.js';
 export { ResourceRegistry, createTimeResource, createVeilBudgetResource, RESOURCE_TIME, RESOURCE_CAMERA, RESOURCE_DEVICE, RESOURCE_VEIL_BUDGET, } from './resources.js';
 export { SpriteRenderSystem } from './systems/sprite-render-system.js';
 export { Engine, registerBackend, isBackendRegistered } from './engine.js';
