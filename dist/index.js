@@ -8,7 +8,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '1.5.2';
+export const LOOM_ENGINE_VERSION = '1.5.3';
 export { vec2, vec3, rect, clamp, lerp, smoothstep, approxEq, rectContains, rectIntersects, visibleInView, } from './util/math.js';
 export { rgba, hexToRgba, rgbaToHexString, rgbaToCssString, colorLerp, COLOR_WHITE, COLOR_BLACK, COLOR_TRANSPARENT, COLOR_KNOT_STR, COLOR_KNOT_DEX, COLOR_KNOT_INT, COLOR_KNOT_CENTER, } from './util/color.js';
 export { EntityAllocator, NULL_ENTITY, entityIndex, entityGeneration, makeEntity, } from './entity.js';
@@ -231,6 +231,8 @@ export { ChartRenderer, RESOURCE_CHART_RENDERER } from './runtime/chart-renderer
 export { TimelineLedger, RESOURCE_TIMELINE_LEDGER } from './runtime/timeline-ledger.js';
 // 1.5.2 (Wave 1.5 educational depth) - force-directed node graph layout.
 export { GraphLayout, RESOURCE_GRAPH_LAYOUT } from './runtime/graph-layout.js';
+// 1.5.3 (Wave 1.5 educational depth) - quiz items + SM-2 spaced repetition scheduler.
+export { QuestionBank, RESOURCE_QUESTION_BANK } from './runtime/question-bank.js';
 export { ResourceRegistry, createTimeResource, createVeilBudgetResource, RESOURCE_TIME, RESOURCE_CAMERA, RESOURCE_DEVICE, RESOURCE_VEIL_BUDGET, } from './resources.js';
 // Default systems
 export { SpriteRenderSystem } from './systems/sprite-render-system.js';
