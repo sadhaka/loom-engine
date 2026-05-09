@@ -7,7 +7,12 @@ name: Deploy TypeDoc + demo gallery to gh-pages branch
 # itself is unavailable: private repo on free user plan).
 #
 # Tree layout published to gh-pages (and therefore loom-engine.pages.dev):
-#   /                       TypeDoc site root (api reference)
+#   /                       hand-written brutalist landing (landing/index.html)
+#   /reference.html         TypeDoc site root (api reference - was index.html)
+#   /classes/               TypeDoc class pages
+#   /interfaces/            TypeDoc interface pages
+#   /modules.html           TypeDoc module index
+#   /assets/                TypeDoc CSS / JS / icon assets
 #   /demo/                  examples gallery index
 #   /demo/<name>/           individual demos (survivor-mini, plaza-mini, ...)
 #   /dist/                  engine bundle that demos resolve via importmap
@@ -76,6 +81,18 @@ jobs:
         run: |
           cp -r demo docs-build/demo
           cp -r dist docs-build/dist
+
+      - name: Stage hand-written brutalist landing in front of TypeDoc
+        # The auto-generated TypeDoc site has its own homepage at
+        # docs-build/index.html. We move it to reference.html and put
+        # our hand-written landing/index.html at the docs root. All of
+        # TypeDoc's classes/, interfaces/, modules.html, assets/, etc.
+        # stay at the root and continue to resolve as before; only the
+        # entry page changes. The landing links to reference.html for
+        # the API surface.
+        run: |
+          mv docs-build/index.html docs-build/reference.html
+          cp landing/index.html docs-build/index.html
 
       - name: Deploy to gh-pages
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'

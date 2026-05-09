@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0a0805">
+<meta name="color-scheme" content="dark">
+<meta name="description" content="Loom Engine v1.5.4 - TS engine for AI-driven worlds: cross-session NPC memory, asymmetric relationships, deterministic replay.">
+<meta property="og:title" content="Loom Engine // v1.5.4">
+<meta property="og:description" content="TS engine for AI-driven worlds: cross-session NPC memory, asymmetric relationships, deterministic replay.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://loom-engine.pages.dev/">
+<title>Loom Engine // v1.5.4</title>
+<style>
+:root {
+  --bg: #0a0805;
+  --bg-rise: #14100a;
+  --bg-sink: #050402;
+  --fg: #ffb000;
+  --fg-dim: #b8801c;
+  --fg-mute: #6b4d12;
+  --fg-bright: #ffd766;
+  --fg-hot: #ff5b30;
+  --fg-cool: #80c0ff;
+  --border: #5c4500;
+  --border-bright: #8a6800;
+  --grid-line: #1f1810;
+  --font-mono: ui-monospace, "JetBrains Mono", "SF Mono", "IBM Plex Mono", Menlo, Consolas, "Roboto Mono", monospace;
+  --tx-shadow: 0 0 0.5px rgba(255, 176, 0, 0.6);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  line-height: 1.5;
+  font-feature-settings: "kern" 0, "liga" 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background-image: repeating-linear-gradient(0deg,
+    transparent 0px, transparent 2px,
+    rgba(255, 176, 0, 0.013) 2px, rgba(255, 176, 0, 0.013) 3px);
+}
+
+a {
+  color: var(--fg-cool);
+  text-decoration: none;
+  border-bottom: 1px solid currentColor;
+}
+
+a:hover { color: var(--fg-bright); }
+
+.wrap {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 32px 24px 64px;
+}
+
+.banner {
+  border: 1px solid var(--border);
+  background: var(--bg-rise);
+  padding: 28px 24px;
+  margin-bottom: 36px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 24px;
+}
+
+.banner h1 {
+  margin: 0;
+  font-size: 22px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--fg-bright);
+  text-shadow: var(--tx-shadow);
+  font-weight: 400;
+}
+
+.banner h1 .slash { color: var(--fg-mute); padding: 0 0.4em; }
+
+.banner-meta {
+  font-size: 11px;
+  color: var(--fg-dim);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-align: right;
+}
+
+.banner-meta div { margin-bottom: 4px; }
+.banner-meta strong {
+  color: var(--fg-bright);
+  font-weight: 400;
+}
+
+.lede {
+  font-size: 16px;
+  line-height: 1.55;
+  border-left: 2px solid var(--border);
+  padding: 4px 18px;
+  margin-bottom: 36px;
+  color: var(--fg);
+  max-width: 720px;
+}
+
+.lede em {
+  color: var(--fg-bright);
+  font-style: normal;
+  text-shadow: var(--tx-shadow);
+}
+
+section {
+  margin-bottom: 36px;
+}
+
+h2 {
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--fg-mute);
+  margin: 0 0 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+  font-weight: 400;
+}
+
+h2 .num {
+  color: var(--fg-dim);
+  margin-right: 0.8em;
+}
+
+.actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+}
+
+.action {
+  background: var(--bg);
+  padding: 18px 16px;
+  text-decoration: none;
+  border-bottom: none;
+  display: block;
+  transition: background 120ms;
+}
+
+.action:hover { background: var(--bg-rise); }
+
+.action .label {
+  font-size: 9.5px;
+  color: var(--fg-mute);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  margin-bottom: 6px;
+}
+
+.action .target {
+  font-size: 14px;
+  color: var(--fg-bright);
+  text-shadow: var(--tx-shadow);
+  letter-spacing: 0.04em;
+}
+
+.action .hint {
+  font-size: 11px;
+  color: var(--fg-dim);
+  margin-top: 4px;
+  line-height: 1.4;
+  text-transform: none;
+  letter-spacing: 0.02em;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+}
+
+.stat {
+  background: var(--bg);
+  padding: 14px 16px;
+}
+
+.stat-label {
+  font-size: 9.5px;
+  color: var(--fg-mute);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  margin-bottom: 4px;
+}
+
+.stat-value {
+  font-size: 18px;
+  color: var(--fg-bright);
+  text-shadow: var(--tx-shadow);
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-sub {
+  font-size: 10px;
+  color: var(--fg-dim);
+  margin-top: 4px;
+  letter-spacing: 0.04em;
+}
+
+.code {
+  border: 1px solid var(--border);
+  background: var(--bg-rise);
+  padding: 16px 18px;
+  font-size: 12.5px;
+  line-height: 1.55;
+  white-space: pre;
+  overflow-x: auto;
+  color: var(--fg);
+}
+
+.code .com  { color: var(--fg-mute); }
+.code .kw   { color: var(--fg-bright); text-shadow: var(--tx-shadow); }
+.code .str  { color: var(--fg-cool); }
+.code .ix   { color: var(--fg-dim); }
+
+.milestones {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+}
+
+.milestone {
+  background: var(--bg);
+  padding: 14px 16px;
+  position: relative;
+}
+
+.milestone .v {
+  font-size: 13px;
+  color: var(--fg-dim);
+  letter-spacing: 0.02em;
+}
+
+.milestone .label {
+  font-size: 11px;
+  color: var(--fg-bright);
+  text-shadow: var(--tx-shadow);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+
+.milestone.tip { border-top: 2px solid var(--fg); }
+.milestone.tip .v { color: var(--fg-hot); }
+.milestone.tip::after {
+  content: "TIP";
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  font-size: 9px;
+  color: var(--fg-hot);
+  letter-spacing: 0.1em;
+}
+
+.author-block {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+}
+
+.author-cell {
+  background: var(--bg);
+  padding: 16px 18px;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.author-cell .heading {
+  font-size: 9.5px;
+  color: var(--fg-mute);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  margin-bottom: 6px;
+}
+
+.author-cell strong {
+  color: var(--fg-bright);
+  text-shadow: var(--tx-shadow);
+  font-weight: 400;
+}
+
+.author-cell ul {
+  margin: 0;
+  padding-left: 18px;
+  list-style-type: square;
+}
+
+.author-cell li { padding-left: 4px; margin-bottom: 4px; }
+.author-cell li::marker { color: var(--fg-mute); }
+
+footer {
+  margin-top: 48px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+  font-size: 10.5px;
+  color: var(--fg-mute);
+  letter-spacing: 0.05em;
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+footer a { color: var(--fg-dim); }
+
+@media (max-width: 720px) {
+  body { font-size: 13px; }
+  .banner { grid-template-columns: 1fr; }
+  .banner-meta { text-align: left; }
+  .author-block { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header class="banner">
+    <h1>LOOM ENGINE<span class="slash">//</span>v1.5.4</h1>
+    <div class="banner-meta">
+      <div><strong>3098</strong> tests green</div>
+      <div><strong>122</strong> versions since 0.10</div>
+      <div><strong>BUSL-1.1</strong> source-available</div>
+    </div>
+  </header>
+
+  <p class="lede">
+    A TypeScript engine for <em>AI-driven worlds</em>. Cross-session NPC memory,
+    asymmetric relationships, deterministic replay. Browser-first via Canvas2D
+    or WebGL2; ECS world; render-graph stages; Director-bridge SSE integration.
+    Built from scratch for <a href="https://theworldtable.ai">TheWorldTable.ai</a>,
+    available standalone on npm.
+  </p>
+
+  <section>
+    <h2><span class="num">01</span>Surfaces</h2>
+    <div class="actions">
+      <a class="action" href="reference.html">
+        <div class="label">API reference</div>
+        <div class="target">TypeDoc / generated</div>
+        <div class="hint">Every public export from <code>src/index.ts</code> with full type signatures, generics, and inline doc comments.</div>
+      </a>
+      <a class="action" href="https://theworldtable.ai/mainframe/">
+        <div class="label">Live cockpit</div>
+        <div class="target">/mainframe (theworldtable.ai)</div>
+        <div class="hint">9-panel showcase running the engine on itself. ECS world, force-directed module graph, NarrativeMemory matrix, SoundtrackDirector waveform, and more.</div>
+      </a>
+      <a class="action" href="https://github.com/sadhaka/loom-engine">
+        <div class="label">Source</div>
+        <div class="target">github.com/sadhaka/loom-engine</div>
+        <div class="hint">198 source files / 46.8k LOC + 155 test files / 40.9k LOC. BUSL-1.1; converts to Apache 2.0 on 2030-05-08.</div>
+      </a>
+      <a class="action" href="https://www.npmjs.com/package/@sadhaka/loom-engine">
+        <div class="label">Package</div>
+        <div class="target">@sadhaka/loom-engine</div>
+        <div class="hint">Rapid stream publishes to <code>--tag beta</code>. Wave milestones promoted to <code>latest</code> manually. Install: <code>npm i @sadhaka/loom-engine</code>.</div>
+      </a>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="num">02</span>Quickstart</h2>
+    <div class="code"><span class="com">// 1. install</span>
+<span class="ix">$</span> <span class="kw">npm</span> i @sadhaka/loom-engine
+
+<span class="com">// 2. attach to a canvas</span>
+<span class="kw">import</span> { <span class="ix">Engine</span> } <span class="kw">from</span> <span class="str">'@sadhaka/loom-engine'</span>;
+<span class="kw">var</span> canvas = document.querySelector(<span class="str">'canvas'</span>);
+<span class="kw">var</span> engine = <span class="ix">Engine</span>.create({ canvas: canvas });
+
+<span class="com">// 3. drive the frame loop</span>
+<span class="kw">function</span> <span class="ix">tick</span>(now) {
+  engine.tick(now);
+  requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);</div>
+  </section>
+
+  <section>
+    <h2><span class="num">03</span>Stats / integrity</h2>
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-label">Tests</div>
+        <div class="stat-value">3,098</div>
+        <div class="stat-sub">3,098 / 3,098 green at v1.5.4</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Versions</div>
+        <div class="stat-value">122</div>
+        <div class="stat-sub">since v0.10.0 / 2026</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Source</div>
+        <div class="stat-value">46,802</div>
+        <div class="stat-sub">LOC / 198 files</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">License</div>
+        <div class="stat-value">BUSL-1.1</div>
+        <div class="stat-sub">Apache on 2030-05-08</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="num">04</span>Wave milestones</h2>
+    <div class="milestones">
+      <div class="milestone">
+        <div class="v">v1.0.0</div>
+        <div class="label">BenchmarkHarness</div>
+      </div>
+      <div class="milestone">
+        <div class="v">v1.1.5</div>
+        <div class="label">GhostReplay</div>
+      </div>
+      <div class="milestone">
+        <div class="v">v1.2.5</div>
+        <div class="label">LootTier</div>
+      </div>
+      <div class="milestone">
+        <div class="v">v1.3.5</div>
+        <div class="label">NarrativeMemory</div>
+      </div>
+      <div class="milestone">
+        <div class="v">v1.4.5</div>
+        <div class="label">SoundtrackDirector</div>
+      </div>
+      <div class="milestone tip">
+        <div class="v">v1.5.4</div>
+        <div class="label">ProgressTracker</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="num">05</span>Authors</h2>
+    <div class="author-block">
+      <div class="author-cell">
+        <div class="heading">Engineered by</div>
+        <strong>Misha Mitiev</strong> (@sadhaka)<br>
+        with <strong>Claude Opus 4.7</strong> / Anthropic
+        <ul>
+          <li>Pair-engineered architecture, primitive design, code review</li>
+          <li>Deterministic-replay-first stance, var-only browser source</li>
+          <li>122 commits since v0.10.0 land Pure Addition</li>
+        </ul>
+      </div>
+      <div class="author-cell">
+        <div class="heading">Niche</div>
+        TS engine for <strong>AI-driven worlds</strong>. The differentiation
+        is not engine breadth (Babylon, Excalibur, Phaser, Kaboom all do that
+        well already) but:
+        <ul>
+          <li><strong>Cross-session NPC memory</strong> via NarrativeMemory (v1.3.5)</li>
+          <li><strong>Asymmetric relationships</strong> via RelationshipGraph + EmotionState</li>
+          <li><strong>Deterministic replay</strong> via mulberry32 + clock seams</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div>BUSL-1.1 source-available / converts Apache 2.0 on 2030-05-08</div>
+    <div>
+      <a href="https://github.com/sadhaka/loom-engine/blob/main/CHANGELOG.md">CHANGELOG</a>
+      &nbsp;|&nbsp;
+      <a href="https://github.com/sadhaka/loom-engine/releases/tag/v1.5.4">v1.5.4 release</a>
+      &nbsp;|&nbsp;
+      <a href="reference.html">API reference</a>
+    </div>
+  </footer>
+
+</div>
+
+</body>
+</html>
