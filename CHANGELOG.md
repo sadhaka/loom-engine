@@ -7,6 +7,56 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 1.1.0 - 2026-05-09
+
+**Wave 1.1 combat depth opens — InputBuffer: input intent buffer
+with windowed expiry.** Fighting games and ARPGs all face the same
+UX problem: the player presses "attack" 80ms before the previous
+animation finishes. Drop the input → janky combat. Hold it
+forever → repeated taps stack into sloppy spam. InputBuffer is
+the answer: stash recent inputs with per-input TTL, let the
+gameplay layer consume the oldest matching input when ready, age
+out anything stale.
+
+### Added
+
+- `src/runtime/input-buffer.ts` - `InputBuffer<T>` class
+  (type-generic over the payload):
+  - `create<T>({ defaultWindowMs?, capacity?, onBuffer?, onRemoved? })`.
+    Defaults 200ms window, 16 cap.
+  - `buffer(value, { windowMs? })` returns monotonic id.
+  - `consume(predicate)` finds + removes oldest match.
+  - `peek(predicate)` finds without removing.
+  - `consumeOldest()` removes + returns the oldest input.
+  - `removeById(id)` / `has(id)`.
+  - `tick(dtMs)` ages inputs + expires those whose remainingMs
+    reaches 0.
+  - `forEach(cb)` / `list()` defensive snapshots (oldest-first).
+  - `count()` / `capacity()` / `clear()` / `dispose()`.
+- `windowMs: -1` makes an input sticky (never auto-expires).
+- Capacity-bounded; over capacity drops oldest with reason
+  `'evicted'`.
+- All callbacks isolated; throwing predicate / onBuffer / onRemoved
+  cannot destabilize the buffer.
+- NaN / Infinity / negative dt are no-ops.
+- `RESOURCE_INPUT_BUFFER` constant.
+
+### Tests
+
+2385 -> 2411 (26 new).
+
+### Backwards compatibility
+
+Pure addition. Pairs with InputActions (0.31, "single key triggers
+an action"), InputChord (0.39, "patterns: combo / sequence /
+doubleTap / hold"), HotKeyProfile (0.85). InputChord detects
+PATTERNS in real-time; InputBuffer queues INTENTS for delayed
+consumption.
+
+Wave 1.1 combat-depth roadmap: InputBuffer (this) → StatusEffectStack
+→ BehaviorTree → CameraDirector → CutsceneSequencer → GhostReplay
+(1.1 milestone).
+
 ## 1.0.0 - 2026-05-09
 
 **🟢 1.0.0 CAPSTONE — BenchmarkHarness: performance baseline tracker.**

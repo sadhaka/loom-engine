@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '1.0.0';
+export const LOOM_ENGINE_VERSION = '1.1.0';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -648,6 +648,14 @@ export type {
   BaselineStorage,
   BenchmarkHarnessOptions,
 } from './runtime/benchmark-harness.js';
+// 1.1.0 (Wave 1.1 combat depth) - input intent buffer with windowed expiry.
+export { InputBuffer, RESOURCE_INPUT_BUFFER } from './runtime/input-buffer.js';
+export type {
+  BufferedInput,
+  BufferOptions as InputBufferBufferOptions,
+  InputBufferOptions,
+  RemovedReason as InputBufferRemovedReason,
+} from './runtime/input-buffer.js';
 export {
   ResourceRegistry,
   createTimeResource,
