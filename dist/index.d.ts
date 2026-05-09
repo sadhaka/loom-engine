@@ -1,4 +1,4 @@
-export declare const LOOM_ENGINE_VERSION = "1.3.3";
+export declare const LOOM_ENGINE_VERSION = "1.3.4";
 export type { Vec2, Vec3, Rect } from './util/math.js';
 export { vec2, vec3, rect, clamp, lerp, smoothstep, approxEq, rectContains, rectIntersects, visibleInView, } from './util/math.js';
 export type { ColorRGBA } from './util/color.js';
@@ -196,6 +196,8 @@ export { EmotionState, RESOURCE_EMOTION_STATE } from './runtime/emotion-state.js
 export type { EmotionThreshold, EmotionSpec, EmotionEntry, DominantEmotion, EmotionStateOptions, } from './runtime/emotion-state.js';
 export { DialogVoice, RESOURCE_DIALOG_VOICE } from './runtime/dialog-voice.js';
 export type { VoiceMarker, VoiceLine, VoiceLineState, PlayLineOptions, QueueOptions as DialogVoiceQueueOptions, DialogVoiceOptions, } from './runtime/dialog-voice.js';
+export { SchedulePlan, RESOURCE_SCHEDULE_PLAN } from './runtime/schedule-plan.js';
+export type { ScheduleCondition, ScheduleBlock, ActiveBlock as ScheduleActiveBlock, ScheduleQueryContext, SchedulePlanOptions, } from './runtime/schedule-plan.js';
 export { ResourceRegistry, createTimeResource, createVeilBudgetResource, RESOURCE_TIME, RESOURCE_CAMERA, RESOURCE_DEVICE, RESOURCE_VEIL_BUDGET, } from './resources.js';
 export { SpriteRenderSystem } from './systems/sprite-render-system.js';
 export { Engine, registerBackend, isBackendRegistered } from './engine.js';
