@@ -7,6 +7,55 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.67.0 - 2026-05-09
+
+**ActionHistory - undo / redo stack with command pattern.**
+Map editors, level builders, dialog-authoring tools, in-game
+"undo this" surfaces want undo/redo. ActionHistory is the
+canonical command-stack machinery: each action knows how to
+apply itself and how to undo itself.
+
+### Added
+
+- `src/runtime/action-history.ts` - `ActionHistory` class:
+  - `push(action)` — applies the action, pushes to undo stack,
+    clears redo stack (new branch). Capacity overflow drops oldest.
+  - `undo()` / `redo()` — return true if successful.
+  - `canUndo()` / `canRedo()`.
+  - `peekUndo()` / `peekRedo()` — read topmost action (for menu
+    labels like "Undo: place wall").
+  - `undoSize()` / `redoSize()` introspection.
+  - `clear()` empties both stacks; `dispose()` locks ops.
+  - Optional capacity (default 100; 0 = unbounded).
+  - Optional onApplied + onUndone callbacks; throwing isolated.
+- Defensive: throwing apply doesn't push to stack; throwing undo
+  re-pushes to undo stack; throwing redo re-pushes to redo stack;
+  invalid action shape rejected silently.
+- Action type exported as `HistoryAction` (avoids collision with
+  the existing dialog-tree Action).
+- `RESOURCE_ACTION_HISTORY` constant.
+
+### Tests
+
+1623 -> 1645 (22 new in tests/action-history.test.ts):
+- RESOURCE_ACTION_HISTORY stable string; starts empty.
+- push applies + enables undo.
+- undo reverses; on empty returns false.
+- redo re-applies; on empty returns false.
+- New push clears redo (new branch).
+- Capacity caps undo stack; capacity 0 = unbounded.
+- peekUndo / peekRedo + null on empty.
+- Throwing apply does not push; throwing undo re-pushes;
+  throwing redo re-pushes to redo.
+- clear empties both; invalid action rejected.
+- onApplied / onUndone fire; throwing isolated.
+- dispose locks ops.
+- Realistic edit sequence example.
+
+### Backwards compatibility
+
+Pure addition.
+
 ## 0.66.0 - 2026-05-09
 
 **DamageFormula - canonical RPG combat math.** Pure-math
