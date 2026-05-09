@@ -7,6 +7,61 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.97.0 - 2026-05-09
+
+**TooltipQueue — anchored tooltip primitive with fade-in/out lifecycle.**
+Hover tooltips on equipped items, info popovers anchored to NPCs,
+"Boss is vulnerable" hints pinned over entities - every anchored
+UI hint wants the same shape: a content string keyed to an anchor
+id, faded in over 150ms, held for a lifetime, then faded out over
+200ms before removal. TooltipQueue owns that lifecycle so the
+renderer just reads (anchorId, content, alpha) per frame.
+
+### Added
+
+- `src/runtime/tooltip-queue.ts` - `TooltipQueue` class:
+  - `create({ capacity?, fadeInMs?, fadeOutMs?, defaultLifetimeMs?, replaceOnSameAnchor?, onShow?, onRemoved? })`.
+    Defaults: capacity 32, fadeInMs 150, fadeOutMs 200,
+    defaultLifetimeMs 4000, replaceOnSameAnchor true.
+  - `show(anchorId, content, { lifetimeMs?, data? })` returns
+    monotonic id; rejects empty / non-string anchor.
+  - `hide(anchorId)` begins fade-out for every match; returns
+    count affected.
+  - `hideById(id)` begins fade-out for one tooltip.
+  - `tick(dtMs)` advances ageMs / remainingMs / fadeOutAge,
+    transitions state (fadeIn -> visible -> fadeOut), updates
+    alpha, removes tips whose fade-out completed.
+  - `forEach(cb)` / `list()` / `byAnchor(anchorId)` defensive
+    snapshots for render consumers.
+  - `count()` / `capacity()`.
+  - `clear()` drops every tooltip; fires onRemoved with reason
+    `'hidden'`.
+  - `dispose()` clears + locks ops.
+- `TooltipState` is `'fadeIn' | 'visible' | 'fadeOut'`. Alpha
+  ramps 0 -> 1 over fadeInMs, holds 1 during visible, ramps
+  1 -> 0 over fadeOutMs.
+- `lifetimeMs: -1` makes a tooltip sticky (visible until manual
+  hide / dispose / clear).
+- `replaceOnSameAnchor: true` (default) begins fade-out on prior
+  tooltips at the same anchor when show() is called. Set to false
+  to stack multiple tooltips per anchor.
+- Capacity-bounded with eviction that prefers an already-fading
+  tooltip; falls back to oldest by post order.
+- All callbacks isolated; throwing onShow / onRemoved cannot
+  destabilize the queue.
+- NaN / Infinity / negative dt are no-ops.
+- `RESOURCE_TOOLTIP_QUEUE` constant.
+
+### Tests
+
+2275 -> 2300 (25 new).
+
+### Backwards compatibility
+
+Pure addition. Pairs with ToastQueue (0.65) for global feed,
+TutorialFlow (0.88) for sequenced step gating, DialogTree (0.61)
+for branching NPC dialog.
+
 ## 0.96.0 - 2026-05-09
 
 **ComboCounter — chain hit counter with reset timer + thresholds.**

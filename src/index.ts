@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.96.0';
+export const LOOM_ENGINE_VERSION = '0.97.0';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -612,6 +612,14 @@ export type {
   ComboThreshold,
   ComboCounterOptions,
 } from './runtime/combo-counter.js';
+// 0.97.0 - anchored tooltip primitive with fade-in/out lifecycle.
+export { TooltipQueue, RESOURCE_TOOLTIP_QUEUE } from './runtime/tooltip-queue.js';
+export type {
+  Tooltip,
+  TooltipState,
+  ShowOptions as TooltipShowOptions,
+  TooltipQueueOptions,
+} from './runtime/tooltip-queue.js';
 export {
   ResourceRegistry,
   createTimeResource,
