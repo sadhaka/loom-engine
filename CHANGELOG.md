@@ -7,6 +7,42 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.86.0 - 2026-05-09
+
+**FactionReputation — per-faction reputation track with tiered
+status.** RPGs want "Kingdom of Eldoria likes you (Friendly),
+Thieves Guild hates you (Hostile)." Reputation is a number per
+faction; tiers are named bands (hostile / unfriendly / neutral /
+friendly / honored by default). Tier flips fire onTierChanged.
+
+This is the first M9 batch-3 (world-feel + tutorial) release.
+
+### Added
+
+- `src/runtime/faction-reputation.ts` - `FactionReputation` class:
+  - `create({ onChanged?, onTierChanged? })`.
+  - `registerFaction({ id, name, tiers?, initialReputation?, minReputation?, maxReputation?, data? })`.
+  - `unregisterFaction` / `has` / `size` / `list`.
+  - `getReputation` / `getTier` (1-based bands, null if no tiers).
+  - `addReputation(id, delta)` / `setReputation(id, value)`. Both
+    clamp to [min, max].
+  - `toSnapshot` / `fromSnapshot` (id -> reputation map).
+  - `dispose()` clears + locks ops.
+- Default tiers: hostile (-1000), unfriendly (-250), neutral (-50),
+  friendly (50), honored (250). Default min/max: -1000 / 1000.
+- `onChanged` fires on every change; `onTierChanged` fires only on
+  tier flips. Both isolated.
+- Tiers sorted internally by `min` ascending.
+- `RESOURCE_FACTION_REPUTATION` constant.
+
+### Tests
+
+2041 -> 2063 (22 new in tests/faction-reputation.test.ts).
+
+### Backwards compatibility
+
+Pure addition.
+
 ## 0.85.0 - 2026-05-09
 
 **HotKeyProfileManager + M9 0.85 milestone — keybinding profile

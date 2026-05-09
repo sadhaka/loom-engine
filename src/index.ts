@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.85.0';
+export const LOOM_ENGINE_VERSION = '0.86.0';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -553,6 +553,14 @@ export type {
   HotKeyProfileManagerOptions,
   HotKeyProfileSnapshot,
 } from './runtime/hotkey-profile.js';
+// 0.86.0 - per-faction reputation track with tiered status.
+export { FactionReputation, RESOURCE_FACTION_REPUTATION } from './runtime/faction-reputation.js';
+export type {
+  FactionTier,
+  FactionSpec,
+  FactionStatus,
+  FactionReputationOptions,
+} from './runtime/faction-reputation.js';
 export {
   ResourceRegistry,
   createTimeResource,
