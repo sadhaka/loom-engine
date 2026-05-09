@@ -7,6 +7,70 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.91.0 - 2026-05-09
+
+**ScreenFader — render-state primitive for fade-to-color overlays.**
+Scene transitions, hit reactions, dramatic narrative beats, and
+tutorial blackouts all share the same shape: an alpha-animated
+full-screen color overlay with a configurable color, duration, and
+easing. The renderer reads `getColor()` + `getAlpha()` each frame
+and draws a fullscreen rect; consumers fire `fadeTo()` / `fadeIn()`
+/ `fadeOut()` from gameplay code without touching the renderer.
+
+This is the first push beyond the M9 0.90 milestone toward the
+1.0 capstone (visual + game-feel + capstone track: 0.91-0.99 +
+1.0.0).
+
+### Added
+
+- `src/runtime/screen-fader.ts` - `ScreenFader` class:
+  - `create({ initialColor?, initialAlpha?, onFadeComplete? })`.
+  - `fadeTo({ color?, durationMs?, targetAlpha?, easing?, data? })`.
+  - `fadeIn(opts?)` / `fadeOut(opts?)` convenience helpers.
+  - `tick(dtMs)` advances the active ramp; fires onFadeComplete
+    exactly once on completion.
+  - `clear()` snaps to alpha 0; `fillOpaque()` snaps to alpha 1.
+  - `getColor()` / `getAlpha()` / `isFading()` reads.
+  - `setColor()` / `setAlpha()` direct overrides (no ramp).
+  - `dispose()` locks ops.
+- Custom easing: caller passes `easing: (t) => number` for ease-in
+  / ease-out / cubic-bezier curves (pairs with engine 0.40 Easings).
+- Color blends linearly between start + target (renderers wanting
+  per-channel curves intercept getColor + their own time read).
+- `data` block on fadeOptions threads through to the
+  onFadeComplete callback so consumers can chain ("fade to black,
+  swap scene, fade back in").
+- durationMs == 0 -> instant snap; durationMs missing or negative
+  falls back to default 500ms.
+- Defensive: NaN / negative dt no-op; alpha clamped to [0, 1] on
+  every input.
+- `FadeDirection` type, `ScreenFaderFadeOptions`,
+  `ScreenFaderOptions` exported.
+- `RESOURCE_SCREEN_FADER` constant.
+
+### Tests
+
+2152 -> 2173 (21 new in tests/screen-fader.test.ts):
+- RESOURCE_SCREEN_FADER stable string; defaults.
+- initialColor / initialAlpha; clamping.
+- fadeTo durationMs=0 instant snap + onFadeComplete fires.
+- tick ramps alpha linearly to target; completes on/after durationMs.
+- fadeIn / fadeOut helpers.
+- color lerps during ramp.
+- custom easing applied.
+- clear / fillOpaque snap + stop ramp.
+- NaN / negative dt no-op.
+- setColor / setAlpha direct + clamping.
+- throwing onFadeComplete isolated.
+- data passthrough on completion.
+- dispose locks ops.
+- Realistic scene transition (out -> swap -> in).
+- Negative durationMs falls back to default 500.
+
+### Backwards compatibility
+
+Pure addition. 0.10-era code compiles unmodified against 0.91.
+
 ## 0.90.0 - 2026-05-09
 
 **AssetVariant + M9 0.90 milestone — per-locale / per-platform

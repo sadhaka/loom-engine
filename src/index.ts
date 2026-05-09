@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.90.0';
+export const LOOM_ENGINE_VERSION = '0.91.0';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -583,6 +583,13 @@ export type {
   AssetVariantSpec,
   AssetVariantOptions,
 } from './runtime/asset-variant.js';
+// 0.91.0 - render-state primitive for fade-to-color overlays.
+export { ScreenFader, RESOURCE_SCREEN_FADER } from './runtime/screen-fader.js';
+export type {
+  FadeDirection,
+  ScreenFaderFadeOptions,
+  ScreenFaderOptions,
+} from './runtime/screen-fader.js';
 export {
   ResourceRegistry,
   createTimeResource,
