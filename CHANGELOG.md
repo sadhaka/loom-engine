@@ -7,6 +7,49 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 1.2.3 - 2026-05-09
+
+**EncounterTable — weighted encounter pools per zone / phase /
+level / tags.** LootTable (0.57) drops items; EncounterTable
+picks ENCOUNTERS the same way: "which mob pack spawns in this
+zone at this time-of-day at this player difficulty level?"
+Filters by zone, phase, level band, and tags - so a single
+declarative table can drive encounters across an entire game.
+
+### Added
+
+- `src/runtime/encounter-table.ts` - `EncounterTable<T>` class
+  (type-generic over the payload):
+  - `create<T>({ rng? })` - default `Math.random`.
+  - `add({ id, zones?, phases?, minLevel?, maxLevel?, tags?, weight?, payload })`
+    - returns false on invalid id / payload.
+  - `remove(id)` / `has(id)` / `size()` / `list()`.
+  - `roll({ zone?, phase?, level?, tags? })` - weighted random
+    pick from filtered entries; returns `null` if no match or
+    total weight 0.
+  - `filter(ctx)` - matching entries without rolling.
+  - `totalWeightFor(ctx)` - sum of matching weights.
+  - `setRng(rng)` - swap the RNG seam.
+  - `clear()` / `dispose()`.
+- Filter rules:
+  - `zones` / `phases` use allow-list semantics (entry's list must
+    contain ctx value; if omitted, no filtering).
+  - `minLevel` / `maxLevel` are inclusive bounds on `ctx.level`.
+  - `tags` use any-match: if entry specifies tags, ctx.tags must
+    overlap.
+- Throwing RNG falls back to `Math.random`.
+- `RESOURCE_ENCOUNTER_TABLE` constant.
+
+### Tests
+
+2617 -> 2639 (22 new).
+
+### Backwards compatibility
+
+Pure addition. Pairs with LootTable (0.57, item drops),
+SpawnDirector (1.2.2, the spawn-rate engine), Entropy (0.17,
+deterministic RNG seam for replays).
+
 ## 1.2.2 - 2026-05-09
 
 **SpawnDirector — declarative spawn rules with rate-limits + caps
