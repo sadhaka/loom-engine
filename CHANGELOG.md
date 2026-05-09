@@ -7,6 +7,51 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 1.1.3 - 2026-05-09
+
+**CameraDirector — cinematic camera sequencer.** CameraController
+(0.41) is the runtime camera (player follow, smooth pan, manual
+drag). CameraDirector is the cinematic counterpart: scripted
+keyframed sequences for boss reveals, death cams, dialogue
+close-ups, scripted cutscenes. Hand off control: when the director
+plays, the consumer reads `getState()` and pushes the snapshot to
+the runtime camera; when `isPlaying()` is false, control returns.
+
+### Added
+
+- `src/runtime/camera-director.ts` - `CameraDirector` class:
+  - `create({ initial? })`. Default initial `{ x: 0, y: 0, zoom: 1, rotation: 0 }`.
+  - `play({ keyframes, speed?, onFinish? })` returns true if
+    accepted (false on empty / disposed).
+  - `tick(dtMs)` advances elapsed; lerps between keyframes per
+    easing; fires onFinish once at end.
+  - `pause()` / `resume()` / `stop()`. `stop()` does NOT fire
+    onFinish; snaps camera back to initial.
+  - `setSpeed(multiplier)` for slow-mo / fast-forward.
+  - `jumpTo(ms)` scrubs to a specific time, clamped to sequence
+    length.
+  - `getState()` returns
+    `{ x, y, zoom, rotation, isPlaying, isPaused, progress, elapsedMs, speed }`.
+  - `isPlaying()` / `isPaused()` / `dispose()`.
+- Easings: `'linear' | 'easeIn' | 'easeOut' | 'easeInOut' | 'step'`.
+- Keyframes are sorted by `atMs` on play; consumer can pass them
+  in any order.
+- Engine ships zero render path - consumer wires the snapshot to
+  whatever camera they have.
+- Throwing onFinish isolated; faults do not destabilize the director.
+- NaN / Infinity / negative dt no-op.
+- `RESOURCE_CAMERA_DIRECTOR` constant.
+
+### Tests
+
+2468 -> 2492 (24 new).
+
+### Backwards compatibility
+
+Pure addition. Pairs with CameraController (0.41), Tween (0.32,
+single-channel easing), CutsceneSequencer (1.1.4 next, broader
+event timeline).
+
 ## 1.1.2 - 2026-05-09
 
 **BehaviorTree — pluggable AI decision tree.** StateMachine (0.51)

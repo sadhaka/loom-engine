@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '1.1.2';
+export const LOOM_ENGINE_VERSION = '1.1.3';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -684,6 +684,15 @@ export type {
   BTActionNode,
   BehaviorTreeOptions,
 } from './runtime/behavior-tree.js';
+// 1.1.3 (Wave 1.1 combat depth) - cinematic camera sequencer.
+export { CameraDirector, RESOURCE_CAMERA_DIRECTOR } from './runtime/camera-director.js';
+export type {
+  EasingName as CameraEasingName,
+  CameraKeyframe,
+  CameraSnapshot,
+  PlayOptions as CameraPlayOptions,
+  CameraDirectorOptions,
+} from './runtime/camera-director.js';
 export {
   ResourceRegistry,
   createTimeResource,
