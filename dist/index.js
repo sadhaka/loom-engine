@@ -8,7 +8,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.60.0';
+export const LOOM_ENGINE_VERSION = '0.61.0';
 export { vec2, vec3, rect, clamp, lerp, smoothstep, approxEq, rectContains, rectIntersects, visibleInView, } from './util/math.js';
 export { rgba, hexToRgba, rgbaToHexString, rgbaToCssString, colorLerp, COLOR_WHITE, COLOR_BLACK, COLOR_TRANSPARENT, COLOR_KNOT_STR, COLOR_KNOT_DEX, COLOR_KNOT_INT, COLOR_KNOT_CENTER, } from './util/color.js';
 export { EntityAllocator, NULL_ENTITY, entityIndex, entityGeneration, makeEntity, } from './entity.js';
@@ -97,6 +97,8 @@ export { InventoryGrid, RESOURCE_INVENTORY_GRID } from './runtime/inventory-grid
 export { StatStack, RESOURCE_STAT_STACK } from './runtime/stat-stack.js';
 // 0.60.0 - replay recorder (deterministic input + tick capture).
 export { ReplayRecorder, RESOURCE_REPLAY_RECORDER } from './runtime/replay-recorder.js';
+// 0.61.0 - branching dialog tree with conditions + actions.
+export { DialogTree, RESOURCE_DIALOG_TREE } from './runtime/dialog-tree.js';
 export { ResourceRegistry, createTimeResource, createVeilBudgetResource, RESOURCE_TIME, RESOURCE_CAMERA, RESOURCE_DEVICE, RESOURCE_VEIL_BUDGET, } from './resources.js';
 // Default systems
 export { SpriteRenderSystem } from './systems/sprite-render-system.js';
