@@ -7,6 +7,22 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 1.7.0 - 2026-05-09 (Wave 1.7 networking opens)
+
+**PresenceTracker — online roster with heartbeat + auto-timeout.**
+"Who is online right now?" Tracks per-key last-heartbeat ms;
+entries auto-expire after a configurable timeout. Foundation for
+LobbyState (1.7.1), AuthorityHandoff (1.7.3), ChatChannel (1.7.5
+milestone).
+
+Public surface: `create({ timeoutMs?, maxEntries? })`,
+`heartbeat(id, data, now)`, `tick(now)` (sweeps + returns expired
+ids), `get(id)`, `has(id)`, `list()`, `count()`, `staleCount(now)`,
+`remove(id)`, `clear()`, `setTimeoutMs(ms)`. maxEntries triggers
+LRU eviction by lastSeenAt on insert.
+
+Tests 3218 -> 3234 (16 new). Pure addition.
+
 ## 1.6.5 - 2026-05-09 (Wave 1.6 procgen MILESTONE)
 
 **WorldSeed — single-seed reproducible worlds.**
