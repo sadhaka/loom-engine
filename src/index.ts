@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.87.0';
+export const LOOM_ENGINE_VERSION = '0.88.0';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -564,6 +564,13 @@ export type {
 // 0.87.0 - N-mob spawn with budget cap.
 export { CrowdSpawner, RESOURCE_CROWD_SPAWNER } from './runtime/crowd-spawner.js';
 export type { SpawnDef, CrowdSpawnerOptions } from './runtime/crowd-spawner.js';
+// 0.88.0 - sequenced UI hints with anchor-target tracking.
+export { TutorialFlow, RESOURCE_TUTORIAL_FLOW } from './runtime/tutorial-flow.js';
+export type {
+  TutorialStep,
+  TutorialPersistAdapter,
+  TutorialFlowOptions,
+} from './runtime/tutorial-flow.js';
 export {
   ResourceRegistry,
   createTimeResource,

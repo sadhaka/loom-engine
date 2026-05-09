@@ -7,6 +7,39 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.88.0 - 2026-05-09
+
+**TutorialFlow — sequenced UI hints with anchor-target tracking.**
+New-player tutorials are a sequence of hints that point at parts
+of the UI. Each step has an anchor (a UI element id), a message,
+and a condition that gates when the step should appear.
+TutorialFlow owns the sequence + persistence (so first-time
+tutorials don't replay every session).
+
+### Added
+
+- `src/runtime/tutorial-flow.ts` - `TutorialFlow` class:
+  - `create({ steps, persist?, onStepChanged?, onFlowComplete? })`.
+  - `currentStep()` - first incomplete step whose condition passes.
+    Pumps onStepChanged + onShow on changes.
+  - `advance()` - mark current complete; fire onComplete + advance.
+  - `completeStep(id)` - mark a specific step complete (idempotent).
+  - `skipAll()` / `restart()`.
+  - `isComplete` / `isCompleted(id)` / `completedIds()`.
+  - `saveLocal()` / `loadLocal()` via persist adapter.
+  - `dispose()` clears + locks ops.
+- Conditions throwing are treated as false (step skipped).
+- All callbacks isolated.
+- `RESOURCE_TUTORIAL_FLOW` constant.
+
+### Tests
+
+2086 -> 2106 (20 new in tests/tutorial-flow.test.ts).
+
+### Backwards compatibility
+
+Pure addition.
+
 ## 0.87.0 - 2026-05-09
 
 **CrowdSpawner — N-mob spawn with budget cap.** Open zones, swarm
