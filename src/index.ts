@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.73.0';
+export const LOOM_ENGINE_VERSION = '0.74.0';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -473,6 +473,19 @@ export type {
   ActiveBuff,
   BuffLifecycleOptions,
 } from './runtime/buff-lifecycle.js';
+// 0.74.0 - recipe registry + atomic ingredient consume / output produce on InventoryGrid.
+export { Crafting, RESOURCE_CRAFTING } from './runtime/crafting.js';
+export type {
+  Recipe,
+  RecipeIngredient,
+  RecipeOutput,
+  CraftFailureReason,
+  CraftSuccess,
+  CraftFailure,
+  CraftResult,
+  IInventoryAdapter,
+  CraftingOptions,
+} from './runtime/crafting.js';
 export {
   ResourceRegistry,
   createTimeResource,

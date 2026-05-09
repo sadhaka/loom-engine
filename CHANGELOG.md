@@ -7,6 +7,72 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.74.0 - 2026-05-09
+
+**Crafting — recipe matcher + ingredient consumption + output
+production.** Recipes ("iron + handle = sword" with maybe an "anvil"
+tool) are everywhere in survival / RPG / hub-MMO worlds. This
+module is the recipe registry plus the atomic
+consume-then-produce step on top of an InventoryGrid (0.58).
+
+This is the fourth and final M9-opener release before asking Misha
+for the next batch of candidates.
+
+### Added
+
+- `src/runtime/crafting.ts` - `Crafting` class:
+  - `create({ inventory, onCrafted?, onFailed? })`. The `inventory`
+    is structural - any object with `totalOf` / `has` / `add` /
+    `remove` matching `IInventoryAdapter` works.
+  - `registerRecipe(recipe)` adds; rejects duplicates and invalid
+    recipes (empty id, empty outputs, non-positive counts, etc.).
+  - `unregisterRecipe(id)`.
+  - `hasRecipe(id)` / `getRecipe(id)` / `listRecipes()` (defensive
+    copies).
+  - `recipesByOutput(itemId)` finds every recipe whose outputs
+    include `itemId`.
+  - `canCraft(recipe | id)` true when ingredients + tools present.
+  - `craft(recipe | id)` atomic consume-then-produce. On
+    `output_overflow`, partial outputs are removed AND ingredients
+    are re-added (full rollback) before returning the failure.
+  - `dispose()` clears recipes + locks ops.
+- `Recipe` shape: `{ id, ingredients[], outputs[], tools?, data? }`.
+  Tools must be PRESENT but are NOT consumed.
+- `CraftResult` is a discriminated union: `{ ok: true, recipe }`
+  on success, `{ ok: false, reason, missing? }` on failure.
+- `CraftFailureReason`: `unknown_recipe` / `missing_ingredients`
+  / `missing_tool` / `output_overflow`.
+- `onCrafted(recipe)` fires on success; `onFailed(recipe?, reason, missing?)`
+  fires on every failure path. Both isolated.
+- `RESOURCE_CRAFTING` constant.
+
+### Tests
+
+1774 -> 1796 (22 new in tests/crafting.test.ts):
+- RESOURCE constant.
+- registerRecipe accept / duplicate / invalid rejection.
+- unregisterRecipe drops + clears output index.
+- getRecipe / listRecipes defensive copies.
+- recipesByOutput finds by output itemId.
+- canCraft true / false on ingredients + tools.
+- craft success path consumes + produces; tool not consumed;
+  fires onCrafted.
+- failure reasons: missing_ingredients / missing_tool /
+  unknown_recipe / output_overflow.
+- atomic - missing ingredients leaves inventory untouched;
+  output_overflow rolls back partial outputs AND restores
+  consumed ingredients.
+- recipe object can be passed directly (no prior register required).
+- Tools are not consumed across multiple crafts.
+- dispose clears recipes + locks ops.
+- Realistic forge example (3 sword crafts then exhaustion).
+- Multi-output recipe (1 log -> 2 planks).
+- Stackable outputs merge into existing stacks.
+
+### Backwards compatibility
+
+Pure addition.
+
 ## 0.73.0 - 2026-05-09
 
 **BuffLifecycle — duration-tracked StatStack modifiers with
