@@ -7,6 +7,21 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 1.6.3 - 2026-05-09 (Wave 1.6 procgen)
+
+**DungeonGenerator — BSP rooms-and-corridors layout.**
+Produces a 2D tile map (0 = wall, 1 = floor) plus the room +
+corridor lists that built it. Uses Binary Space Partitioning to
+recursively split the map, places one room per leaf, connects
+sibling rooms via L-shaped corridors. Standard roguelike pattern.
+
+Public surface: `create({ seed?, width, height, minRoomSize?,
+maxRoomSize?, minLeafSize?, maxDepth? })`, `generate()` ->
+`{ width, height, tiles: Uint8Array, rooms[], corridors[] }`.
+
+Tests 3170 -> 3184 (14 new). Includes a flood-fill connectivity
+test verifying every room is reachable from rooms[0]. Pure addition.
+
 ## 1.6.2 - 2026-05-09 (Wave 1.6 procgen)
 
 **VoronoiPartition — 2D Voronoi region partitioning.**

@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '1.6.2';
+export const LOOM_ENGINE_VERSION = '1.6.3';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -941,6 +941,14 @@ export type {
   VoronoiSite,
   DistanceFn,
 } from './runtime/voronoi-partition.js';
+// 1.6.3 (Wave 1.6 procgen) - BSP rooms-and-corridors dungeon layout.
+export { DungeonGenerator, RESOURCE_DUNGEON_GENERATOR } from './runtime/dungeon-generator.js';
+export type {
+  DungeonGeneratorOptions,
+  DungeonResult,
+  DungeonRoom,
+  DungeonCorridor,
+} from './runtime/dungeon-generator.js';
 export {
   ResourceRegistry,
   createTimeResource,
