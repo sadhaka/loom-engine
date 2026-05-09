@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '1.2.5';
+export const LOOM_ENGINE_VERSION = '1.3.0';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -763,6 +763,14 @@ export type {
   TierScaleFn,
   LootTierOptions,
 } from './runtime/loot-tier.js';
+// 1.3.0 (Wave 1.3 AI persona depth opens) - NPC personality trait ledger.
+export { PersonaTrait, RESOURCE_PERSONA_TRAIT } from './runtime/persona-trait.js';
+export type {
+  TraitSpec,
+  CharacterTraitValue,
+  FindOptions as PersonaFindOptions,
+  PersonaTraitOptions,
+} from './runtime/persona-trait.js';
 export {
   ResourceRegistry,
   createTimeResource,

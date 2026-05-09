@@ -7,6 +7,58 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 1.3.0 - 2026-05-09
+
+**Wave 1.3 AI persona depth opens — PersonaTrait: NPC personality
+trait ledger with weighted expression + decay.** The most
+"uniquely Loom" wave: making NPCs feel like PEOPLE, not state
+machines. PersonaTrait is the foundation - a weighted trait
+vector per character (curiosity, courage, greed, suspicion, ...)
+that biases their dialog, AI choices, and reactions. Traits can
+decay over time, be reinforced by experiences, and be queried
+for "is this NPC the type to ___?".
+
+### Added
+
+- `src/runtime/persona-trait.ts` - `PersonaTrait` class:
+  - `create({ valueClamp?, onChange? })`. Default clamp `[-1, 1]`.
+  - `defineTrait({ id, baseline?, decayHalfLifeMs?, data? })` -
+    register a trait spec. Default baseline 0 / no decay.
+  - `set(characterId, traitId, value)` - direct set; auto-defines
+    spec on first use.
+  - `adjust(characterId, traitId, delta)` - additive update;
+    treats missing entry as 0.
+  - `getValue(characterId, traitId)` - returns clamped value.
+  - `getRawValue(characterId, traitId)` - un-clamped.
+  - `has` / `remove` per (character, trait).
+  - `forCharacter(characterId)` / `forTrait(traitId)` - bulk reads.
+  - `findHighest(traitId, { minLevel?, maxLevel?, characterIds? })`
+    / `findLowest(...)` - "which NPC is bravest / greediest".
+  - `tick(dtMs)` - exponential decay toward baseline using
+    `decayHalfLifeMs`.
+  - `removeTraitSpec(id)` - drops the spec AND all entries for
+    that trait.
+  - `traitIds` / `traitSpecCount` / `entryCount` / `list` /
+    `clear` / `dispose`.
+- Decay model: `value(t+dt) = baseline + (value(t) - baseline) *
+  0.5^(dt / halfLife)`. Exponential, baseline-anchored, smooth.
+- `valueClamp` option lets consumers normalize differently
+  (e.g. `[0, 100]` for stat-style traits).
+- All callbacks isolated; throwing onChange cannot destabilize
+  the ledger.
+- `RESOURCE_PERSONA_TRAIT` constant.
+
+### Tests
+
+2690 -> 2721 (31 new).
+
+### Backwards compatibility
+
+Pure addition. Pairs with EmotionState (1.3.2 next, mood gauges -
+shorter timescale than traits), RelationshipGraph (1.3.1 next,
+per-pair bonds), DialogTree (0.61, often gated by trait
+thresholds), BehaviorTree (1.1.2, uses traits in conditions).
+
 ## 1.2.5 - 2026-05-09
 
 **🟩 Wave 1.2 milestone — LootTier: gear-quality tiered drop
