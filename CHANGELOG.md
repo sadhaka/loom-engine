@@ -7,6 +7,22 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 1.6.4 - 2026-05-09 (Wave 1.6 procgen)
+
+**BiomeMixer — Whittaker-style biome classifier.**
+Each biome is a rectangle in (elevation, moisture) space. Pass
+two scalar samples in, get the matching biome id (or fallback) out.
+First-match-in-insertion-order, so layered cases work naturally.
+Pairs with NoiseField (1.6.1) - feed elevation + moisture noise
+fields through it to label a tile map.
+
+Public surface: `create<T>()`, `defineBiome({ id, minElev?, maxElev?,
+minMoist?, maxMoist?, data? })`, `removeBiome(id)`, `setFallback(id)`,
+`classify(elev, moist)`, `classifyFull(elev, moist)`, `list()`,
+`count()`, `hasBiome(id)`, `clear()`.
+
+Tests 3184 -> 3199 (15 new). Pure addition.
+
 ## 1.6.3 - 2026-05-09 (Wave 1.6 procgen)
 
 **DungeonGenerator — BSP rooms-and-corridors layout.**
