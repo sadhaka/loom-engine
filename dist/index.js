@@ -8,7 +8,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '1.7.0';
+export const LOOM_ENGINE_VERSION = '1.7.1';
 export { vec2, vec3, rect, clamp, lerp, smoothstep, approxEq, rectContains, rectIntersects, visibleInView, } from './util/math.js';
 export { rgba, hexToRgba, rgbaToHexString, rgbaToCssString, colorLerp, COLOR_WHITE, COLOR_BLACK, COLOR_TRANSPARENT, COLOR_KNOT_STR, COLOR_KNOT_DEX, COLOR_KNOT_INT, COLOR_KNOT_CENTER, } from './util/color.js';
 export { EntityAllocator, NULL_ENTITY, entityIndex, entityGeneration, makeEntity, } from './entity.js';
@@ -256,6 +256,9 @@ export { WorldSeed, RESOURCE_WORLD_SEED } from './runtime/world-seed.js';
 // 1.7.0 (Wave 1.7 networking depth opens) - PresenceTracker: online
 // roster with heartbeat + auto-timeout.
 export { PresenceTracker, RESOURCE_PRESENCE_TRACKER } from './runtime/presence-tracker.js';
+// 1.7.1 (Wave 1.7 networking) - LobbyState: pre-game waiting room
+// with ready states + host election.
+export { LobbyState, RESOURCE_LOBBY_STATE } from './runtime/lobby-state.js';
 export { ResourceRegistry, createTimeResource, createVeilBudgetResource, RESOURCE_TIME, RESOURCE_CAMERA, RESOURCE_DEVICE, RESOURCE_VEIL_BUDGET, } from './resources.js';
 // Default systems
 export { SpriteRenderSystem } from './systems/sprite-render-system.js';
