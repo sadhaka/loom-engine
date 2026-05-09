@@ -7,6 +7,53 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 1.4.1 - 2026-05-09
+
+**AudioDuck — automatic music ducking when high-priority SFX
+fires.** Classic mixer trick: when a critical sound fires (boss
+roar, dialog line, story beat), the music + ambient bed
+automatically dip in volume so the SFX stands out, then smoothly
+restore. AudioDuck owns that timeline: trigger a duck event with
+target channels, attack / release / hold timing, and ducked
+volume. Mixer reads each channel's current multiplier per frame
+and applies it.
+
+### Added
+
+- `src/runtime/audio-duck.ts` - `AudioDuck` class:
+  - `create({})`.
+  - `registerChannel({ id, baseVolume?, data? })`.
+  - `setBaseVolume(id, volume)` / `removeChannel(id)` /
+    `hasChannel(id)` / `channelCount`.
+  - `triggerDuck({ id, durationMs?, attackMs?, releaseMs?, duckTo?, channels? })`.
+    Defaults: attack 100ms, release 500ms, duckTo 0.3, all
+    channels.
+  - `cancelDuck(eventId)` - manually transition to release.
+  - `hasEvent(eventId)` / `eventCount`.
+  - `getChannelMultiplier(channelId)` - current duck multiplier
+    (1 = unducked).
+  - `getChannel(channelId)` returns
+    `{ id, volume, baseVolume, isDucking, data? }`.
+  - `tick(dtMs)` - advance phases (attack -> hold -> release ->
+    done; auto-removes done events).
+  - `forEach(cb)` / `list()` / `clear()` / `dispose()`.
+- Multiple ducks on one channel: deepest (lowest multiplier) wins.
+- `durationMs: 0` = manual-cancel-only (holds at duckTo until
+  cancelDuck is called).
+- All callbacks isolated.
+- NaN / Infinity / negative dt no-op.
+- `RESOURCE_AUDIO_DUCK` constant.
+
+### Tests
+
+2875 -> 2899 (24 new).
+
+### Backwards compatibility
+
+Pure addition. Pairs with AmbientLayerMixer (1.4.0, the layered
+ambient bed), MusicPlaylist (0.95, music tracks), AudioCueQueue
+(0.94, the SFX side that triggers ducks).
+
 ## 1.4.0 - 2026-05-09
 
 **Wave 1.4 audio cinematic depth opens — AmbientLayerMixer:
