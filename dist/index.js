@@ -8,7 +8,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.67.0';
+export const LOOM_ENGINE_VERSION = '0.68.0';
 export { vec2, vec3, rect, clamp, lerp, smoothstep, approxEq, rectContains, rectIntersects, visibleInView, } from './util/math.js';
 export { rgba, hexToRgba, rgbaToHexString, rgbaToCssString, colorLerp, COLOR_WHITE, COLOR_BLACK, COLOR_TRANSPARENT, COLOR_KNOT_STR, COLOR_KNOT_DEX, COLOR_KNOT_INT, COLOR_KNOT_CENTER, } from './util/color.js';
 export { EntityAllocator, NULL_ENTITY, entityIndex, entityGeneration, makeEntity, } from './entity.js';
@@ -111,6 +111,8 @@ export { ToastQueue, RESOURCE_TOAST_QUEUE } from './runtime/toast-queue.js';
 export { computeDamage, RESOURCE_DAMAGE_FORMULA } from './runtime/damage-formula.js';
 // 0.67.0 - undo / redo stack with command pattern.
 export { ActionHistory, RESOURCE_ACTION_HISTORY } from './runtime/action-history.js';
+// 0.68.0 - generator-based multi-tick coroutine.
+export { Coroutine, waitMs, waitUntil, waitFrames, RESOURCE_COROUTINE, } from './runtime/coroutine.js';
 export { ResourceRegistry, createTimeResource, createVeilBudgetResource, RESOURCE_TIME, RESOURCE_CAMERA, RESOURCE_DEVICE, RESOURCE_VEIL_BUDGET, } from './resources.js';
 // Default systems
 export { SpriteRenderSystem } from './systems/sprite-render-system.js';
