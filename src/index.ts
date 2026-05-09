@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.60.0';
+export const LOOM_ENGINE_VERSION = '0.61.0';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -361,6 +361,15 @@ export type {
   ReplayRecorderOptions,
   RecorderMode,
 } from './runtime/replay-recorder.js';
+// 0.61.0 - branching dialog tree with conditions + actions.
+export { DialogTree, RESOURCE_DIALOG_TREE } from './runtime/dialog-tree.js';
+export type {
+  DialogChoice,
+  DialogNode,
+  DialogTreeOptions,
+  Predicate as DialogPredicate,
+  Action as DialogAction,
+} from './runtime/dialog-tree.js';
 export {
   ResourceRegistry,
   createTimeResource,

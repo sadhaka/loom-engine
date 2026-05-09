@@ -7,6 +7,59 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.61.0 - 2026-05-09
+
+**DialogTree - branching dialog with conditions + actions.**
+Most dialog systems are nodes with text + a list of choices, each
+choice has an optional `if` predicate and optional `do` action,
+and points to a next node. DialogTree is that machinery as a
+generic state container - the engine doesn't know what your
+predicates or actions do, only that they're functions you
+registered by name.
+
+### Added
+
+- `src/runtime/dialog-tree.ts` - `DialogTree` class:
+  - `create({ start, nodes, predicates?, actions?, onEnd? })`.
+  - Nodes: `{ text, choices, onEnter? }`. Choices:
+    `{ label, next, if?, do?, data? }`.
+  - `start()` / `end()` / `isActive()` / `currentId()` / `current()`.
+  - `visibleChoices()` filters by registered predicates; missing
+    or throwing predicates hide their choice (defensive).
+  - `choose(index)` — picks from visibleChoices; fires `do`
+    action with optional `data`; transitions to `next`. Unknown
+    `next` ends the dialog (fires onEnd).
+  - `setPredicate(name, fn)` / `setAction(name, fn)` — register
+    at runtime so the dialog catalog can load before quest /
+    skill systems are wired.
+  - Throwing actions don't block transitions; throwing onEnter
+    isolated.
+  - `dispose()` locks subsequent ops.
+- `DialogChoice`, `DialogNode`, `DialogTreeOptions`,
+  `DialogPredicate`, `DialogAction` types exported.
+- `RESOURCE_DIALOG_TREE` constant.
+
+### Tests
+
+1492 -> 1510 (18 new in tests/dialog-tree.test.ts):
+- RESOURCE_DIALOG_TREE stable string.
+- create requires start + matching node.
+- starts inactive; start() activates start node.
+- visibleChoices: all when no predicates; predicates filter;
+  missing/throwing predicate hides.
+- choose advances; fires action with data; throwing action does
+  not block; unknown next ends + fires onEnd; bad index returns
+  false; before-start returns false.
+- onEnter fires on node entry.
+- setPredicate / setAction at runtime.
+- end() terminates; double-end no-op.
+- dispose locks ops.
+- Realistic quest-offer scenario.
+
+### Backwards compatibility
+
+Pure addition.
+
 ## 0.60.0 - 2026-05-09
 
 **ReplayRecorder + 0.60 milestone - deterministic input + tick
