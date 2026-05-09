@@ -51,7 +51,7 @@ test('engine version constant agrees with package.json', () => {
   // Audit L-01 (0.10.0): the constant drifted from package.json after
   // the productization bump. Pin both together; bump in the same
   // commit when cutting a release.
-  assert.equal(LOOM_ENGINE_VERSION, '1.3.2');
+  assert.equal(LOOM_ENGINE_VERSION, '1.3.3');
 });
 
 test('math: clamp + lerp + approxEq', () => {

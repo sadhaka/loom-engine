@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '1.3.2';
+export const LOOM_ENGINE_VERSION = '1.3.3';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -788,6 +788,16 @@ export type {
   DominantEmotion,
   EmotionStateOptions,
 } from './runtime/emotion-state.js';
+// 1.3.3 (Wave 1.3 AI persona depth) - voice-line scheduler for DialogTree nodes.
+export { DialogVoice, RESOURCE_DIALOG_VOICE } from './runtime/dialog-voice.js';
+export type {
+  VoiceMarker,
+  VoiceLine,
+  VoiceLineState,
+  PlayLineOptions,
+  QueueOptions as DialogVoiceQueueOptions,
+  DialogVoiceOptions,
+} from './runtime/dialog-voice.js';
 export {
   ResourceRegistry,
   createTimeResource,

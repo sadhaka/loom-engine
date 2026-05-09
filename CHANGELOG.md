@@ -7,6 +7,56 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 1.3.3 - 2026-05-09
+
+**DialogVoice — voice-line scheduler for DialogTree nodes.**
+DialogTree (0.61) handles BRANCHING (which line plays next).
+DialogVoice handles AUDIO + TIMING: each dialog node maps to a
+voice cue id with a duration and inline markers (phonemes for
+lip-sync, gesture triggers, emote shifts, scene beats). Plays
+lines, manages a queue, supports interruption, fires markers as
+time passes.
+
+### Added
+
+- `src/runtime/dialog-voice.ts` - `DialogVoice` class:
+  - `create({})`.
+  - `registerLine({ nodeId, cueId, durationMs, markers?, data? })`
+    - markers auto-sorted by atMs at registration.
+  - `unregisterLine(nodeId)` / `hasLine(nodeId)` / `getLine(nodeId)`
+    / `lineCount`.
+  - `play(nodeId, { speed?, onMarker?, onLineEnd?, autoAdvance? })`
+    - replaces current line if any.
+  - `playQueue({ nodeIds, ... })` - first plays now; rest queue;
+    auto-advances on line end (unless autoAdvance: false).
+  - `enqueue(nodeId, opts?)` - add to existing queue.
+  - `interrupt()` - stops current + clears queue. Does NOT fire
+    onLineEnd.
+  - `pause()` / `resume()`.
+  - `getCurrent()` returns `VoiceLineState | null`.
+  - `tick(dtMs)` - advances elapsed; fires markers as crossed;
+    fires onLineEnd at end; auto-advances to queue next.
+  - `isPlaying` / `isPaused` / `queueLength` / `clear` / `dispose`.
+- `VoiceMarker { atMs, kind, payload? }` - markers fire ONCE per
+  play; kind is opaque to engine ('phoneme' / 'gesture' / 'emote'
+  / 'beat' / consumer-defined).
+- Engine ships zero audio: consumer reads `getCurrent()` /
+  handles `onLineEnd` and routes `cueId` to AudioCueQueue (0.94)
+  or other audio system.
+- All callbacks isolated.
+- NaN / Infinity / negative dt no-op.
+- `RESOURCE_DIALOG_VOICE` constant.
+
+### Tests
+
+2780 -> 2803 (23 new).
+
+### Backwards compatibility
+
+Pure addition. Pairs with DialogTree (0.61, branching),
+AudioCueQueue (0.94, the actual audio playback), CutsceneSequencer
+(1.1.4, broader scripted timeline), DialogChoiceHistory (0.89).
+
 ## 1.3.2 - 2026-05-09
 
 **EmotionState — per-character mood / fear / anger / joy gauges
