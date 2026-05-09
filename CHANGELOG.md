@@ -7,6 +7,23 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 1.6.2 - 2026-05-09 (Wave 1.6 procgen)
+
+**VoronoiPartition — 2D Voronoi region partitioning.**
+Pick N seed points in a rectangle; for any (x, y), the "site" is
+whichever seed is nearest. Result: tiling of the rectangle into
+N polygonal regions. Used for biome borders, district maps,
+fault lines, region boundaries on a generated world.
+
+Public surface: `create({ seed?, width, height, count, distance?,
+sites? })`, `nearestSite(x, y)`, `twoNearest(x, y)`, `onBoundary(x, y, eps)`,
+`sites()`, `count()`, plus `getWidth / getHeight / getDistance`.
+Distance metrics: `'euclidean'` (default, squared internally) /
+`'manhattan'` / `'chebyshev'`. Brute-force O(N) per query - fine for
+the 32-128 site range typical of region maps.
+
+Tests 3155 -> 3170 (15 new). Pure addition.
+
 ## 1.6.1 - 2026-05-09 (Wave 1.6 procgen)
 
 **NoiseField — deterministic 2D fractal noise (multi-octave).**

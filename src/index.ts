@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '1.6.1';
+export const LOOM_ENGINE_VERSION = '1.6.2';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -934,6 +934,13 @@ export type {
 // 1.6.1 (Wave 1.6 procgen) - deterministic 2D fractal noise field.
 export { NoiseField, RESOURCE_NOISE_FIELD } from './runtime/noise-field.js';
 export type { NoiseFieldOptions } from './runtime/noise-field.js';
+// 1.6.2 (Wave 1.6 procgen) - Voronoi region partitioning.
+export { VoronoiPartition, RESOURCE_VORONOI_PARTITION } from './runtime/voronoi-partition.js';
+export type {
+  VoronoiOptions,
+  VoronoiSite,
+  DistanceFn,
+} from './runtime/voronoi-partition.js';
 export {
   ResourceRegistry,
   createTimeResource,
