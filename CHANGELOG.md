@@ -7,6 +7,37 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.83.0 - 2026-05-09
+
+**EventLog — structured replay-friendly event log.** Different
+shape from LogRingBuffer (0.50): typed payloads instead of
+severity-filtered text. Used for recording game events (loot drop /
+boss spawn / quest completion) so replays / analytics / network
+sync can rebuild the timeline.
+
+### Added
+
+- `src/runtime/event-log.ts` - `EventLog<T>` class:
+  - `create({ capacity? })` (default 10000).
+  - `append(type, payload)` returns assigned monotonic seq.
+  - `bySeq(seq)` / `byType(type)` / `filter(pred)` / `list()` /
+    `forEach(cb)`.
+  - `clear()` / `size()` / `capacity()` / `highWaterMark()`.
+  - `toSnapshot()` / `fromSnapshot(records)` save / load / network.
+    fromSnapshot continues numbering past restored max.
+  - `dispose()` clears + locks ops.
+- Capacity overflow evicts oldest entries.
+- Predicates / forEach callbacks isolated.
+- `RESOURCE_EVENT_LOG` constant.
+
+### Tests
+
+1976 -> 1998 (22 new in tests/event-log.test.ts).
+
+### Backwards compatibility
+
+Pure addition.
+
 ## 0.82.0 - 2026-05-09
 
 **ThresholdTrigger — value-crossing event emitter.** "When HP drops

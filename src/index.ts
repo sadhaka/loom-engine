@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.82.0';
+export const LOOM_ENGINE_VERSION = '0.83.0';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -535,6 +535,9 @@ export type {
 // 0.82.0 - value-crossing threshold trigger with hysteresis.
 export { ThresholdTrigger, RESOURCE_THRESHOLD_TRIGGER } from './runtime/threshold-trigger.js';
 export type { ThresholdSpec, TriggerDirection } from './runtime/threshold-trigger.js';
+// 0.83.0 - structured replay-friendly event log.
+export { EventLog, RESOURCE_EVENT_LOG } from './runtime/event-log.js';
+export type { EventRecord, EventLogOptions } from './runtime/event-log.js';
 export {
   ResourceRegistry,
   createTimeResource,
