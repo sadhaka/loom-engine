@@ -7,6 +7,78 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 1.2.5 - 2026-05-09
+
+**🟩 Wave 1.2 milestone — LootTier: gear-quality tiered drop
+pools.** LootTable (0.57) is a flat weighted pool: roll once, get
+an item. LootTier is the diablo / borderlands / Path of Exile
+pattern: items belong to tiers (common / uncommon / rare / epic /
+legendary), and drops are TWO weighted rolls — first pick the
+tier per-context, then pick an item within that tier. Plus tier
+scaling so high-level zones drop rares more often.
+
+### Added
+
+- `src/runtime/loot-tier.ts` - `LootTier<T>` class
+  (type-generic over the per-item payload):
+  - `create<T>({ rng?, seed? })`. Default seeded mulberry32 PRNG.
+  - **Tier management**:
+    - `defineTier({ id, weight? })` - register a tier (default
+      weight 1).
+    - `removeTier(id)` - drops the tier and ALL items in it.
+    - `hasTier` / `tierIds` / `tierCount`.
+  - **Item management**:
+    - `addItem({ id, tier, weight?, tags?, payload })` - rejects
+      if tier not defined. Re-adding same id moves it between
+      tiers.
+    - `removeItem` / `hasItem` / `size` / `list` / `itemsByTier`.
+  - **Tier scaling**:
+    - `setTierScaleFn((tierId, ctx) => weightMultiplier)` - dynamic
+      weights based on level / tags / arbitrary ctx. Throwing fn
+      falls back to weight 1.
+    - `effectiveTierWeights(ctx)` - resolved weights for diagnostics.
+  - **Rolling**:
+    - `rollTier(ctx?)` - returns tier id or null.
+    - `rollItem(ctx?)` - tier roll then item roll; returns
+      `DropResult { tier, id, payload, tags? }` or null.
+    - `rollItems(count, ctx?)` - independent rolls (with
+      replacement).
+    - `rollItemsUnique(count, ctx?)` - without replacement; caps
+      at pool size.
+    - `ctx.tier` forces a specific tier; `ctx.tags` filters items
+      with any-match overlap; `ctx.requireTagMatch: true`
+      excludes untagged items when tags filter set.
+  - `setRng(rng)` / `clear()` / `dispose()`.
+- `RESOURCE_LOOT_TIER` constant.
+
+### Tests
+
+2665 -> 2690 (25 new).
+
+### Backwards compatibility
+
+Pure addition. Pairs with LootTable (0.57, flat pools),
+MerchantStock (1.2.4), SpawnDirector (1.2.2), Entropy (0.17, RNG
+seam).
+
+### 🟩 Milestone — Wave 1.2 world / economy depth complete
+
+**6 versions shipped (1.2.0 → 1.2.5)**: PathfindingCache (A*
+memoization), RegionGraph (zone topology + traversal),
+SpawnDirector (declarative spawn rules + caps), EncounterTable
+(weighted encounter pools), MerchantStock (restocking shop
+inventory + dynamic pricing), LootTier (tiered drop pools with
+scaling).
+
+Together these unlock: full world-graph navigation across zones,
+declarative population control with budgets, content-driven
+encounter design across phases, economy systems with faction-priced
+shops, and Diablo-style item rarity tiers with level scaling.
+
+Wave 1.3 (AI persona depth) opens next: PersonaTrait,
+RelationshipGraph, EmotionState, DialogVoice, SchedulePlan,
+NarrativeMemory (1.3 milestone).
+
 ## 1.2.4 - 2026-05-09
 
 **MerchantStock — restocking shop inventory with caps + dynamic

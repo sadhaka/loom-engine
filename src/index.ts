@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '1.2.4';
+export const LOOM_ENGINE_VERSION = '1.2.5';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -753,6 +753,16 @@ export type {
   SellResult,
   MerchantStockOptions,
 } from './runtime/merchant-stock.js';
+// 1.2.5 CAPSTONE (Wave 1.2 world depth milestone) - tiered loot pools.
+export { LootTier, RESOURCE_LOOT_TIER } from './runtime/loot-tier.js';
+export type {
+  TierSpec,
+  LootItem,
+  DropResult,
+  RollContext as LootRollContext,
+  TierScaleFn,
+  LootTierOptions,
+} from './runtime/loot-tier.js';
 export {
   ResourceRegistry,
   createTimeResource,
