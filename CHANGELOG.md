@@ -7,6 +7,22 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 1.7.1 - 2026-05-09 (Wave 1.7 networking)
+
+**LobbyState — pre-game waiting room with ready states.**
+Players join, mark ready, leave, get kicked. Lobby starts when
+minSize is met AND every member is ready. First-joiner becomes
+host; on host-leave, the next-oldest member is auto-promoted.
+Optional per-member timeout sweeps via `tick(now)`.
+
+Public surface: `create({ id, minSize?, maxSize?, hostId?,
+memberTimeoutMs? })`, `join / leave / kick / markReady / touch /
+tick / canStart / start / end / setHost`. State machine: waiting
+-> started -> ended.
+
+Tests 3234 -> 3252 (18 new). Pure addition. Pairs with
+PresenceTracker (1.7.0) for member-timeout heartbeats.
+
 ## 1.7.0 - 2026-05-09 (Wave 1.7 networking opens)
 
 **PresenceTracker — online roster with heartbeat + auto-timeout.**

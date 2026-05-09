@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '1.7.0';
+export const LOOM_ENGINE_VERSION = '1.7.1';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -969,6 +969,10 @@ export type {
 // roster with heartbeat + auto-timeout.
 export { PresenceTracker, RESOURCE_PRESENCE_TRACKER } from './runtime/presence-tracker.js';
 export type { PresenceEntry, PresenceOptions } from './runtime/presence-tracker.js';
+// 1.7.1 (Wave 1.7 networking) - LobbyState: pre-game waiting room
+// with ready states + host election.
+export { LobbyState, RESOURCE_LOBBY_STATE } from './runtime/lobby-state.js';
+export type { LobbyMember, LobbyOptions, LobbyStatus } from './runtime/lobby-state.js';
 export {
   ResourceRegistry,
   createTimeResource,
