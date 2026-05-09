@@ -7,6 +7,42 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.81.0 - 2026-05-09
+
+**Quadtree — 2D broadphase spatial index.** SpatialHash (0.30) is
+fast for evenly distributed entities at a known cell size, but
+sparse / clustered worlds (huge open zones with packed cities,
+scattered loot fields) chew memory or scan irrelevant cells.
+Quadtree adapts: leaves subdivide only where entities concentrate,
+queries skip large empty quadrants in O(log n) instead of O(cells).
+
+### Added
+
+- `src/runtime/quadtree.ts` - `Quadtree` class:
+  - `create({ bounds, maxItemsPerNode?, maxDepth? })`. Defaults
+    8 items per node, depth 6.
+  - `insert(id, aabb)` / `remove(id)` / `update(id, aabb)`.
+  - `has(id)` / `size()` / `clear()` / `dispose()`.
+  - `query(aabb)` returns ids overlapping the AABB.
+  - `queryPoint(x, y)` shortcut for point queries.
+  - `queryRadius(cx, cy, r)` AABB candidates filtered by exact
+    closest-point-on-AABB distance.
+  - `rebuild()` re-inserts every item from scratch (cleanup after
+    many updates).
+- Items spanning subdivision boundaries stay at their parent node
+  (correct results, same item appears once per query).
+- Defensive: invalid AABB / empty id rejected; non-finite radius
+  / coords return empty.
+- `RESOURCE_QUADTREE` constant.
+
+### Tests
+
+1932 -> 1953 (21 new in tests/quadtree.test.ts).
+
+### Backwards compatibility
+
+Pure addition.
+
 ## 0.80.0 - 2026-05-09
 
 **HealthBar + M9 0.80 milestone — render-state primitive for entity

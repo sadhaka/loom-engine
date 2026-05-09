@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.80.0';
+export const LOOM_ENGINE_VERSION = '0.81.0';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -525,6 +525,13 @@ export type {
   HealthBarRenderState,
   HealthBarOptions,
 } from './runtime/health-bar.js';
+// 0.81.0 - 2D broadphase quadtree (sparse / clustered worlds).
+export { Quadtree, RESOURCE_QUADTREE } from './runtime/quadtree.js';
+export type {
+  AABBLite,
+  QuadtreeBounds,
+  QuadtreeOptions,
+} from './runtime/quadtree.js';
 export {
   ResourceRegistry,
   createTimeResource,
