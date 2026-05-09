@@ -7,6 +7,57 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 1.5.5 - 2026-05-09 (Wave 1.5 educational MILESTONE)
+
+**KnowledgeMap — prerequisite-graph topology for learning + skill trees.**
+The capstone primitive of Wave 1.5. ProgressTracker (1.5.4) holds
+per-skill mastery; KnowledgeMap is the structure that says WHICH
+skills matter and IN WHAT ORDER. Each topic links to a mastery skill
+via `masterySkillId`; prerequisite edges say "you can't unlock topic
+B until topic A's mastery passes a threshold." Pair gives the standard
+learning-app + skill-tree + quest-dependency-graph pattern.
+
+### Added
+
+- `src/runtime/knowledge-map.ts` - `KnowledgeMap<T>` class
+  (type-generic over per-topic payload):
+  - `create<T>({ minMasteryThreshold? })` - default threshold 0.7.
+  - `addTopic({ id, name, masterySkillId?, data? })` - link to a
+    ProgressTracker skill (or leave bare for milestone/lore topics
+    that gate without quizzes).
+  - `addPrerequisite(prerequisiteId, dependentId, threshold?)` -
+    directed edge with optional per-edge threshold override.
+    Rejects self-loops, missing endpoints, duplicates, and cycles
+    (BFS reachability check on the outgoing graph).
+  - `removeTopic(id)` - drops the topic AND all its incoming +
+    outgoing edges from neighbor lists.
+  - `removePrerequisite(prerequisiteId, dependentId)`.
+  - `prerequisitesOf(id)` / `dependentsOf(id)`.
+  - `isUnlocked(id, masterySource)` - all prereq edges satisfied?
+    Topics with no prereqs are always unlocked.
+  - `unlocked(masterySource)` / `locked(masterySource)`.
+  - `getMastery(id, masterySource)` - read mastery via the linked
+    skill; 0 for unlinked topics or missing skills.
+  - `learningPath(targetId)` - DFS topo sort, returns ordered list
+    of all transitive prereqs ending at the target. Returns null
+    on cycle or missing target.
+  - `list()` / `count()` / `clear()` / `dispose()`.
+- `MasterySource` interface: `{ getSkill(id): { overallMastery: number } | null }`.
+  ProgressTracker's `getSkill` matches this shape natively, so the
+  pair drops in without an adapter.
+- `RESOURCE_KNOWLEDGE_MAP` constant.
+
+### Tests
+
+3098 -> 3125 (27 new). Direct integration test demonstrates passing
+a `ProgressTracker` instance straight into `isUnlocked()`.
+
+### Backwards compatibility
+
+Pure addition. Wave 1.5 educational depth complete: ChartRenderer
+(1.5.0) + TimelineLedger (1.5.1) + GraphLayout (1.5.2) +
+QuestionBank (1.5.3) + ProgressTracker (1.5.4) + KnowledgeMap (1.5.5).
+
 ## 1.5.4 - 2026-05-09
 
 **ProgressTracker — skill mastery ledger using Bloom's taxonomy.**

@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '1.5.4';
+export const LOOM_ENGINE_VERSION = '1.5.5';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -914,6 +914,16 @@ export type {
   SkillState,
   ProgressTrackerOptions,
 } from './runtime/progress-tracker.js';
+// 1.5.5 CAPSTONE (Wave 1.5 educational milestone) - prerequisite-graph
+// topology for learning + skill trees, pairs with ProgressTracker.
+export { KnowledgeMap, RESOURCE_KNOWLEDGE_MAP } from './runtime/knowledge-map.js';
+export type {
+  TopicSpec,
+  TopicState,
+  PrerequisiteEdge,
+  MasterySource,
+  KnowledgeMapOptions,
+} from './runtime/knowledge-map.js';
 export {
   ResourceRegistry,
   createTimeResource,
