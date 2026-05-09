@@ -1,4 +1,4 @@
-export declare const LOOM_ENGINE_VERSION = "1.3.1";
+export declare const LOOM_ENGINE_VERSION = "1.3.2";
 export type { Vec2, Vec3, Rect } from './util/math.js';
 export { vec2, vec3, rect, clamp, lerp, smoothstep, approxEq, rectContains, rectIntersects, visibleInView, } from './util/math.js';
 export type { ColorRGBA } from './util/color.js';
@@ -192,6 +192,8 @@ export { PersonaTrait, RESOURCE_PERSONA_TRAIT } from './runtime/persona-trait.js
 export type { TraitSpec, CharacterTraitValue, FindOptions as PersonaFindOptions, PersonaTraitOptions, } from './runtime/persona-trait.js';
 export { RelationshipGraph, RESOURCE_RELATIONSHIP_GRAPH } from './runtime/relationship-graph.js';
 export type { BondTypeSpec, Bond, BondFilter, RelationshipGraphOptions, } from './runtime/relationship-graph.js';
+export { EmotionState, RESOURCE_EMOTION_STATE } from './runtime/emotion-state.js';
+export type { EmotionThreshold, EmotionSpec, EmotionEntry, DominantEmotion, EmotionStateOptions, } from './runtime/emotion-state.js';
 export { ResourceRegistry, createTimeResource, createVeilBudgetResource, RESOURCE_TIME, RESOURCE_CAMERA, RESOURCE_DEVICE, RESOURCE_VEIL_BUDGET, } from './resources.js';
 export { SpriteRenderSystem } from './systems/sprite-render-system.js';
 export { Engine, registerBackend, isBackendRegistered } from './engine.js';
