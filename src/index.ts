@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '1.2.1';
+export const LOOM_ENGINE_VERSION = '1.2.2';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -728,6 +728,14 @@ export type {
   BidirectionalOptions as RegionBidirectionalOptions,
   RegionGraphOptions,
 } from './runtime/region-graph.js';
+// 1.2.2 (Wave 1.2 world depth) - declarative spawn rules with rate-limits + caps.
+export { SpawnDirector, RESOURCE_SPAWN_DIRECTOR } from './runtime/spawn-director.js';
+export type {
+  SpawnFn,
+  SpawnRule,
+  SpawnDirectorOptions,
+  RejectReason as SpawnRejectReason,
+} from './runtime/spawn-director.js';
 export {
   ResourceRegistry,
   createTimeResource,

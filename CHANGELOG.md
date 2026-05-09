@@ -7,6 +7,53 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 1.2.2 - 2026-05-09
+
+**SpawnDirector — declarative spawn rules with rate-limits + caps
++ budget tracking.** CrowdSpawner (0.87) handles bulk-spawn waves
+("spawn N goblins in this arc"). SpawnDirector is the higher-level
+rules engine: "every 30s, attempt to spawn a wolf if zone
+wolfCount < 5," "spawn limit 12 mobs in this zone," "respect a
+global mob budget so the simulation doesn't melt." Per-rule
+cooldowns, per-zone caps, and a global concurrent-spawn budget.
+
+### Added
+
+- `src/runtime/spawn-director.ts` - `SpawnDirector` class:
+  - `create({ globalBudget?, context?, onSpawned?, onRejected? })`.
+  - `defineRule({ id, zone, intervalMs?, spawnFn, maxConcurrent?, maxPerZone?, gate?, data? })`.
+    Default interval 5000ms, max ∞ / ∞.
+  - `removeRule(id)` / `hasRule(id)` / `ruleIds()` / `ruleCount()`.
+  - `notifySpawned(ruleId)` / `notifyDespawned(ruleId)` -
+    consumer keeps cap accounting accurate.
+  - `tryAttempt(ruleId)` - force a spawn check outside cooldown;
+    returns `RejectReason | 'spawned'`.
+  - `tick(dtMs)` - decrement cooldowns; attempt spawns when 0.
+  - `setContext(ctx)` - update gate context.
+  - `setGlobalBudget(n)` - update global cap.
+  - `getSpawnedTotal()` / `getActiveCount(ruleId)` /
+    `getZoneCount(zone, ruleId)`.
+  - `clear()` / `dispose()`.
+- `RejectReason`: `'cooldown' | 'gate' | 'maxConcurrent' |
+  'maxPerZone' | 'globalBudget' | 'spawnFnFailed' | 'spawnFnThrew'`.
+- spawnFn returning `false` is a soft-fail (e.g. no valid spawn
+  point); the cooldown still resets so we don't hammer the spawn
+  pool.
+- All callbacks isolated.
+- NaN / Infinity / negative dt no-op.
+- `RESOURCE_SPAWN_DIRECTOR` constant.
+
+### Tests
+
+2595 -> 2617 (22 new).
+
+### Backwards compatibility
+
+Pure addition. Pairs with CrowdSpawner (0.87, the actual spawn
+machinery), EncounterTable (1.2.3 next, weighted encounter pools),
+FrameBudgetScheduler (0.36, defers heavy spawn callbacks across
+frames).
+
 ## 1.2.1 - 2026-05-09
 
 **RegionGraph — connected-zone topology + traversal.** Pathfinder
