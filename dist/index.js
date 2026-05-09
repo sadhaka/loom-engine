@@ -8,7 +8,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '1.3.0';
+export const LOOM_ENGINE_VERSION = '1.3.1';
 export { vec2, vec3, rect, clamp, lerp, smoothstep, approxEq, rectContains, rectIntersects, visibleInView, } from './util/math.js';
 export { rgba, hexToRgba, rgbaToHexString, rgbaToCssString, colorLerp, COLOR_WHITE, COLOR_BLACK, COLOR_TRANSPARENT, COLOR_KNOT_STR, COLOR_KNOT_DEX, COLOR_KNOT_INT, COLOR_KNOT_CENTER, } from './util/color.js';
 export { EntityAllocator, NULL_ENTITY, entityIndex, entityGeneration, makeEntity, } from './entity.js';
@@ -203,6 +203,8 @@ export { MerchantStock, RESOURCE_MERCHANT_STOCK } from './runtime/merchant-stock
 export { LootTier, RESOURCE_LOOT_TIER } from './runtime/loot-tier.js';
 // 1.3.0 (Wave 1.3 AI persona depth opens) - NPC personality trait ledger.
 export { PersonaTrait, RESOURCE_PERSONA_TRAIT } from './runtime/persona-trait.js';
+// 1.3.1 (Wave 1.3 AI persona depth) - per-pair character bonds (asymmetric).
+export { RelationshipGraph, RESOURCE_RELATIONSHIP_GRAPH } from './runtime/relationship-graph.js';
 export { ResourceRegistry, createTimeResource, createVeilBudgetResource, RESOURCE_TIME, RESOURCE_CAMERA, RESOURCE_DEVICE, RESOURCE_VEIL_BUDGET, } from './resources.js';
 // Default systems
 export { SpriteRenderSystem } from './systems/sprite-render-system.js';
