@@ -7,6 +7,81 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.71.0 - 2026-05-09
+
+**WeatherSystem — discrete weather states with ramped intensity
+transitions.** Outdoor zones often layer a weather signal on top
+of TimeOfDay (0.70): a state machine that flips between named
+conditions (clear / rain / storm / snow / fog / custom) plus a
+continuous intensity that can ramp between values over a
+configurable duration. Renderers, ambient audio, encounter pools,
+and movement modifiers all read the current state + intensity each
+frame. WeatherSystem owns the transition; consumers react through
+onWeatherChanged + onIntensitySettled callbacks.
+
+This is the M9 opener and pairs naturally with 0.70 TimeOfDay - a
+zone with day/night and weather both running gets a richer ambient
+signal without engine forks.
+
+### Added
+
+- `src/runtime/weather-system.ts` - `WeatherSystem` class:
+  - `create({ states?, initial?, initialIntensity?, onWeatherChanged?, onIntensitySettled? })`.
+  - `setWeather(name, { rampMs?, intensity? })` flips state and
+    optionally ramps intensity over rampMs ms; instant when
+    rampMs is 0/missing/negative. Returns false on unknown name.
+  - Calling `setWeather` with the current state name re-targets
+    intensity without firing `onWeatherChanged` (use to dim an
+    active rain to a drizzle).
+  - `tick(dtMs)` advances the active intensity ramp; fires
+    `onIntensitySettled` exactly once when the ramp completes.
+  - `registerState({ name, defaultIntensity? })` adds at runtime;
+    returns false on duplicate or empty name.
+  - `getWeather()` / `getIntensity()` / `isTransitioning()` /
+    `hasState()` / `getStates()` (defensive copy in registration
+    order).
+  - `dispose()` locks ops.
+- Defaults: missing `defaultIntensity` is treated as 0 (idle / no
+  weather); `initialIntensity` overrides the initial state's
+  default; an explicit `intensity` on setWeather always wins.
+- Intensity clamps to [0, 1] on every input (state default,
+  initial intensity, transition target).
+- onWeatherChanged / onIntensitySettled isolated (throwing handler
+  doesn't break the engine).
+- Defensive: NaN / negative dt ignored; unknown initial state
+  ignored; empty state names rejected at registration.
+- `WeatherState`, `WeatherTransitionOptions`, `WeatherSystemOptions`
+  types exported.
+- `RESOURCE_WEATHER_SYSTEM` constant.
+
+### Tests
+
+1710 -> 1731 (21 new in tests/weather-system.test.ts):
+- RESOURCE_WEATHER_SYSTEM stable string; empty config defaults.
+- initial state respected; unknown initial ignored; explicit
+  initialIntensity overrides state default.
+- setWeather instant flip when no rampMs; unknown state returns
+  false + skips callbacks.
+- setWeather with rampMs interpolates intensity over time; ramp
+  completes on/after rampMs; onIntensitySettled fires exactly once.
+- setWeather to current state re-targets intensity without
+  onWeatherChanged.
+- explicit intensity overrides state default; intensity clamps
+  to [0, 1].
+- tick during ramp does not re-fire onWeatherChanged.
+- registerState adds; rejects duplicates + empty names.
+- getStates defensive-copy in registration order.
+- throwing onWeatherChanged / onIntensitySettled isolated.
+- NaN / negative dt ignored during ramp.
+- tick with no ramp is a no-op.
+- rampMs <= 0 falls back to instant flip.
+- dispose locks ops.
+- Realistic chained transitions over a tick loop.
+
+### Backwards compatibility
+
+Pure addition.
+
 ## 0.70.0 - 2026-05-09
 
 **TimeOfDay + M8 0.70 milestone — day/night cycle with named

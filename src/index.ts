@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.70.0';
+export const LOOM_ENGINE_VERSION = '0.71.0';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -446,6 +446,13 @@ export type {
   PhaseBoundary,
   TimeOfDayOptions,
 } from './runtime/time-of-day.js';
+// 0.71.0 - discrete weather states with ramped intensity transitions.
+export { WeatherSystem, RESOURCE_WEATHER_SYSTEM } from './runtime/weather-system.js';
+export type {
+  WeatherState,
+  WeatherTransitionOptions,
+  WeatherSystemOptions,
+} from './runtime/weather-system.js';
 export {
   ResourceRegistry,
   createTimeResource,
