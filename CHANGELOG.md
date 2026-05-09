@@ -7,6 +7,55 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 1.5.2 - 2026-05-09
+
+**GraphLayout — force-directed node graph layout.** Used for
+knowledge maps (concept relationships), NPC relationship diagrams,
+quest dependency graphs, skill trees, network topology displays.
+Nodes repel each other (Coulomb-like 1/r²), edges pull connected
+nodes together (Hooke spring), optional center force keeps the
+graph from drifting. Each tick integrates forces and updates
+positions.
+
+### Added
+
+- `src/runtime/graph-layout.ts` - `GraphLayout<T>` class
+  (type-generic over per-node payload):
+  - `create<T>({ repulsion?, attraction?, damping?, centerForce?, stableThreshold?, rng?, seed?, maxStabilizeIterations? })`.
+    Defaults: 1000 / 0.05 / 0.85 / 0.01 / 0.5 / mulberry32.
+  - `addNode({ id, x?, y?, mass?, pinned?, data? })` - random
+    initial position if x/y omitted.
+  - `removeNode(id)` - drops node + connected edges.
+  - `hasNode` / `getNode` / `setPosition` / `setPinned` / `nodeCount`.
+  - `addEdge({ fromId, toId, restLength?, strength? })` - rejects
+    self-loops, unknown nodes, duplicates. Default rest 50, strength 0.1.
+  - `removeEdge(from, to)` / `hasEdge(from, to)` / `edgeCount`.
+  - `tick(dtMs)` - one simulation step (16ms = 1 unit of force
+    integration).
+  - `stabilize(maxIterations?)` - run ticks until energy <
+    threshold or maxIter reached. Returns iteration count used.
+  - `positions()` - all `NodePosition` snapshots.
+  - `getSnapshot()` returns
+    `{ nodes, edges (with from/to coords), energy, isStable }`.
+  - `forEach(cb)` / `clear()` / `dispose()`.
+- Pinned nodes are anchors (don't move under forces).
+- Mass scales force impact (heavier = harder to move).
+- Energy = sum of squared velocities; `isStable` when energy <
+  threshold.
+- All callbacks isolated.
+- NaN / Infinity / negative dt no-op.
+- `RESOURCE_GRAPH_LAYOUT` constant.
+
+### Tests
+
+3031 -> 3053 (22 new).
+
+### Backwards compatibility
+
+Pure addition. Pairs with TimelineLedger (1.5.1, time-axis events),
+RegionGraph (1.2.1, world topology - feed it nodes + edges),
+RelationshipGraph (1.3.1, character bonds visualizable here).
+
 ## 1.5.1 - 2026-05-09
 
 **TimelineLedger — events along a time axis (history view,

@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '1.5.1';
+export const LOOM_ENGINE_VERSION = '1.5.2';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -888,6 +888,16 @@ export type {
   TimelineSnapshot,
   TimelineLedgerOptions,
 } from './runtime/timeline-ledger.js';
+// 1.5.2 (Wave 1.5 educational depth) - force-directed node graph layout.
+export { GraphLayout, RESOURCE_GRAPH_LAYOUT } from './runtime/graph-layout.js';
+export type {
+  GraphNodeSpec,
+  GraphEdgeSpec,
+  NodePosition,
+  RenderedEdge as GraphRenderedEdge,
+  GraphSnapshot,
+  GraphLayoutOptions,
+} from './runtime/graph-layout.js';
 export {
   ResourceRegistry,
   createTimeResource,
