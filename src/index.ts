@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '1.1.5';
+export const LOOM_ENGINE_VERSION = '1.2.0';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -711,6 +711,14 @@ export type {
   PlayGhostOptions,
   GhostReplayOptions,
 } from './runtime/ghost-replay.js';
+// 1.2.0 (Wave 1.2 world depth opens) - memoization layer for A* path queries.
+export { PathfindingCache, RESOURCE_PATHFINDING_CACHE } from './runtime/pathfinding-cache.js';
+export type {
+  CachedPathPoint,
+  CachedPathResult,
+  CacheEntry as PathfindingCacheEntry,
+  PathfindingCacheOptions,
+} from './runtime/pathfinding-cache.js';
 export {
   ResourceRegistry,
   createTimeResource,

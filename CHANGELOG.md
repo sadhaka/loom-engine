@@ -7,6 +7,52 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 1.2.0 - 2026-05-09
+
+**Wave 1.2 world depth opens — PathfindingCache: memoization
+layer for A* path queries.** Pathfinder (0.55) does the actual A*
+search. PathfindingCache is the layer above: 50 mobs all pathing
+to the player every tick is 50 A* invocations per second. Most
+share a goal (one player) or a start (mob group clumping).
+Cache them.
+
+### Added
+
+- `src/runtime/pathfinding-cache.ts` - `PathfindingCache` class:
+  - `create({ capacity?, ttlMs?, gridVersion? })`. Defaults 128 / 0 / 0.
+  - `get(sx, sy, gx, gy)` - returns cached `CachedPathResult` or
+    `undefined` on miss / stale.
+  - `set(sx, sy, gx, gy, result)` - insert / replace. Evicts LRU
+    on capacity overflow.
+  - `getOrCompute(sx, sy, gx, gy, computeFn)` - hit cache, else
+    invoke `computeFn`, cache, return. Throwing `computeFn`
+    returns null and does not cache.
+  - `bumpGridVersion()` - lazy invalidation; existing entries
+    become stale on next get.
+  - `invalidateAll()` / `invalidateAt(x, y)` (drop entries whose
+    path crosses the cell) / `invalidateBySource(x, y)` /
+    `invalidateByGoal(x, y)`.
+  - `tick(dtMs)` - advance internal clock; expire entries past
+    TTL if configured.
+  - Stats: `size()` / `hits()` / `misses()` / `hitRate()` /
+    `resetStats()`.
+  - `getGridVersion()` / `dispose()`.
+- Cache key is `(floor(sx), floor(sy)) -> (floor(gx), floor(gy))`.
+- Cached `null` paths are preserved (don't keep retrying impossible
+  searches).
+- `RESOURCE_PATHFINDING_CACHE` constant.
+
+### Tests
+
+2545 -> 2568 (23 new).
+
+### Backwards compatibility
+
+Pure addition. Pairs with Pathfinder (0.55, the A* function),
+Quadtree (0.81, spatial queries that often FEED pathfinding
+goals), TileMap (0.56). The cache is opt-in - existing Pathfinder
+consumers don't change.
+
 ## 1.1.5 - 2026-05-09
 
 **🟦 Wave 1.1 milestone — GhostReplay: record + replay translucent
