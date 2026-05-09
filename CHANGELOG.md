@@ -7,6 +7,34 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.94.0 - 2026-05-09
+
+**AudioCueQueue — prioritized one-shot SFX queue.** Combat is
+bursty: 5 hits land in 200ms, the renderer wants to play 5
+hit-sounds, but mixer voices are limited. AudioCueQueue is the
+prioritization layer between gameplay events and the audio
+backend: enqueue cues with a priority, pull the highest-priority
+cue when a voice frees up, drop low-priority cues when full.
+
+### Added
+
+- `src/runtime/audio-cue-queue.ts` - `AudioCueQueue` class:
+  - `create({ capacity? })` (default 32).
+  - `enqueue(cue)` — over-cap drops lowest-priority cue first.
+  - `next()` pulls highest-priority (FIFO on ties).
+  - `peek()` reads without consuming.
+  - `removeById(id)` drops all matching; returns count.
+  - `clear()` / `size()` / `capacity()` / `list()` / `dispose()`.
+- `RESOURCE_AUDIO_CUE_QUEUE` constant.
+
+### Tests
+
+2217 -> 2235 (18 new).
+
+### Backwards compatibility
+
+Pure addition.
+
 ## 0.93.0 - 2026-05-09
 
 **DamageFlash — per-entity tint reaction on hit.** The "white
