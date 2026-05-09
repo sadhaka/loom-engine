@@ -7,6 +7,21 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 1.6.0 - 2026-05-09 (Wave 1.6 procgen opens)
+
+**NameGenerator — Markov-chain procedural names.**
+Trains an order-N character chain on a corpus, then emits new
+names that read like the corpus but aren't in it. FNV-1a hashed
+seeds + mulberry32 RNG = deterministic by default; same seed +
+same corpus + same options always gives the same sequence.
+
+Public surface: `create({ seed?, order?, startToken?, endToken? })`,
+`train(corpus[])`, `generate({ minLen?, maxLen?, maxAttempts?,
+titleCase? })`, `setSeed(seed)`, `reset()`, `count()`, `states()`.
+Order 1/2/3 supported; default 2.
+
+Tests 3125 -> 3140 (15 new). Pure addition.
+
 ## 1.5.5 - 2026-05-09 (Wave 1.5 educational MILESTONE)
 
 **KnowledgeMap — prerequisite-graph topology for learning + skill trees.**

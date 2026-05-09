@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '1.5.5';
+export const LOOM_ENGINE_VERSION = '1.6.0';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -924,6 +924,13 @@ export type {
   MasterySource,
   KnowledgeMapOptions,
 } from './runtime/knowledge-map.js';
+// 1.6.0 (Wave 1.6 procgen depth opens) - Markov-chain procedural names.
+export { NameGenerator, RESOURCE_NAME_GENERATOR } from './runtime/name-generator.js';
+export type {
+  NameGeneratorOptions,
+  GenerateOptions as NameGeneratorGenerateOptions,
+  MarkovOrder,
+} from './runtime/name-generator.js';
 export {
   ResourceRegistry,
   createTimeResource,
