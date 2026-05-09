@@ -1,4 +1,4 @@
-export declare const LOOM_ENGINE_VERSION = "1.0.0";
+export declare const LOOM_ENGINE_VERSION = "1.1.0";
 export type { Vec2, Vec3, Rect } from './util/math.js';
 export { vec2, vec3, rect, clamp, lerp, smoothstep, approxEq, rectContains, rectIntersects, visibleInView, } from './util/math.js';
 export type { ColorRGBA } from './util/color.js';
@@ -164,6 +164,8 @@ export { VignetteRenderState, RESOURCE_VIGNETTE_RENDER_STATE } from './runtime/v
 export type { VignetteColor, VignetteSourceSpec, VignetteSource, VignetteSnapshot, VignetteRenderStateOptions, } from './runtime/vignette-render-state.js';
 export { BenchmarkHarness, RESOURCE_BENCHMARK_HARNESS } from './runtime/benchmark-harness.js';
 export type { BenchmarkSpec, BenchmarkResult, BenchmarkBaseline, RegressionReport, BaselineStorage, BenchmarkHarnessOptions, } from './runtime/benchmark-harness.js';
+export { InputBuffer, RESOURCE_INPUT_BUFFER } from './runtime/input-buffer.js';
+export type { BufferedInput, BufferOptions as InputBufferBufferOptions, InputBufferOptions, RemovedReason as InputBufferRemovedReason, } from './runtime/input-buffer.js';
 export { ResourceRegistry, createTimeResource, createVeilBudgetResource, RESOURCE_TIME, RESOURCE_CAMERA, RESOURCE_DEVICE, RESOURCE_VEIL_BUDGET, } from './resources.js';
 export { SpriteRenderSystem } from './systems/sprite-render-system.js';
 export { Engine, registerBackend, isBackendRegistered } from './engine.js';
