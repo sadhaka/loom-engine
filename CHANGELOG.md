@@ -7,6 +7,47 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.76.0 - 2026-05-09
+
+**AggroTable — multi-target threat ledger for boss AI.** Bosses
+with multiple attackers need to know "who is hurting me most right
+now?" and "who hit me last?" to drive target-selection AI.
+AggroTable is that ledger: keyed by target id, storing accumulated
+threat plus a monotonic last-hit counter. Threat decays over time
+so a player who stops attacking fades off the threat list, and
+entries below a `minThreat` floor get auto-evicted to keep the
+table compact.
+
+### Added
+
+- `src/runtime/aggro-table.ts` - `AggroTable` class:
+  - `create({ decayPerSecond?, minThreat?, maxTargets? })`. Default
+    decay 0 (persistent), minThreat 0.01, maxTargets 64.
+  - `addThreat(target, amount)` accumulates; `setThreat(target, amount)`
+    replaces. Negative addThreat reduces; clamps at 0 (entry removed).
+    Empty target id / non-finite amount rejected.
+  - `remove(target)` / `clear()` / `has(target)` / `getThreat(target)`
+    / `size()`.
+  - `topTarget()` returns highest-threat (ties broken by more recent
+    `lastHitAt`). `lastHitTarget()` returns most recently incremented.
+  - `list()` sorted by threat desc; defensive copy.
+  - `tick(dtMs)` decays every entry by `1 - decayPerSecond * (dt/1000)`
+    and removes entries dropping below `minThreat`. NaN / negative
+    dt ignored.
+  - `setDecayPerSecond(rate)` runtime tuning.
+  - `dispose()` clears + locks ops.
+- `lastHitAt` is a monotonic int (NOT Date.now); replay-deterministic.
+- maxTargets overflow evicts lowest-threat entry (ties: oldest hit).
+- `RESOURCE_AGGRO_TABLE` constant.
+
+### Tests
+
+1818 -> 1840 (22 new in tests/aggro-table.test.ts).
+
+### Backwards compatibility
+
+Pure addition.
+
 ## 0.75.0 - 2026-05-09
 
 **Achievements — milestone tracker with progress + unlock

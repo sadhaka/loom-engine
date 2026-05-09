@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.75.0';
+export const LOOM_ENGINE_VERSION = '0.76.0';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -494,6 +494,9 @@ export type {
   AchievementsOptions,
   AchievementSnapshotEntry,
 } from './runtime/achievements.js';
+// 0.76.0 - multi-target threat ledger for boss AI.
+export { AggroTable, RESOURCE_AGGRO_TABLE } from './runtime/aggro-table.js';
+export type { AggroTableOptions, AggroEntry } from './runtime/aggro-table.js';
 export {
   ResourceRegistry,
   createTimeResource,
