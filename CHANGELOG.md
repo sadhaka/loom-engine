@@ -7,6 +7,48 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.85.0 - 2026-05-09
+
+**HotKeyProfileManager + M9 0.85 milestone — keybinding profile
+manager.** Different from InputChord (0.39, combo / sequence
+recognition): HotKeyProfile is name-binding storage. Players
+switch between keybinding profiles ("default" / "wasd" /
+"vim-style"); classes can override the default ("warrior" inherits
++ adds 'shout' on Q); the actual input-matching happens via
+`resolveAction(action) -> key`.
+
+This is the M9 0.85 milestone - 5 versions shipped this batch
+(0.81 → 0.85) on the infra + tooling track:
+Quadtree (0.81), ThresholdTrigger (0.82), EventLog (0.83),
+AssetManifest (0.84), HotKeyProfileManager (0.85).
+
+### Added
+
+- `src/runtime/hotkey-profile.ts` - `HotKeyProfileManager` class:
+  - `create({ initialProfiles?, active? })`.
+  - `registerProfile(p)` / `unregisterProfile(id)` / `has(id)`
+    / `get(id)` / `list()` / `size()`.
+  - `setActive(id)` / `getActive()`.
+  - `resolveAction(action)` - binding for action via active profile,
+    walking inheritance on miss.
+  - `resolveActionFor(profileId, action)` - explicit profile lookup.
+  - `setBinding(profileId, action, key)` - add or replace.
+  - `removeBinding(profileId, action)`.
+  - `toSnapshot()` / `fromSnapshot(snap)`.
+  - `dispose()` clears + locks ops.
+- Inheritance chains supported (warrior inherits combat inherits global);
+  cycles in inheritance handled via visited set (no infinite loop).
+- Defensive copies in / out of getters.
+- `RESOURCE_HOTKEY_PROFILE` constant.
+
+### Tests
+
+2020 -> 2042 (22 new in tests/hotkey-profile.test.ts).
+
+### Backwards compatibility
+
+Pure addition.
+
 ## 0.84.0 - 2026-05-09
 
 **AssetManifest — declarative asset list + dependency graph.**

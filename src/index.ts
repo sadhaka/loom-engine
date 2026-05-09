@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.84.0';
+export const LOOM_ENGINE_VERSION = '0.85.0';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -545,6 +545,14 @@ export type {
   AssetManifestOptions,
   ResolveResult as AssetResolveResult,
 } from './runtime/asset-manifest.js';
+// 0.85.0 - keybinding profile manager (M9 0.85 milestone).
+export { HotKeyProfileManager, RESOURCE_HOTKEY_PROFILE } from './runtime/hotkey-profile.js';
+export type {
+  KeyBinding,
+  HotKeyProfile,
+  HotKeyProfileManagerOptions,
+  HotKeyProfileSnapshot,
+} from './runtime/hotkey-profile.js';
 export {
   ResourceRegistry,
   createTimeResource,
