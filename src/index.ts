@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.65.0';
+export const LOOM_ENGINE_VERSION = '0.66.0';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -406,6 +406,14 @@ export type {
   PostOptions,
   ToastQueueOptions,
 } from './runtime/toast-queue.js';
+// 0.66.0 - canonical RPG damage formula (atk/def/crit/mit/resist).
+export { computeDamage, RESOURCE_DAMAGE_FORMULA } from './runtime/damage-formula.js';
+export type {
+  AttackerStats,
+  DefenderStats,
+  DamageOptions,
+  DamageResult,
+} from './runtime/damage-formula.js';
 export {
   ResourceRegistry,
   createTimeResource,

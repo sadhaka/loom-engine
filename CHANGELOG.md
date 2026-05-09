@@ -7,6 +7,58 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.66.0 - 2026-05-09
+
+**DamageFormula - canonical RPG combat math.** Pure-math
+combat damage: base attack power → critical roll → variance →
+hyperbolic armor mitigation → optional type-resist → flat
+reduction → minDamage floor.
+
+The armor mitigation uses `armor / (armor + K)` (default K=100)
+so armor never fully reduces damage to zero. K is configurable
+per zone / level scaling.
+
+### Added
+
+- `src/runtime/damage-formula.ts`:
+  - `computeDamage(attacker, defender, opts?)` returns
+    `{ final, raw, mitigated, isCrit, mitigationPct, varianceRoll }`.
+  - AttackerStats: attackPower, critChance (0-1), critMultiplier
+    (default 1.5), variance fraction, armorPen, type.
+  - DefenderStats: armor, flatReduction, resists (per-type
+    fraction map).
+  - Options: armorK (curve constant), minDamage (floor), rng
+    (seedable; default Math.random).
+- Pure: same RNG output → same result. Combine with seedable
+  Entropy (0.17) or LootTable's mulberry32 for replay
+  determinism.
+- Defensive: NaN / negative attackPower clamped; critChance >1
+  clamps; variance >1 clamps; armorPen exceeding armor clamps to 0.
+- `AttackerStats`, `DefenderStats`, `DamageOptions`,
+  `DamageResult` types exported.
+- `RESOURCE_DAMAGE_FORMULA` constant.
+
+### Tests
+
+1602 -> 1623 (21 new in tests/damage-formula.test.ts):
+- RESOURCE_DAMAGE_FORMULA stable string.
+- Zero attack power = minimum damage.
+- No crit chance / 100% crit / variance range / minDamage floor.
+- Armor reduces hyperbolically; very high armor approaches but
+  never reaches 100%.
+- armorPen reduces effective armor; armorPen > armor caps at 0.
+- Flat reduction applied AFTER mitigation.
+- Type-resist matches; missing type is no-op.
+- Full pipeline test (crit + armor + flat + resist).
+- Deterministic with same RNG output.
+- Out-of-range stats clamped (critChance, variance, attackPower).
+- Result includes per-stage breakdown.
+- Realistic crit fireball into mage.
+
+### Backwards compatibility
+
+Pure addition.
+
 ## 0.65.0 - 2026-05-09
 
 **ToastQueue - severity-tiered notification queue with auto-dismiss.**
