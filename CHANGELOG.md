@@ -7,6 +7,51 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 1.3.4 - 2026-05-09
+
+**SchedulePlan — NPC daily routine ledger.** The Stardew Valley
+/ Skyrim / Persona pattern: each NPC has a schedule of "at 8am
+go to the bakery, at noon go to the temple, at 6pm go home."
+SchedulePlan is the time-indexed registry: blocks per character
+with start / end minute, location, activity, weekday filter,
+optional gate predicate, and priority for overlap resolution.
+
+### Added
+
+- `src/runtime/schedule-plan.ts` - `SchedulePlan` class:
+  - `create({})`.
+  - `addBlock({ id, characterId, startMinute, endMinute, location, activity?, weekdays?, priority?, condition?, data? })`.
+  - `removeBlock(id)` / `updateBlock(id, partial)` / `hasBlock(id)`
+    / `getBlock(id)` / `blockCount`.
+  - `current(characterId, ctx)` - highest-priority active block
+    or null. Returns `ActiveBlock` with `progress` (0..1) and
+    `remainingMinutes`.
+  - `allActive(characterId, ctx)` - all matching blocks, no
+    priority resolution.
+  - `blocksFor(characterId)` - all regular blocks for a character.
+  - `allCurrent(ctx)` - map of all characters → their current
+    block (or null).
+  - `list()` / `clear()` / `dispose()`.
+- Block window supports midnight wrap (`startMinute > endMinute`
+  means wraps through midnight, e.g. 22:00 → 06:00).
+- Weekday filter (0=Sun..6=Sat). When ctx.weekday omitted,
+  weekday filter is ignored (every-day match).
+- Priority resolves overlap: higher wins; same-priority broken
+  by insertion order (later wins).
+- `condition(ctx)` predicate for gate; throwing predicate treated
+  as false.
+- `RESOURCE_SCHEDULE_PLAN` constant.
+
+### Tests
+
+2803 -> 2823 (20 new).
+
+### Backwards compatibility
+
+Pure addition. Pairs with PersonaTrait (1.3.0, who they are),
+EmotionState (1.3.2, current mood), RegionGraph (1.2.1, the
+location ids), EncounterTable (1.2.3, what spawns where).
+
 ## 1.3.3 - 2026-05-09
 
 **DialogVoice — voice-line scheduler for DialogTree nodes.**

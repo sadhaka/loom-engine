@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '1.3.3';
+export const LOOM_ENGINE_VERSION = '1.3.4';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -798,6 +798,15 @@ export type {
   QueueOptions as DialogVoiceQueueOptions,
   DialogVoiceOptions,
 } from './runtime/dialog-voice.js';
+// 1.3.4 (Wave 1.3 AI persona depth) - NPC daily routine ledger.
+export { SchedulePlan, RESOURCE_SCHEDULE_PLAN } from './runtime/schedule-plan.js';
+export type {
+  ScheduleCondition,
+  ScheduleBlock,
+  ActiveBlock as ScheduleActiveBlock,
+  ScheduleQueryContext,
+  SchedulePlanOptions,
+} from './runtime/schedule-plan.js';
 export {
   ResourceRegistry,
   createTimeResource,
