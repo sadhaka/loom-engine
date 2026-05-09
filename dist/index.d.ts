@@ -1,4 +1,4 @@
-export declare const LOOM_ENGINE_VERSION = "0.83.0";
+export declare const LOOM_ENGINE_VERSION = "0.84.0";
 export type { Vec2, Vec3, Rect } from './util/math.js';
 export { vec2, vec3, rect, clamp, lerp, smoothstep, approxEq, rectContains, rectIntersects, visibleInView, } from './util/math.js';
 export type { ColorRGBA } from './util/color.js';
@@ -130,6 +130,8 @@ export { ThresholdTrigger, RESOURCE_THRESHOLD_TRIGGER } from './runtime/threshol
 export type { ThresholdSpec, TriggerDirection } from './runtime/threshold-trigger.js';
 export { EventLog, RESOURCE_EVENT_LOG } from './runtime/event-log.js';
 export type { EventRecord, EventLogOptions } from './runtime/event-log.js';
+export { AssetManifest, RESOURCE_ASSET_MANIFEST } from './runtime/asset-manifest.js';
+export type { AssetEntry, AssetManifestOptions, ResolveResult as AssetResolveResult, } from './runtime/asset-manifest.js';
 export { ResourceRegistry, createTimeResource, createVeilBudgetResource, RESOURCE_TIME, RESOURCE_CAMERA, RESOURCE_DEVICE, RESOURCE_VEIL_BUDGET, } from './resources.js';
 export { SpriteRenderSystem } from './systems/sprite-render-system.js';
 export { Engine, registerBackend, isBackendRegistered } from './engine.js';
