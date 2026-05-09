@@ -7,6 +7,43 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.92.0 - 2026-05-09
+
+**ScreenShake — camera trauma model.** Standard "trauma" approach
+(Squirrel Eiserloh / Brackeys): a single scalar t in [0, 1]
+represents shake state; per-frame offset is `(rng()*2-1) *
+maxOffsetPx * trauma^2` for x/y and analogous for angle. Quadratic
+dampening means low-trauma jitter is barely visible while
+high-trauma feels punchy. Trauma decays linearly per second; on
+hit events consumers `addTrauma(N)` and the camera settles
+automatically.
+
+### Added
+
+- `src/runtime/screen-shake.ts` - `ScreenShake` class:
+  - `create({ decayPerSecond?, maxOffsetPx?, maxAngleRad?, rng? })`.
+    Defaults: 1.5/s decay, 16px offset, 0.05rad angle.
+  - `addTrauma(amount)` clamps to [0, 1]; negative reduces.
+  - `setTrauma(value)` direct + clamping.
+  - `getTrauma()` / `isShaking()` reads.
+  - `getOffset()` returns `{ x, y, angle }` with quadratic
+    dampening; samples RNG 3x.
+  - `tick(dtMs)` decays trauma linearly; floors at 0.
+  - `setMaxOffset` / `setDecayPerSecond` / `setMaxAngleRad`
+    runtime tuning.
+  - `reset()` snaps trauma to 0; `dispose()` locks ops.
+- Replay determinism via injected RNG seam (Math.random default).
+- Defensive: NaN inputs rejected; negative max parameters rejected.
+- `RESOURCE_SCREEN_SHAKE` constant.
+
+### Tests
+
+2174 -> 2195 (21 new in tests/screen-shake.test.ts).
+
+### Backwards compatibility
+
+Pure addition.
+
 ## 0.91.0 - 2026-05-09
 
 **ScreenFader — render-state primitive for fade-to-color overlays.**

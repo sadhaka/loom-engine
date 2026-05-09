@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.91.0';
+export const LOOM_ENGINE_VERSION = '0.92.0';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -590,6 +590,9 @@ export type {
   ScreenFaderFadeOptions,
   ScreenFaderOptions,
 } from './runtime/screen-fader.js';
+// 0.92.0 - camera trauma model for screen shake effects.
+export { ScreenShake, RESOURCE_SCREEN_SHAKE } from './runtime/screen-shake.js';
+export type { ScreenShakeOptions, ShakeOffset } from './runtime/screen-shake.js';
 export {
   ResourceRegistry,
   createTimeResource,
