@@ -7,6 +7,75 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 1.4.5 - 2026-05-09
+
+**🟧 Wave 1.4 milestone — SoundtrackDirector: context-driven
+music orchestration.** The conductor that ties all audio
+primitives together. MusicPlaylist (0.95) shuffles tracks within
+a mood. AmbientLayerMixer (1.4.0) layers ambient stems. AudioDuck
+(1.4.1) ducks music for SFX. SoundtrackDirector is the
+orchestrator on top: define music states (peace, combat, dialog,
+boss, victory), define transitions between them with per-pair
+fade timings + min-hold rules, and play one-shot stingers
+(cinematic flourishes) over the current state.
+
+### Added
+
+- `src/runtime/soundtrack-director.ts` - `SoundtrackDirector` class:
+  - `create({ rng?, seed? })` - default seeded mulberry32 PRNG.
+  - `defineState({ id, trackIds, transitions?, defaultFadeMs?, minHoldMs?, data? })`.
+    `transitions: { sourceStateId: { fadeMs } }` for per-pair
+    overrides. `minHoldMs` enforces a minimum stay-time.
+  - `hasState(id)` / `stateIds()`.
+  - `setState(stateId, { fadeMs?, force? })` - transition. Returns
+    false if unknown state OR minHoldMs not yet elapsed (unless
+    force).
+  - `getCurrentState()` / `pickTrack(stateId?)`.
+  - `playStinger({ id, trackId, durationMs, resumeAfter? })` -
+    one-shot flourish. `resumeAfter: true` (default) restores
+    the state after the stinger ends.
+  - `cancelStinger(id)`.
+  - `getSnapshot()` returns
+    `{ currentState, currentTrackId, previousState, previousTrackId, fadeProgress, stinger? }`.
+  - `tick(dtMs)` - ages current state, advances fade, ages stinger.
+  - `clear()` / `dispose()`.
+- Track selection within a state uses the seeded RNG (deterministic
+  for replays).
+- `RESOURCE_SOUNDTRACK_DIRECTOR` constant.
+
+### Tests
+
+2961 -> 2984 (23 new).
+
+### Backwards compatibility
+
+Pure addition. Pairs with MusicPlaylist (0.95, the per-state
+track shuffler), AmbientLayerMixer (1.4.0), AudioCueQueue (0.94),
+AudioDuck (1.4.1).
+
+### 🟧 Milestone — Wave 1.4 audio / cinematic depth complete
+
+**6 versions shipped (1.4.0 → 1.4.5)**: AmbientLayerMixer
+(cross-faded ambient stems), AudioDuck (auto-music-ducking on
+SFX), SubtitleQueue (timed dialog / caption display),
+VoiceLineQueue (per-channel VO with interruption + resume),
+CinematicLetterbox (cutscene framing bars), SoundtrackDirector
+(state-machine music orchestration).
+
+Together these deliver a **complete cinematic audio + visual
+framing pipeline**: ambient bed under music under VO under SFX
+under stingers, with subtitles, ducking, and letterboxing - all
+without engine-level audio code (consumer brings the audio bus).
+
+### Wave 1.5+
+
+Roadmap continues per Misha's "ask me" cadence: themes proposed
+via AskUserQuestion after each milestone. Engine adaptability
+vision (project_engine_adaptability_vision.md) directs themes
+toward broadening the engine's APPLICABLE DOMAIN (sim / strategy
+/ multiplayer / proc-gen / educational / accessibility / etc.),
+not just deepening action-RPG.
+
 ## 1.4.4 - 2026-05-09
 
 **CinematicLetterbox — cutscene framing bars with smooth open/close.**

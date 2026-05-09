@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '1.4.4';
+export const LOOM_ENGINE_VERSION = '1.4.5';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -856,6 +856,16 @@ export type {
   PulseOptions as LetterboxPulseOptions,
   CinematicLetterboxOptions,
 } from './runtime/cinematic-letterbox.js';
+// 1.4.5 CAPSTONE (Wave 1.4 audio cinematic depth milestone) - context-driven music orchestration.
+export { SoundtrackDirector, RESOURCE_SOUNDTRACK_DIRECTOR } from './runtime/soundtrack-director.js';
+export type {
+  StateTransition,
+  MusicStateSpec,
+  SetStateOptions,
+  StingerSpec,
+  SoundtrackSnapshot,
+  SoundtrackDirectorOptions,
+} from './runtime/soundtrack-director.js';
 export {
   ResourceRegistry,
   createTimeResource,
