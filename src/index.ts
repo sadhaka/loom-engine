@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '1.2.3';
+export const LOOM_ENGINE_VERSION = '1.2.4';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -743,6 +743,16 @@ export type {
   RollContext as EncounterRollContext,
   EncounterTableOptions,
 } from './runtime/encounter-table.js';
+// 1.2.4 (Wave 1.2 world depth) - restocking shop inventory with caps + dynamic pricing.
+export { MerchantStock, RESOURCE_MERCHANT_STOCK } from './runtime/merchant-stock.js';
+export type {
+  PriceModifierFn,
+  StockItemSpec,
+  StockItem,
+  BuyResult,
+  SellResult,
+  MerchantStockOptions,
+} from './runtime/merchant-stock.js';
 export {
   ResourceRegistry,
   createTimeResource,

@@ -7,6 +7,53 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 1.2.4 - 2026-05-09
+
+**MerchantStock — restocking shop inventory with caps + dynamic
+pricing.** Every shopkeeper in every RPG: a counter of items, a
+restock cadence (potions regenerate every 30 minutes, rare gear
+once per week), buy / sell prices, and optional dynamic pricing
+(faction discount, time-of-day surcharge, supply / demand).
+
+### Added
+
+- `src/runtime/merchant-stock.ts` - `MerchantStock<T>` class
+  (type-generic over the per-item payload):
+  - `create<T>({ priceFn?, sellbackPct?, data? })`. Default
+    sellback 0.5.
+  - `addItem({ id, currentStock?, maxStock?, restockAmount?, restockIntervalMs?, basePrice?, payload? })`.
+  - `removeItem` / `hasItem` / `getItem` / `list` / `size`.
+  - `buy(itemId, qty, ctx?)` returns `BuyResult`
+    `{ ok, reason?, unitsSold, totalCost }`. Reasons:
+    `'unknown_item' | 'out_of_stock' | 'invalid_qty'`. Buying
+    more than available caps at `currentStock`.
+  - `sell(itemId, qty, ctx?)` returns `SellResult`
+    `{ ok, reason?, unitsBought, totalPaid }`. Reasons:
+    `'unknown_item' | 'invalid_qty' | 'cap_hit'`. Pays
+    `basePrice * sellbackPct * priceFn(...)` per unit.
+  - `setStock(itemId, qty)` admin override.
+  - `setRestock(itemId, amount, intervalMs)` updates restock
+    policy.
+  - `priceFor(itemId, ctx?)` resolved unit price.
+  - `setPriceFn(fn)` swap modifier at runtime.
+  - `tick(dtMs)` advances restock cadence; auto-caps at maxStock.
+  - Stats: `totalSold` / `totalRevenue` / `totalBought` /
+    `totalCost` / `resetStats`.
+  - `clear()` / `dispose()`.
+- `priceFn(basePrice, itemId, ctx) -> resolvedPrice` is the global
+  modifier hook. Throwing priceFn falls back to basePrice.
+- `restockIntervalMs: 0` disables auto-restock.
+- `RESOURCE_MERCHANT_STOCK` constant.
+
+### Tests
+
+2639 -> 2665 (26 new).
+
+### Backwards compatibility
+
+Pure addition. Pairs with InventoryGrid (0.54, the player's bag),
+LootTable (0.57), FactionReputation (0.86, often drives discounts).
+
 ## 1.2.3 - 2026-05-09
 
 **EncounterTable — weighted encounter pools per zone / phase /
