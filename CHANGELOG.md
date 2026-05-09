@@ -7,6 +7,51 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 1.4.3 - 2026-05-09
+
+**VoiceLineQueue — per-channel interruption-aware VO queue.**
+DialogVoice (1.3.3) is dialog-tree-bound. VoiceLineQueue is the
+general VO surface: per-channel queues for narrator, system
+announcements, NPC barks, training prompts. Each channel has its
+own queue. Higher-priority lines interrupt lower on the same
+channel; interrupted lines optionally resume.
+
+### Added
+
+- `src/runtime/voice-line-queue.ts` - `VoiceLineQueue` class:
+  - `create({ onStart?, onEnd?, onInterrupt? })`.
+  - `enqueue({ id, cueId, durationMs, channel?, priority?, resumeOnInterrupt?, data? })`.
+    Default channel `'default'`, priority 0.
+  - `cancelLine(id)` - cancel anywhere; advances queue if active.
+  - `cancelChannel(channelId)` - clear active + queue.
+  - `pauseChannel(id)` / `resumeChannel(id)` - pause halts tick
+    advancement on that channel.
+  - `setChannelMute(id, muted)` / `isMuted(id)` - muted channels
+    return null from `getActive`.
+  - `getActive(channelId)` - currently playing line or null.
+  - `isPlaying(channelId?)` - any channel by default.
+  - `channels()` - active line snapshots across all channels.
+  - `queueLength(channelId)` / `tick(dtMs)` / `clear` / `dispose`.
+- Higher priority interrupts lower on same channel; queue
+  insertion within channel sorted priority desc.
+- `resumeOnInterrupt: true` re-queues the interrupted line at
+  the front (preserving elapsedMs) so it resumes when the
+  interrupting line ends.
+- All callbacks isolated.
+- NaN / Infinity / negative dt no-op.
+- `RESOURCE_VOICE_LINE_QUEUE` constant.
+
+### Tests
+
+2922 -> 2945 (23 new).
+
+### Backwards compatibility
+
+Pure addition. Pairs with DialogVoice (1.3.3, dialog-bound),
+AudioCueQueue (0.94, the actual audio playback), AudioDuck (1.4.1,
+ducks music when high-priority lines play), SubtitleQueue (1.4.2,
+the visual side - share `id`).
+
 ## 1.4.2 - 2026-05-09
 
 **SubtitleQueue — timed subtitle display + fade for dialog,
