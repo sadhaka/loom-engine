@@ -1,0 +1,470 @@
+<!DOCTYPE html><html class="default" lang="en" data-base="./"><head><meta charset="utf-8"/><meta http-equiv="x-ua-compatible" content="IE=edge"/><title>Loom Engine - v1.5.4</title><meta name="description" content="Documentation for Loom Engine"/><meta name="viewport" content="width=device-width, initial-scale=1"/><link rel="stylesheet" href="assets/style.css"/><link rel="stylesheet" href="assets/highlight.css"/><script defer src="assets/main.js"></script><script async src="assets/icons.js" id="tsd-icons-script"></script><script async src="assets/search.js" id="tsd-search-script"></script><script async src="assets/navigation.js" id="tsd-nav-script"></script><script async src="assets/hierarchy.js" id="tsd-hierarchy-script"></script></head><body><script>document.documentElement.dataset.theme = localStorage.getItem("tsd-theme") || "os";document.body.style.display="none";setTimeout(() => window.app?app.showPage():document.body.style.removeProperty("display"),500)</script><header class="tsd-page-toolbar"><div class="tsd-toolbar-contents container"><a href="index.html" class="title">Loom Engine - v1.5.4</a><div id="tsd-toolbar-links"><a href="https://github.com/sadhaka/loom-engine">GitHub</a><a href="https://theworldtable.ai">TheWorldTable.ai</a></div><button id="tsd-search-trigger" class="tsd-widget" aria-label="Search"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><use href="assets/icons.svg#icon-search"></use></svg></button><dialog id="tsd-search" aria-label="Search"><input role="combobox" id="tsd-search-input" aria-controls="tsd-search-results" aria-autocomplete="list" aria-expanded="true" autocapitalize="off" autocomplete="off" placeholder="Search the docs" maxLength="100"/><ul role="listbox" id="tsd-search-results"></ul><div id="tsd-search-status" aria-live="polite" aria-atomic="true"><div>Preparing search index...</div></div></dialog><a href="#" class="tsd-widget menu" id="tsd-toolbar-menu-trigger" data-toggle="menu" aria-label="Menu"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><use href="assets/icons.svg#icon-menu"></use></svg></a></div></header><div class="container container-main"><div class="col-content"><div class="tsd-page-title"><h1>Loom Engine - v1.5.4</h1></div><div class="tsd-panel tsd-typography"><h1 id="loom-engine" class="tsd-anchor-link">Loom Engine<a href="#loom-engine" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h1>
+<p>Browser-first 2D / 2.5D game engine for <a href="https://theworldtable.ai">TheWorldTable.ai</a>.
+Canvas2D primary backend, ECS, render-graph stages, Director-bridge
+SSE integration. No external engine reuse - built from scratch in
+TypeScript.</p>
+<p>Repo: <a href="https://github.com/sadhaka/loom-engine">sadhaka/loom-engine</a>.
+API docs: <a href="https://loom-engine.pages.dev/">loom-engine.pages.dev</a>.
+The design spec (<code>LOOM-ENGINE-SPEC.md</code>) lives in the consuming
+<a href="http://TheWorldTable.ai">TheWorldTable.ai</a> repo and is the canonical source for phase
+plans and architectural decisions.</p>
+<h2 id="install" class="tsd-anchor-link">Install<a href="#install" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<pre><code class="sh"><span class="hl-0">npm</span><span class="hl-1"> </span><span class="hl-2">install</span><span class="hl-1"> </span><span class="hl-2">@sadhaka/loom-engine</span>
+</code><button type="button">Copy</button></pre>
+
+<p>Pre-alpha. ESM-only, browser-first. TypeScript types ship in the
+package (<code>dist/index.d.ts</code>). Node 18+ for the build toolchain;
+the runtime targets evergreen browsers (Canvas2D + Web Audio +
+EventSource).</p>
+<h2 id="documentation" class="tsd-anchor-link">Documentation<a href="#documentation" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p>API reference (TypeDoc) - generated from the public surface in
+<a href="./"><code>src/index.ts</code></a> on every push to <code>main</code>:
+<strong><a href="https://loom-engine.pages.dev/">https://loom-engine.pages.dev/</a></strong></p>
+<p>Build it locally with <code>npm run docs</code> (writes to <code>./docs/</code>).</p>
+<p>See <a href="#docs-deploy">Docs deploy</a> for the hosting chain and one-time
+activation steps (Cloudflare Pages, since GitHub Pages is unavailable
+on private repos for free user plans).</p>
+<h2 id="quickstart" class="tsd-anchor-link">Quickstart<a href="#quickstart" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<pre><code class="ts"><span class="hl-3">// 1. Install</span><br/><span class="hl-3">//    npm install @sadhaka/loom-engine</span><br/><span class="hl-4">import</span><span class="hl-1"> {</span><br/><span class="hl-1">  </span><span class="hl-5">Engine</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-5">SpriteRenderSystem</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-5">InputSystem</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-5">VeilBudgetSystem</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-5">SYSTEM_PHASE_INPUT</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-5">SYSTEM_PHASE_RENDER</span><span class="hl-1">,</span><br/><span class="hl-1">} </span><span class="hl-4">from</span><span class="hl-1"> </span><span class="hl-2">&#39;@sadhaka/loom-engine&#39;</span><span class="hl-1">;</span><br/><br/><span class="hl-3">// 2. Attach to a canvas. Engine.create wires Canvas2DDevice, World,</span><br/><span class="hl-3">//    TransformPool, SpritePool, Time + Camera resources, and the</span><br/><span class="hl-3">//    default SpriteRenderSystem in SYSTEM_PHASE_RENDER.</span><br/><span class="hl-6">var</span><span class="hl-1"> </span><span class="hl-5">canvas</span><span class="hl-1"> = </span><span class="hl-5">document</span><span class="hl-1">.</span><span class="hl-0">querySelector</span><span class="hl-1">(</span><span class="hl-2">&#39;canvas&#39;</span><span class="hl-1">);</span><br/><span class="hl-6">var</span><span class="hl-1"> </span><span class="hl-5">engine</span><span class="hl-1"> = </span><span class="hl-5">Engine</span><span class="hl-1">.</span><span class="hl-0">create</span><span class="hl-1">({ </span><span class="hl-5">canvas:</span><span class="hl-1"> </span><span class="hl-5">canvas</span><span class="hl-1"> });</span><br/><br/><span class="hl-3">// 3. Register the systems your game needs. Order within a phase is</span><br/><span class="hl-3">//    deterministic; phases run INPUT -&gt; LOGIC -&gt; PHYSICS -&gt; ANIMATION</span><br/><span class="hl-3">//    -&gt; RENDER -&gt; POST_RENDER per frame.</span><br/><span class="hl-5">engine</span><span class="hl-1">.</span><span class="hl-5">world</span><span class="hl-1">.</span><span class="hl-0">addSystem</span><span class="hl-1">(</span><span class="hl-6">new</span><span class="hl-1"> </span><span class="hl-0">InputSystem</span><span class="hl-1">(), </span><span class="hl-7">SYSTEM_PHASE_INPUT</span><span class="hl-1">);</span><br/><span class="hl-5">engine</span><span class="hl-1">.</span><span class="hl-5">world</span><span class="hl-1">.</span><span class="hl-0">addSystem</span><span class="hl-1">(</span><span class="hl-6">new</span><span class="hl-1"> </span><span class="hl-0">VeilBudgetSystem</span><span class="hl-1">(), </span><span class="hl-7">SYSTEM_PHASE_INPUT</span><span class="hl-1">);</span><br/><br/><span class="hl-3">// 4. Drive the frame loop. engine.tick advances Time, beginFrame on</span><br/><span class="hl-3">//    the device, world.update across all phases, endFrame.</span><br/><span class="hl-6">function</span><span class="hl-1"> </span><span class="hl-0">tick</span><span class="hl-1">(</span><span class="hl-5">now</span><span class="hl-1">) {</span><br/><span class="hl-1">  </span><span class="hl-5">engine</span><span class="hl-1">.</span><span class="hl-0">tick</span><span class="hl-1">(</span><span class="hl-5">now</span><span class="hl-1">);</span><br/><span class="hl-1">  </span><span class="hl-0">requestAnimationFrame</span><span class="hl-1">(</span><span class="hl-5">tick</span><span class="hl-1">);</span><br/><span class="hl-1">}</span><br/><span class="hl-0">requestAnimationFrame</span><span class="hl-1">(</span><span class="hl-5">tick</span><span class="hl-1">);</span>
+</code><button type="button">Copy</button></pre>
+
+<h2 id="configuration" class="tsd-anchor-link">Configuration<a href="#configuration" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<h3 id="director-bridge-credentials-security-note" class="tsd-anchor-link">Director-bridge credentials (security note)<a href="#director-bridge-credentials-security-note" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p><code>SSEDirectorBridge</code> and <code>SnapshotRecoveryHelper</code> send credentials with
+their network requests by default. The default <code>eventSourceFactory</code>
+constructs <code>new EventSource(url, { withCredentials: true })</code> and
+<code>SnapshotRecoveryHelper</code> calls <code>fetch(url, { credentials: 'include' })</code>.
+This is the right default for the embedded <a href="http://TheWorldTable.ai">TheWorldTable.ai</a>
+same-origin use case (cookies + auth headers flow with the request
+to the same origin), but <strong>a third-party consumer pointing the bridge
+at a URL configured from user input could end up sending their own
+site's credentials cross-origin</strong> (the browser still requires the
+target server to opt in via <code>Access-Control-Allow-Credentials: true</code>
+plus a specific <code>Access-Control-Allow-Origin</code>, so this is not a
+one-sided SSRF; it requires attacker control of the target server's
+CORS policy).</p>
+<p>If you do not want credentials to flow with director-bridge requests,
+override the seams the engine already exposes - no engine code change
+needed:</p>
+<pre><code class="ts"><span class="hl-4">import</span><span class="hl-1"> {</span><br/><span class="hl-1">  </span><span class="hl-5">SSEDirectorBridge</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-5">SnapshotRecoveryHelper</span><span class="hl-1">,</span><br/><span class="hl-1">} </span><span class="hl-4">from</span><span class="hl-1"> </span><span class="hl-2">&#39;@sadhaka/loom-engine&#39;</span><span class="hl-1">;</span><br/><br/><span class="hl-3">// Credential-free SSE subscription.</span><br/><span class="hl-6">var</span><span class="hl-1"> </span><span class="hl-5">bridge</span><span class="hl-1"> = </span><span class="hl-6">new</span><span class="hl-1"> </span><span class="hl-0">SSEDirectorBridge</span><span class="hl-1">({</span><br/><span class="hl-1">  </span><span class="hl-5">baseUrl:</span><span class="hl-1"> </span><span class="hl-5">directorUrl</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-5">characterId:</span><span class="hl-1"> </span><span class="hl-5">characterId</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-0">eventSourceFactory</span><span class="hl-5">:</span><span class="hl-1"> </span><span class="hl-6">function</span><span class="hl-1">(</span><span class="hl-5">u</span><span class="hl-1">) {</span><br/><span class="hl-1">    </span><span class="hl-4">return</span><span class="hl-1"> </span><span class="hl-6">new</span><span class="hl-1"> </span><span class="hl-0">EventSource</span><span class="hl-1">(</span><span class="hl-5">u</span><span class="hl-1">, { </span><span class="hl-5">withCredentials:</span><span class="hl-1"> </span><span class="hl-6">false</span><span class="hl-1"> });</span><br/><span class="hl-1">  },</span><br/><span class="hl-1">});</span><br/><br/><span class="hl-3">// Credential-free snapshot recovery.</span><br/><span class="hl-6">var</span><span class="hl-1"> </span><span class="hl-5">recovery</span><span class="hl-1"> = </span><span class="hl-6">new</span><span class="hl-1"> </span><span class="hl-0">SnapshotRecoveryHelper</span><span class="hl-1">({</span><br/><span class="hl-1">  </span><span class="hl-5">baseUrl:</span><span class="hl-1"> </span><span class="hl-5">snapshotUrl</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-5">characterId:</span><span class="hl-1"> </span><span class="hl-5">characterId</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-0">fetchImpl</span><span class="hl-5">:</span><span class="hl-1"> </span><span class="hl-6">function</span><span class="hl-1">(</span><span class="hl-5">input</span><span class="hl-1">, </span><span class="hl-5">init</span><span class="hl-1">) {</span><br/><span class="hl-1">    </span><span class="hl-6">var</span><span class="hl-1"> </span><span class="hl-5">safeInit</span><span class="hl-1"> = </span><span class="hl-5">Object</span><span class="hl-1">.</span><span class="hl-0">assign</span><span class="hl-1">({}, </span><span class="hl-5">init</span><span class="hl-1">, { </span><span class="hl-5">credentials:</span><span class="hl-1"> </span><span class="hl-2">&#39;omit&#39;</span><span class="hl-1"> });</span><br/><span class="hl-1">    </span><span class="hl-4">return</span><span class="hl-1"> </span><span class="hl-0">fetch</span><span class="hl-1">(</span><span class="hl-5">input</span><span class="hl-1">, </span><span class="hl-5">safeInit</span><span class="hl-1">);</span><br/><span class="hl-1">  },</span><br/><span class="hl-1">});</span>
+</code><button type="button">Copy</button></pre>
+
+<p>The override hooks have always existed; 0.10.1 documents them.
+Internal security audit references are kept in the repository, not
+shipped with the npm package.</p>
+<h2 id="status" class="tsd-anchor-link">Status<a href="#status" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p><strong>Pre-alpha, productized as of 0.10.0</strong> (Phase 11B.3 - npm publish
+under MIT). Phases 0 through 9.3 + 11A.2 are shipped; the engine
+runs the public <a href="http://TheWorldTable.ai">TheWorldTable.ai</a> pre-alpha. Productization is a
+fund-raising and distribution decision, not a stability claim - the
+public API surface will evolve until 1.0.</p>
+<table>
+<thead>
+<tr>
+<th>Phase</th>
+<th>Status</th>
+<th>Surface</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>shipped</td>
+<td>scaffolding, package.json, tsconfig, PRIOR-ART log</td>
+</tr>
+<tr>
+<td>1</td>
+<td>shipped</td>
+<td>Canvas2D iso renderer, camera, transform pool (SoA)</td>
+</tr>
+<tr>
+<td>2</td>
+<td>shipped</td>
+<td>ECS World, system scheduler, resource registry, Engine facade, asset pipeline</td>
+</tr>
+<tr>
+<td>3</td>
+<td>shipped</td>
+<td>clip-aware sprite-sheet manifests, AnimationStatePool, AnimationSystem</td>
+</tr>
+<tr>
+<td>4</td>
+<td>shipped</td>
+<td>particle pool, emitter component, three-system VFX pipeline, additive blend</td>
+</tr>
+<tr>
+<td>5</td>
+<td>shipped</td>
+<td>Web Audio bus mixer with VE-budget gating, unified keyboard / mouse / touch input</td>
+</tr>
+<tr>
+<td>6</td>
+<td>shipped</td>
+<td>Director-bridge: SSE event-stream subscription, eventSourceFactory hook, snapshot-recovery</td>
+</tr>
+<tr>
+<td>7</td>
+<td>shipped</td>
+<td>Survivor combat layer (projectile pool, hit resolution, damage application) ported onto Loom Engine</td>
+</tr>
+<tr>
+<td>8</td>
+<td>shipped</td>
+<td>2.5D ARPG hub-and-spoke per LOOM-CLASS-SYSTEM-SPEC, plaza narrator, mobile + touch input (virtual D-pad, tap-to-walk)</td>
+</tr>
+<tr>
+<td>9.1</td>
+<td>shipped</td>
+<td>perf pass: alloc-churn fixes + bench harness</td>
+</tr>
+<tr>
+<td>9.3</td>
+<td>shipped</td>
+<td>TypeDoc public-API site with auto-deploy</td>
+</tr>
+<tr>
+<td>11A.2</td>
+<td>shipped</td>
+<td>docs hosting migrated to Cloudflare Pages</td>
+</tr>
+<tr>
+<td>11B.3</td>
+<td>shipped</td>
+<td>MIT license + npm publish posture (this release)</td>
+</tr>
+<tr>
+<td>12.4</td>
+<td>shipped</td>
+<td>License pivot from MIT to BUSL 1.1 with $1M revenue cap</td>
+</tr>
+<tr>
+<td>13.2</td>
+<td>shipped</td>
+<td>Engine hardening: 12.6 audit lows L-08..L-12 closed</td>
+</tr>
+<tr>
+<td>14.1</td>
+<td>shipped</td>
+<td>WebGL2 instanced sprite batcher</td>
+</tr>
+<tr>
+<td>15.1</td>
+<td>shipped</td>
+<td>Multiplayer presence: pluggable bridge (SSE / Mock), peer pool with per-peer linear interpolation, render system (this release)</td>
+</tr>
+</tbody>
+</table>
+<p>See <a href="../docker/LOOM-ENGINE-SPEC.md">LOOM-ENGINE-SPEC.md</a> Section 7
+for the full phase plan with effort estimates.</p>
+<h2 id="renderer-backends" class="tsd-anchor-link">Renderer backends<a href="#renderer-backends" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p>Two backends ship behind the same <code>IGraphicsDevice</code> contract:</p>
+<table>
+<thead>
+<tr>
+<th>Backend</th>
+<th>Status</th>
+<th>When to use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>canvas2d</code></td>
+<td>default, stable</td>
+<td>Hundreds to ~2k sprites; broadest browser coverage</td>
+</tr>
+<tr>
+<td><code>webgl2</code></td>
+<td>0.12.0+, opt-in</td>
+<td>Thousands of sprites; instanced batching with atlas grouping</td>
+</tr>
+</tbody>
+</table>
+<p>Existing consumers do not need to change anything - <code>Engine.create({ canvas })</code>
+keeps the Canvas2D path it has always had, with byte-for-byte
+compatibility on every public API.</p>
+<h3 id="opt-into-webgl2" class="tsd-anchor-link">Opt into WebGL2<a href="#opt-into-webgl2" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<pre><code class="ts"><span class="hl-4">import</span><span class="hl-1"> { </span><span class="hl-5">Engine</span><span class="hl-1">, </span><span class="hl-5">WebGL2Device</span><span class="hl-1"> } </span><span class="hl-4">from</span><span class="hl-1"> </span><span class="hl-2">&#39;@sadhaka/loom-engine&#39;</span><span class="hl-1">;</span><br/><br/><span class="hl-3">// Importing WebGL2Device side-effect-registers the &#39;webgl2&#39; backend</span><br/><span class="hl-3">// factory. The string-based form then works:</span><br/><span class="hl-6">var</span><span class="hl-1"> </span><span class="hl-5">engine</span><span class="hl-1"> = </span><span class="hl-5">Engine</span><span class="hl-1">.</span><span class="hl-0">create</span><span class="hl-1">({ </span><span class="hl-5">canvas:</span><span class="hl-1"> </span><span class="hl-5">myCanvas</span><span class="hl-1">, </span><span class="hl-5">backend:</span><span class="hl-1"> </span><span class="hl-2">&#39;webgl2&#39;</span><span class="hl-1"> });</span>
+</code><button type="button">Copy</button></pre>
+
+<p>Or inject a pre-built device for absolute control over construction
+(useful when sharing the GL context with another renderer):</p>
+<pre><code class="ts"><span class="hl-4">import</span><span class="hl-1"> { </span><span class="hl-5">Engine</span><span class="hl-1">, </span><span class="hl-5">WebGL2Device</span><span class="hl-1"> } </span><span class="hl-4">from</span><span class="hl-1"> </span><span class="hl-2">&#39;@sadhaka/loom-engine&#39;</span><span class="hl-1">;</span><br/><br/><span class="hl-6">var</span><span class="hl-1"> </span><span class="hl-5">device</span><span class="hl-1"> = </span><span class="hl-6">new</span><span class="hl-1"> </span><span class="hl-0">WebGL2Device</span><span class="hl-1">(</span><span class="hl-5">myCanvas</span><span class="hl-1">);</span><br/><span class="hl-6">var</span><span class="hl-1"> </span><span class="hl-5">engine</span><span class="hl-1"> = </span><span class="hl-5">Engine</span><span class="hl-1">.</span><span class="hl-0">create</span><span class="hl-1">({ </span><span class="hl-5">canvas:</span><span class="hl-1"> </span><span class="hl-5">myCanvas</span><span class="hl-1">, </span><span class="hl-5">device:</span><span class="hl-1"> </span><span class="hl-5">device</span><span class="hl-1"> });</span>
+</code><button type="button">Copy</button></pre>
+
+<h3 id="how-batching-works" class="tsd-anchor-link">How batching works<a href="#how-batching-works" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Every <code>drawSprite</code> / <code>drawTile</code> / <code>drawParticle</code> / <code>drawText</code> call
+flows through <code>SpriteBatcher</code>, which accumulates per-instance data
+(screen-space origin + size, atlas UV rect, RGBA tint) into a single
+Float32Array. A flush triggers when the next call uses a different
+atlas or blend mode, and at <code>endFrame</code>. Each flush issues exactly
+one <code>drawArraysInstanced</code> for the batch.</p>
+<p>For maximum throughput, group draws by atlas at the system level
+(e.g. render all hamlet props from one atlas, all NPCs from another).
+The default <code>SpriteRenderSystem</code> already sorts globally by iso depth
+key; submission order within an atlas-bounded run is preserved
+through the batcher.</p>
+<h3 id="tree-shake-story" class="tsd-anchor-link">Tree-shake story<a href="#tree-shake-story" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p><code>engine.ts</code> deliberately does <strong>not</strong> statically import
+<code>WebGL2Device</code>. A consumer that only uses Canvas2D never pulls
+WebGL2-specific code into their bundle - the only way the WebGL2
+path enters the dependency graph is via an explicit
+<code>import { WebGL2Device }</code>, which also triggers backend registration
+through a <code>/*#__PURE__*/</code>-marked side effect.</p>
+<h3 id="webgl2-limits-fallback" class="tsd-anchor-link">WebGL2 limits + fallback<a href="#webgl2-limits-fallback" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ul>
+<li>WebGL2 contexts can be lost (GPU crash, long backgrounded tab,
+extension hijack). The device handles <code>webglcontextlost</code> /
+<code>webglcontextrestored</code> automatically: every atlas re-uploads from
+its cached source image; frames during the lost interval no-op.</li>
+<li>Browsers without WebGL2 (Safari &lt; 15, very old Chrome/Firefox)
+throw at <code>WebGL2Device</code> construction. Wrap the upgrade in a
+feature check and fall back to Canvas2D:<pre><code class="ts"><span class="hl-6">function</span><span class="hl-1"> </span><span class="hl-0">pickBackend</span><span class="hl-1">() {</span><br/><span class="hl-1">  </span><span class="hl-6">var</span><span class="hl-1"> </span><span class="hl-5">probe</span><span class="hl-1"> = </span><span class="hl-5">document</span><span class="hl-1">.</span><span class="hl-0">createElement</span><span class="hl-1">(</span><span class="hl-2">&#39;canvas&#39;</span><span class="hl-1">).</span><span class="hl-0">getContext</span><span class="hl-1">(</span><span class="hl-2">&#39;webgl2&#39;</span><span class="hl-1">);</span><br/><span class="hl-1">  </span><span class="hl-4">return</span><span class="hl-1"> </span><span class="hl-5">probe</span><span class="hl-1"> ? </span><span class="hl-2">&#39;webgl2&#39;</span><span class="hl-1"> : </span><span class="hl-2">&#39;canvas2d&#39;</span><span class="hl-1">;</span><br/><span class="hl-1">}</span><br/><span class="hl-6">var</span><span class="hl-1"> </span><span class="hl-5">engine</span><span class="hl-1"> = </span><span class="hl-5">Engine</span><span class="hl-1">.</span><span class="hl-0">create</span><span class="hl-1">({ </span><span class="hl-5">canvas:</span><span class="hl-1"> </span><span class="hl-5">myCanvas</span><span class="hl-1">, </span><span class="hl-5">backend:</span><span class="hl-1"> </span><span class="hl-0">pickBackend</span><span class="hl-1">() });</span>
+</code><button type="button">Copy</button></pre>
+
+</li>
+<li>Performance characterization lands in phase 14.3 (synthetic 5k+
+sprite bench, frame-time histograms, pareto-front against
+Canvas2D). Until then, treat WebGL2 as opt-in for scale-bound
+scenes only.</li>
+</ul>
+<h2 id="build" class="tsd-anchor-link">Build<a href="#build" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<pre><code class="sh"><span class="hl-0">npm</span><span class="hl-1"> </span><span class="hl-2">install</span><br/><span class="hl-0">npm</span><span class="hl-1"> </span><span class="hl-2">run</span><span class="hl-1"> </span><span class="hl-2">build</span><span class="hl-1">         </span><span class="hl-3"># tsc src/ -&gt; dist/</span><br/><span class="hl-0">npm</span><span class="hl-1"> </span><span class="hl-2">run</span><span class="hl-1"> </span><span class="hl-2">build:demo</span><span class="hl-1">    </span><span class="hl-3"># tsc demo/*.ts -&gt; demo/*.js</span><br/><span class="hl-0">npm</span><span class="hl-1"> </span><span class="hl-2">run</span><span class="hl-1"> </span><span class="hl-2">build:all</span><span class="hl-1">     </span><span class="hl-3"># both</span><br/><span class="hl-0">npm</span><span class="hl-1"> </span><span class="hl-2">run</span><span class="hl-1"> </span><span class="hl-2">watch</span><span class="hl-1">         </span><span class="hl-3"># rebuild src on change</span><br/><span class="hl-0">npm</span><span class="hl-1"> </span><span class="hl-2">run</span><span class="hl-1"> </span><span class="hl-2">test</span><span class="hl-1">          </span><span class="hl-3"># tsx tests/*.test.ts</span><br/><span class="hl-0">npm</span><span class="hl-1"> </span><span class="hl-2">run</span><span class="hl-1"> </span><span class="hl-2">clean</span><span class="hl-1">         </span><span class="hl-3"># remove dist + compiled demo</span>
+</code><button type="button">Copy</button></pre>
+
+<h2 id="run-the-demos" class="tsd-anchor-link">Run the demos<a href="#run-the-demos" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<pre><code class="sh"><span class="hl-0">npm</span><span class="hl-1"> </span><span class="hl-2">run</span><span class="hl-1"> </span><span class="hl-2">build:all</span><br/><span class="hl-0">python</span><span class="hl-1"> </span><span class="hl-6">-m</span><span class="hl-1"> </span><span class="hl-2">http.server</span><span class="hl-1"> </span><span class="hl-8">8765</span><br/><span class="hl-3"># browse http://localhost:8765/demo/</span>
+</code><button type="button">Copy</button></pre>
+
+<p><code>http://localhost:8765/demo/</code> is the gallery index. The same tree is
+published to <a href="https://loom-engine.pages.dev/demo/">loom-engine.pages.dev/demo/</a>
+on every push to <code>main</code>.</p>
+<h2 id="examples" class="tsd-anchor-link">Examples<a href="#examples" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p>Three minimal, copy-paste-ready starters live under <code>demo/</code>. Each is
+roughly 150 lines of TypeScript, imports from <code>@sadhaka/loom-engine</code>
+(resolved via <code>importmap</code> to the local engine bundle), and runs in
+the browser without a build step on the consumer side.</p>
+<ul>
+<li><strong><a href="media/survivor-mini">Survivor Mini</a></strong> - 100-line autobattler.
+Player at center auto-fires at the nearest mob; mobs spawn from
+random screen edges and pursue. Showcases ECS pools (Transform /
+Sprite / Health / Pursue / RangedAttack), <code>MOB_CATALOG</code>, projectile
+physics, system-phase ordering.</li>
+<li><strong><a href="media/plaza-mini">Plaza Mini</a></strong> - walkable iso plaza wired to
+a mock Director bridge. WASD to walk; the narrator overlay below
+the canvas pulses every five seconds with a synthetic
+<code>narrator.line</code> event drained from <code>MockDirectorBridge</code>. Demonstrates
+iso projection, input snapshot, the bridge / event-log / DOM-overlay
+boundary.</li>
+<li><strong><a href="media/dialogue-mini">Dialogue Mini</a></strong> - branching dialogue
+tree, no movement, no combat. Click a choice or press 1 / 2 / 3.
+Demonstrates that the same ECS / resource model that runs the action
+demos also fits a UI-only game: custom <code>Resource</code>, custom <code>System</code>
+reading both <code>InputSnapshot</code> and DOM events, DOM as the primary UI.</li>
+<li><strong><a href="media/plaza-multiplayer">Plaza Multiplayer</a></strong> - walkable iso
+plaza with three synthetic peers wandering randomly, driven by a
+<code>MockMultiplayerBridge</code>. WASD to walk; the local player broadcasts
+position at 10 Hz and the three peers (Alice / Bob / Carol) lerp
+smoothly between presence updates. Demonstrates the pluggable
+multiplayer bridge, <code>PeerPool</code> linear interpolation, and the
+<code>PeerPresenceSystem</code> / <code>PeerRenderSystem</code> pipeline. See the
+<a href="#multiplayer">Multiplayer</a> section below for the wire protocol.</li>
+</ul>
+<p>The legacy reference demos (Phase 6 director, Phase 7 combat, Phase 8
+ARPG slice) stay accessible from the gallery index.</p>
+<p>Controls in the legacy director demo (<code>demo/director.html</code>):</p>
+<ul>
+<li><strong>Arrow keys / WASD</strong>: pan camera</li>
+<li><strong>Click</strong>: burst 24 particles + play SFX chirp (after first click, AudioContext unlocks)</li>
+<li><strong>Hover</strong>: stats panel shows the iso tile under the cursor</li>
+</ul>
+<h2 id="multiplayer" class="tsd-anchor-link">Multiplayer<a href="#multiplayer" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p>Phase 15.1 adds a thin presence layer for showing other players in
+real time on the same world. The transport is pluggable: the engine
+ships an <code>SSEMultiplayerBridge</code> (server-sent events) and a
+<code>MockMultiplayerBridge</code> (in-process; tests + offline demos), and the
+<code>IMultiplayerBridge</code> interface is small enough to swap in WebSocket
+or WebRTC without touching anything above it. No CRDT - peers carry
+position only, and conflict resolution is &quot;last write wins&quot; at the
+server. Shared state beyond position is deferred to a later phase.</p>
+<h3 id="wire-protocol" class="tsd-anchor-link">Wire protocol<a href="#wire-protocol" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>The bridge layer hides this from gameplay code, but for anyone
+implementing a server (or a custom transport) the contract is:</p>
+<p><strong>Server -&gt; client (SSE event types):</strong></p>
+<ul>
+<li><code>presence.snapshot</code> <code>{ peers: [{ character_id, x, y, zone, ts_ms, name? }] }</code>
+emitted once on connect with the full current peer roster. The
+client treats this as authoritative and drops any peer not in the
+snapshot.</li>
+<li><code>presence.update</code> <code>{ character_id, x, y, zone, ts_ms, name? }</code>
+emitted as peers move.</li>
+<li><code>presence.depart</code> <code>{ character_id }</code>
+emitted when a peer disconnects.</li>
+</ul>
+<p><strong>Client -&gt; server (HTTP POST):</strong></p>
+<ul>
+<li><code>POST &lt;broadcastUrl&gt;</code> <code>{ character_id, x, y, zone, ts_ms }</code>
+the engine rate-limits to <strong>10 Hz</strong> (<code>BROADCAST_HZ</code>); excess calls
+to <code>broadcastPosition()</code> are silently dropped and counted in
+<code>bridge.stats().rateLimitedDrops</code>. Calling once per frame is fine.</li>
+</ul>
+<p><code>ts_ms</code> is the wall clock at which the position was true. The
+<code>PeerPool</code> uses it to interpolate between successive samples so peers
+don't jitter at the network rate. Acceptable lag is ~150 ms (one
+update interval at 10 Hz), imperceptible at walk speed.</p>
+<h3 id="setup" class="tsd-anchor-link">Setup<a href="#setup" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<pre><code class="ts"><span class="hl-4">import</span><span class="hl-1"> {</span><br/><span class="hl-1">  </span><span class="hl-5">Engine</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-3">// Multiplayer</span><br/><span class="hl-1">  </span><span class="hl-5">MockMultiplayerBridge</span><span class="hl-1">,        </span><span class="hl-3">// or SSEMultiplayerBridge</span><br/><span class="hl-1">  </span><span class="hl-5">PeerPool</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-5">PeerSpritePool</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-5">PeerPresenceSystem</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-5">PeerRenderSystem</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-5">POOL_PEER_SPRITE</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-5">RESOURCE_MULTIPLAYER_BRIDGE</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-5">RESOURCE_PEER_POOL</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-5">SYSTEM_PHASE_INPUT</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-5">SYSTEM_PHASE_RENDER</span><span class="hl-1">,</span><br/><span class="hl-1">} </span><span class="hl-4">from</span><span class="hl-1"> </span><span class="hl-2">&#39;@sadhaka/loom-engine&#39;</span><span class="hl-1">;</span><br/><br/><span class="hl-6">const</span><span class="hl-1"> </span><span class="hl-7">engine</span><span class="hl-1"> = </span><span class="hl-5">Engine</span><span class="hl-1">.</span><span class="hl-0">create</span><span class="hl-1">({ </span><span class="hl-5">canvas</span><span class="hl-1"> });</span><br/><br/><span class="hl-3">// 1. Create a bridge. Production code uses SSEMultiplayerBridge:</span><br/><span class="hl-3">//</span><br/><span class="hl-3">//   const bridge = new SSEMultiplayerBridge({</span><br/><span class="hl-3">//     baseUrl: &#39;/api/v1/loom/presence/events&#39;,</span><br/><span class="hl-3">//     characterId: &#39;me&#39;,</span><br/><span class="hl-3">//     zone: &#39;plaza&#39;,</span><br/><span class="hl-3">//   });</span><br/><span class="hl-3">//</span><br/><span class="hl-3">// Tests + offline dev use the in-process mock:</span><br/><span class="hl-6">const</span><span class="hl-1"> </span><span class="hl-7">bridge</span><span class="hl-1"> = </span><span class="hl-6">new</span><span class="hl-1"> </span><span class="hl-0">MockMultiplayerBridge</span><span class="hl-1">();</span><br/><span class="hl-5">bridge</span><span class="hl-1">.</span><span class="hl-0">connect</span><span class="hl-1">();</span><br/><br/><span class="hl-3">// 2. PeerPool stores all known peers + their interpolated positions.</span><br/><span class="hl-3">//    Self-filter: tell the pool which character_id is the local player</span><br/><span class="hl-3">//    so it isn&#39;t rendered as a ghost when the server echoes it back.</span><br/><span class="hl-6">const</span><span class="hl-1"> </span><span class="hl-7">peerPool</span><span class="hl-1"> = </span><span class="hl-6">new</span><span class="hl-1"> </span><span class="hl-0">PeerPool</span><span class="hl-1">();</span><br/><span class="hl-5">peerPool</span><span class="hl-1">.</span><span class="hl-0">setLocalCharacterId</span><span class="hl-1">(</span><span class="hl-2">&#39;me&#39;</span><span class="hl-1">);</span><br/><br/><span class="hl-3">// 3. PeerSpritePool maps character_id -&gt; rendering hint. A default</span><br/><span class="hl-3">//    atlas + frame is enough for an undifferentiated demo; setOverride()</span><br/><span class="hl-3">//    lets you assign per-class sprites or cosmetic shards.</span><br/><span class="hl-6">const</span><span class="hl-1"> </span><span class="hl-7">peerSprites</span><span class="hl-1"> = </span><span class="hl-6">new</span><span class="hl-1"> </span><span class="hl-0">PeerSpritePool</span><span class="hl-1">({ </span><span class="hl-5">defaultAtlas:</span><span class="hl-1"> </span><span class="hl-5">peerAtlas</span><span class="hl-1"> });</span><br/><br/><span class="hl-5">engine</span><span class="hl-1">.</span><span class="hl-5">world</span><span class="hl-1">.</span><span class="hl-5">resources</span><span class="hl-1">.</span><span class="hl-0">set</span><span class="hl-1">(</span><span class="hl-7">RESOURCE_MULTIPLAYER_BRIDGE</span><span class="hl-1">, </span><span class="hl-5">bridge</span><span class="hl-1">);</span><br/><span class="hl-5">engine</span><span class="hl-1">.</span><span class="hl-5">world</span><span class="hl-1">.</span><span class="hl-5">resources</span><span class="hl-1">.</span><span class="hl-0">set</span><span class="hl-1">(</span><span class="hl-7">RESOURCE_PEER_POOL</span><span class="hl-1">, </span><span class="hl-5">peerPool</span><span class="hl-1">);</span><br/><span class="hl-5">engine</span><span class="hl-1">.</span><span class="hl-5">world</span><span class="hl-1">.</span><span class="hl-0">registerPool</span><span class="hl-1">(</span><span class="hl-7">POOL_PEER_SPRITE</span><span class="hl-1">, </span><span class="hl-5">peerSprites</span><span class="hl-1">);</span><br/><br/><span class="hl-3">// 4. Wire the systems. PeerPresenceSystem drains the bridge each</span><br/><span class="hl-3">//    frame; PeerRenderSystem submits a drawSprite + name label per</span><br/><span class="hl-3">//    peer at their interpolated position.</span><br/><span class="hl-5">engine</span><span class="hl-1">.</span><span class="hl-5">world</span><span class="hl-1">.</span><span class="hl-0">addSystem</span><span class="hl-1">(</span><span class="hl-6">new</span><span class="hl-1"> </span><span class="hl-0">PeerPresenceSystem</span><span class="hl-1">(), </span><span class="hl-7">SYSTEM_PHASE_INPUT</span><span class="hl-1">);</span><br/><span class="hl-5">engine</span><span class="hl-1">.</span><span class="hl-5">world</span><span class="hl-1">.</span><span class="hl-0">addSystem</span><span class="hl-1">(</span><span class="hl-6">new</span><span class="hl-1"> </span><span class="hl-0">PeerRenderSystem</span><span class="hl-1">(),   </span><span class="hl-7">SYSTEM_PHASE_RENDER</span><span class="hl-1">);</span><br/><br/><span class="hl-3">// 5. Inside your walk-system, call broadcastPosition() each frame.</span><br/><span class="hl-3">//    The bridge enforces the 10 Hz wire rate.</span><br/><span class="hl-5">bridge</span><span class="hl-1">.</span><span class="hl-0">broadcastPosition</span><span class="hl-1">(</span><span class="hl-5">playerX</span><span class="hl-1">, </span><span class="hl-5">playerY</span><span class="hl-1">, </span><span class="hl-2">&#39;plaza&#39;</span><span class="hl-1">, </span><span class="hl-5">Date</span><span class="hl-1">.</span><span class="hl-0">now</span><span class="hl-1">());</span>
+</code><button type="button">Copy</button></pre>
+
+<h3 id="swapping-transports" class="tsd-anchor-link">Swapping transports<a href="#swapping-transports" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>The bridge interface is just five methods (<code>connect</code>, <code>disconnect</code>,
+<code>status</code>, <code>pollMessages</code>, <code>broadcastPosition</code>, plus <code>stats</code>). To use
+WebSocket or WebRTC, implement <code>IMultiplayerBridge</code> with the same
+<code>PresenceMessage</code> shape (<code>update</code> / <code>depart</code> / <code>snapshot</code>); none of
+the systems above the bridge change.</p>
+<h2 id="layout" class="tsd-anchor-link">Layout<a href="#layout" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<pre><code><span class="hl-5">loom</span><span class="hl-1">-</span><span class="hl-5">engine</span><span class="hl-1">/</span><br/><span class="hl-1">  </span><span class="hl-5">src</span><span class="hl-1">/</span><br/><span class="hl-1">    </span><span class="hl-5">util</span><span class="hl-1">/               </span><span class="hl-5">math</span><span class="hl-1">, </span><span class="hl-5">color</span><span class="hl-1">, </span><span class="hl-5">typed</span><span class="hl-1">-</span><span class="hl-5">arrays</span><br/><span class="hl-1">    </span><span class="hl-5">components</span><span class="hl-1">/         </span><span class="hl-5">transform</span><span class="hl-1">, </span><span class="hl-5">sprite</span><span class="hl-1">, </span><span class="hl-5">particle</span><span class="hl-1">-</span><span class="hl-5">emitter</span><br/><span class="hl-1">    </span><span class="hl-5">renderer</span><span class="hl-1">/           </span><span class="hl-5">graphics</span><span class="hl-1">-</span><span class="hl-5">device</span><span class="hl-1">, </span><span class="hl-5">canvas2d</span><span class="hl-1">-</span><span class="hl-5">device</span><span class="hl-1">, </span><span class="hl-5">camera</span><span class="hl-1">, </span><span class="hl-5">iso</span><span class="hl-1">-</span><span class="hl-5">projection</span><br/><span class="hl-1">    </span><span class="hl-5">animation</span><span class="hl-1">/          </span><span class="hl-5">animation</span><span class="hl-1">-</span><span class="hl-5">clip</span><span class="hl-1">, </span><span class="hl-5">animation</span><span class="hl-1">-</span><span class="hl-5">state</span><span class="hl-1">-</span><span class="hl-5">pool</span><br/><span class="hl-1">    </span><span class="hl-5">asset</span><span class="hl-1">/              </span><span class="hl-5">sprite</span><span class="hl-1">-</span><span class="hl-5">sheet</span><span class="hl-1">-</span><span class="hl-5">loader</span><br/><span class="hl-1">    </span><span class="hl-5">audio</span><span class="hl-1">/              </span><span class="hl-5">audio</span><span class="hl-1">-</span><span class="hl-5">bus</span><br/><span class="hl-1">    </span><span class="hl-5">input</span><span class="hl-1">/              </span><span class="hl-5">input</span><span class="hl-1">-</span><span class="hl-5">manager</span><br/><span class="hl-1">    </span><span class="hl-5">systems</span><span class="hl-1">/            </span><span class="hl-5">sprite</span><span class="hl-1">-</span><span class="hl-5">render</span><span class="hl-1">, </span><span class="hl-5">animation</span><span class="hl-1">, </span><span class="hl-5">particle</span><span class="hl-1">-{</span><span class="hl-5">simulation</span><span class="hl-1">,</span><span class="hl-5">emitter</span><span class="hl-1">,</span><span class="hl-5">render</span><span class="hl-1">}, </span><span class="hl-5">input</span><span class="hl-1">, </span><span class="hl-5">veil</span><span class="hl-1">-</span><span class="hl-5">budget</span><br/><span class="hl-1">    </span><span class="hl-5">vfx</span><span class="hl-1">/                </span><span class="hl-5">particle</span><span class="hl-1">-</span><span class="hl-5">pool</span><br/><span class="hl-1">    </span><span class="hl-5">entity</span><span class="hl-1">.</span><span class="hl-5">ts</span><span class="hl-1">           </span><span class="hl-5">entity</span><span class="hl-1"> </span><span class="hl-0">allocator</span><span class="hl-1"> (</span><span class="hl-8">32</span><span class="hl-1">-</span><span class="hl-5">bit</span><span class="hl-1"> </span><span class="hl-5">handle</span><span class="hl-1">, </span><span class="hl-5">generation</span><span class="hl-1"> </span><span class="hl-5">guard</span><span class="hl-1">)</span><br/><span class="hl-1">    </span><span class="hl-5">world</span><span class="hl-1">.</span><span class="hl-5">ts</span><span class="hl-1">            </span><span class="hl-7">ECS</span><span class="hl-1"> </span><span class="hl-5">World</span><span class="hl-1"> </span><span class="hl-6">class</span><br/><span class="hl-1">    </span><span class="hl-9">system</span><span class="hl-1">.</span><span class="hl-9">ts</span><span class="hl-1">           </span><span class="hl-9">System</span><span class="hl-1"> </span><span class="hl-9">interface</span><span class="hl-1"> + </span><span class="hl-9">phase</span><span class="hl-1"> </span><span class="hl-9">constants</span><br/><span class="hl-1">    </span><span class="hl-9">resources</span><span class="hl-1">.</span><span class="hl-9">ts</span><span class="hl-1">        </span><span class="hl-9">ResourceRegistry</span><span class="hl-1"> + </span><span class="hl-9">Time</span><span class="hl-1"> + </span><span class="hl-9">VeilBudget</span><br/><span class="hl-1">    </span><span class="hl-9">engine</span><span class="hl-1">.</span><span class="hl-9">ts</span><span class="hl-1">           </span><span class="hl-9">Engine</span><span class="hl-1"> </span><span class="hl-9">facade</span><br/><span class="hl-1">    </span><span class="hl-9">index</span><span class="hl-1">.</span><span class="hl-9">ts</span><span class="hl-1">            </span><span class="hl-9">public</span><span class="hl-1"> </span><span class="hl-9">API</span><span class="hl-1"> </span><span class="hl-9">barrel</span><br/><span class="hl-1">  </span><span class="hl-9">demo</span><span class="hl-1">/                 </span><span class="hl-9">browser</span><span class="hl-1"> </span><span class="hl-9">demo</span><span class="hl-1"> (</span><span class="hl-9">one</span><span class="hl-1"> </span><span class="hl-9">tile</span><span class="hl-1"> + </span><span class="hl-9">animated</span><span class="hl-1"> </span><span class="hl-9">knight</span><span class="hl-1"> + </span><span class="hl-9">sparkles</span><span class="hl-1"> + </span><span class="hl-9">click</span><span class="hl-1">-</span><span class="hl-9">to</span><span class="hl-1">-</span><span class="hl-9">burst</span><span class="hl-1">)</span><br/><span class="hl-1">  </span><span class="hl-9">tests</span><span class="hl-1">/                </span><span class="hl-9">node</span><span class="hl-1">-</span><span class="hl-9">based</span><span class="hl-1"> </span><span class="hl-9">smoke</span><span class="hl-1"> </span><span class="hl-9">tests</span><span class="hl-1"> (</span><span class="hl-9">tsx</span><span class="hl-1"> --</span><span class="hl-9">test</span><span class="hl-1">)</span><br/><span class="hl-1">  </span><span class="hl-9">assets</span><span class="hl-1">/               </span><span class="hl-9">placeholder</span><span class="hl-1"> </span><span class="hl-9">game</span><span class="hl-1"> </span><span class="hl-9">assets</span><span class="hl-1"> (</span><span class="hl-9">knight</span><span class="hl-1"> </span><span class="hl-9">walk</span><span class="hl-1">-</span><span class="hl-9">cycle</span><span class="hl-1"> </span><span class="hl-9">PNG</span><span class="hl-1"> + </span><span class="hl-9">JSON</span><span class="hl-1">)</span><br/><span class="hl-1">  </span><span class="hl-9">tools</span><span class="hl-1">/                </span><span class="hl-9">helper</span><span class="hl-1"> </span><span class="hl-9">scripts</span><span class="hl-1"> (</span><span class="hl-9">gen</span><span class="hl-1">-</span><span class="hl-9">knight</span><span class="hl-1">.</span><span class="hl-9">py</span><span class="hl-1"> - </span><span class="hl-9">Pillow</span><span class="hl-1"> </span><span class="hl-9">generator</span><span class="hl-1">)</span><br/><span class="hl-1">  </span><span class="hl-9">PRIOR</span><span class="hl-1">-</span><span class="hl-9">ART</span><span class="hl-1">.</span><span class="hl-9">md</span><span class="hl-1">          </span><span class="hl-9">cumulative</span><span class="hl-1"> </span><span class="hl-9">inspirations</span><span class="hl-1"> </span><span class="hl-9">log</span><span class="hl-1"> (</span><span class="hl-9">clean</span><span class="hl-1">-</span><span class="hl-9">room</span><span class="hl-1"> </span><span class="hl-9">defense</span><span class="hl-1">)</span><br/><span class="hl-1">  </span><span class="hl-9">package</span><span class="hl-1">.</span><span class="hl-9">json</span><span class="hl-1">          </span><span class="hl-9">tsc</span><span class="hl-1"> + </span><span class="hl-9">tsx</span><span class="hl-1"> </span><span class="hl-9">as</span><span class="hl-1"> </span><span class="hl-9">only</span><span class="hl-1"> </span><span class="hl-9">dev</span><span class="hl-1"> </span><span class="hl-9">deps</span><br/><span class="hl-1">  </span><span class="hl-9">tsconfig</span><span class="hl-1">.</span><span class="hl-9">json</span><span class="hl-1">         </span><span class="hl-9">ES2022</span><span class="hl-1"> </span><span class="hl-9">strict</span><span class="hl-1"> + </span><span class="hl-9">noUncheckedIndexedAccess</span><br/><span class="hl-1">  </span><span class="hl-9">dist</span><span class="hl-1">/                 </span><span class="hl-9">tsc</span><span class="hl-1"> </span><span class="hl-9">output</span><span class="hl-1"> (</span><span class="hl-9">gitignored</span><span class="hl-1">)</span><br/><span class="hl-1">  </span><span class="hl-9">node_modules</span><span class="hl-1">/         </span><span class="hl-9">npm</span><span class="hl-1"> </span><span class="hl-9">install</span><span class="hl-1"> </span><span class="hl-9">output</span><span class="hl-1"> (</span><span class="hl-9">gitignored</span><span class="hl-1">)</span>
+</code><button>Copy</button></pre>
+
+<h2 id="architecture-quick-reference" class="tsd-anchor-link">Architecture quick-reference<a href="#architecture-quick-reference" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<ul>
+<li><strong>ECS</strong> over god-object scene graph - entities are 32-bit handles,
+components live in pools indexed by entity index</li>
+<li><strong>Structure-of-arrays</strong> for hot data (TransformPool, SpritePool,
+ParticlePool, ParticleEmitterPool, AnimationStatePool) - tight
+iteration over Float32Arrays, no per-entity object allocation</li>
+<li><strong>IGraphicsDevice</strong> abstraction with Canvas2D primary backend
+(WebGL2 reserved for Phase 2+ if profiling demands)</li>
+<li><strong>6-phase scheduler</strong> - INPUT -&gt; LOGIC -&gt; PHYSICS -&gt; ANIMATION -&gt;
+RENDER -&gt; POST_RENDER, deterministic registration order within each</li>
+<li><strong>VeilBudgetResource</strong> - the patent-defensible novelty hook. Single
+resource with <code>particleBudget</code>, <code>audioBudget</code>, <code>shaderBudget</code>,
+<code>eventBudget</code>. VeilBudgetSystem propagates updates to ParticlePool,
+AudioBus, etc. Director-bridge mutates the budget; subsystems read</li>
+<li><strong>Frame loop</strong> - <code>engine.tick(now)</code> runs in this order:
+<ol>
+<li>compute dt (clamped to 1/30s)</li>
+<li>advance Time resource</li>
+<li>device.beginFrame</li>
+<li>world.update (walks all phases)</li>
+<li>device.endFrame</li>
+</ol>
+</li>
+</ul>
+<h2 id="public-api-surface-phase-5" class="tsd-anchor-link">Public API surface (Phase 5)<a href="#public-api-surface-phase-5" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<pre><code class="ts"><span class="hl-4">import</span><span class="hl-1"> {</span><br/><span class="hl-1">  </span><span class="hl-5">Engine</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-3">// ECS</span><br/><span class="hl-1">  </span><span class="hl-5">POOL_TRANSFORM</span><span class="hl-1">, </span><span class="hl-5">POOL_SPRITE</span><span class="hl-1">, </span><span class="hl-5">POOL_ANIMATION</span><span class="hl-1">, </span><span class="hl-5">POOL_PARTICLE</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-5">POOL_EMITTER</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-5">TransformPool</span><span class="hl-1">, </span><span class="hl-5">SpritePool</span><span class="hl-1">, </span><span class="hl-5">AnimationStatePool</span><span class="hl-1">, </span><span class="hl-5">ParticlePool</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-5">ParticleEmitterPool</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-5">SYSTEM_PHASE_INPUT</span><span class="hl-1">, </span><span class="hl-5">SYSTEM_PHASE_LOGIC</span><span class="hl-1">, </span><span class="hl-5">SYSTEM_PHASE_PHYSICS</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-5">SYSTEM_PHASE_ANIMATION</span><span class="hl-1">, </span><span class="hl-5">SYSTEM_PHASE_RENDER</span><span class="hl-1">, </span><span class="hl-5">SYSTEM_PHASE_POST_RENDER</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-3">// Default systems</span><br/><span class="hl-1">  </span><span class="hl-5">AnimationSystem</span><span class="hl-1">, </span><span class="hl-5">SpriteRenderSystem</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-5">ParticleEmitterSystem</span><span class="hl-1">, </span><span class="hl-5">ParticleSimulationSystem</span><span class="hl-1">, </span><span class="hl-5">ParticleRenderSystem</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-5">InputSystem</span><span class="hl-1">, </span><span class="hl-5">VeilBudgetSystem</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-3">// Resources</span><br/><span class="hl-1">  </span><span class="hl-5">RESOURCE_TIME</span><span class="hl-1">, </span><span class="hl-5">RESOURCE_CAMERA</span><span class="hl-1">, </span><span class="hl-5">RESOURCE_DEVICE</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-5">RESOURCE_VEIL_BUDGET</span><span class="hl-1">, </span><span class="hl-5">RESOURCE_INPUT</span><span class="hl-1">, </span><span class="hl-5">RESOURCE_AUDIO_BUS</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-3">// Renderer</span><br/><span class="hl-1">  </span><span class="hl-5">Canvas2DDevice</span><span class="hl-1">, </span><span class="hl-5">ISO_TILE_WIDTH</span><span class="hl-1">, </span><span class="hl-5">ISO_TILE_HEIGHT</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-3">// Asset</span><br/><span class="hl-1">  </span><span class="hl-5">loadSpriteSheet</span><span class="hl-1">, </span><span class="hl-5">computeFrameIndex</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-3">// Audio</span><br/><span class="hl-1">  </span><span class="hl-5">AudioBus</span><span class="hl-1">, </span><span class="hl-5">AUDIO_BUDGET_AMBIENT_FLOOR</span><span class="hl-1">, </span><span class="hl-5">AUDIO_BUDGET_ESSENTIAL_FLOOR</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-3">// Input</span><br/><span class="hl-1">  </span><span class="hl-5">InputManager</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-3">// Math + color</span><br/><span class="hl-1">  </span><span class="hl-5">vec2</span><span class="hl-1">, </span><span class="hl-5">vec3</span><span class="hl-1">, </span><span class="hl-5">rect</span><span class="hl-1">, </span><span class="hl-5">clamp</span><span class="hl-1">, </span><span class="hl-5">lerp</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-5">hexToRgba</span><span class="hl-1">, </span><span class="hl-5">rgbaToCssString</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-5">COLOR_KNOT_STR</span><span class="hl-1">, </span><span class="hl-5">COLOR_KNOT_DEX</span><span class="hl-1">, </span><span class="hl-5">COLOR_KNOT_INT</span><span class="hl-1">, </span><span class="hl-5">COLOR_KNOT_CENTER</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-3">// Iso</span><br/><span class="hl-1">  </span><span class="hl-5">tileToIso</span><span class="hl-1">, </span><span class="hl-5">worldToIso</span><span class="hl-1">, </span><span class="hl-5">isoToTile</span><span class="hl-1">, </span><span class="hl-5">isoDepthKey</span><span class="hl-1">,</span><br/><span class="hl-1">} </span><span class="hl-4">from</span><span class="hl-1"> </span><span class="hl-2">&#39;@sadhaka/loom-engine&#39;</span><span class="hl-1">;</span><br/><br/><span class="hl-6">const</span><span class="hl-1"> </span><span class="hl-7">engine</span><span class="hl-1"> = </span><span class="hl-5">Engine</span><span class="hl-1">.</span><span class="hl-0">create</span><span class="hl-1">({ </span><span class="hl-5">canvas</span><span class="hl-1"> });</span><br/><span class="hl-5">engine</span><span class="hl-1">.</span><span class="hl-5">world</span><span class="hl-1">.</span><span class="hl-0">addSystem</span><span class="hl-1">(</span><span class="hl-6">new</span><span class="hl-1"> </span><span class="hl-0">InputSystem</span><span class="hl-1">(), </span><span class="hl-7">SYSTEM_PHASE_INPUT</span><span class="hl-1">);</span><br/><span class="hl-5">engine</span><span class="hl-1">.</span><span class="hl-5">world</span><span class="hl-1">.</span><span class="hl-0">addSystem</span><span class="hl-1">(</span><span class="hl-6">new</span><span class="hl-1"> </span><span class="hl-0">VeilBudgetSystem</span><span class="hl-1">(), </span><span class="hl-7">SYSTEM_PHASE_INPUT</span><span class="hl-1">);</span><br/><span class="hl-3">// ... game systems ...</span><br/><span class="hl-5">engine</span><span class="hl-1">.</span><span class="hl-5">world</span><span class="hl-1">.</span><span class="hl-0">addSystem</span><span class="hl-1">(</span><span class="hl-6">new</span><span class="hl-1"> </span><span class="hl-0">SpriteRenderSystem</span><span class="hl-1">(), </span><span class="hl-7">SYSTEM_PHASE_RENDER</span><span class="hl-1">);</span><br/><span class="hl-6">function</span><span class="hl-1"> </span><span class="hl-0">tick</span><span class="hl-1">(</span><span class="hl-5">now</span><span class="hl-1">: </span><span class="hl-9">number</span><span class="hl-1">) {</span><br/><span class="hl-1">  </span><span class="hl-5">engine</span><span class="hl-1">.</span><span class="hl-0">tick</span><span class="hl-1">(</span><span class="hl-5">now</span><span class="hl-1">);</span><br/><span class="hl-1">  </span><span class="hl-0">requestAnimationFrame</span><span class="hl-1">(</span><span class="hl-5">tick</span><span class="hl-1">);</span><br/><span class="hl-1">}</span><br/><span class="hl-0">requestAnimationFrame</span><span class="hl-1">(</span><span class="hl-5">tick</span><span class="hl-1">);</span>
+</code><button type="button">Copy</button></pre>
+
+<h2 id="patent-strategy" class="tsd-anchor-link">Patent strategy<a href="#patent-strategy" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p>The engine's defensible novelty is in the <strong>Loom integration layer</strong>,
+not the rasterizer. Director-driven scene state, Veil Essence economy
+gating render budget, knot-aware encounter generation, event-sourced
+rendering. The renderer underneath uses public-domain techniques
+(sprite batching, isometric projection, ECS) implemented from scratch.</p>
+<p>See <a href="media/PRIOR-ART.md">PRIOR-ART.md</a> for the cumulative inspirations
+log (public talks, papers, OSS architecture - took / declined per
+source).</p>
+<p>Every architectural commit names its inspirations in plain text. No
+copy-paste from any external engine source. <a href="http://PRIOR-ART.md">PRIOR-ART.md</a> is the
+audit trail any future productization or patent dispute would lean on.</p>
+<h2 id="test-coverage" class="tsd-anchor-link">Test coverage<a href="#test-coverage" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p>208 / 208 tests pass on Node 24 via <code>tsx --test</code>. Coverage spans
+all twelve test files in <code>tests/</code>:</p>
+<ul>
+<li><code>smoke.test.ts</code> - public API barrel, version stamp</li>
+<li><code>world.test.ts</code> - ECS world, system scheduling, sprite pool, sprite render, time</li>
+<li><code>asset-loader.test.ts</code> - sprite-sheet manifest, frame stepper, error discriminator</li>
+<li><code>animation.test.ts</code> - animation clip math, state pool, AnimationSystem end-to-end</li>
+<li><code>vfx.test.ts</code> - particle pool, emitter pool, simulation, emitter system, veil budget</li>
+<li><code>audio-input.test.ts</code> - audio bus + ducking, input manager, input system, budget propagation</li>
+<li><code>director.test.ts</code> - SSE bridge, eventSourceFactory hook, scene-state derivation</li>
+<li><code>combat.test.ts</code> - hit resolution, damage application, knockback</li>
+<li><code>projectile.test.ts</code> - projectile pool, lifetime, collision</li>
+<li><code>arpg.test.ts</code> - ARPG hub-and-spoke, plaza narrator, encounter scheduling</li>
+<li><code>snapshot-recovery.test.ts</code> - SnapshotRecoveryHelper for Director reconnect</li>
+<li><code>touch-input.test.ts</code> - virtual D-pad, tap-to-walk, multi-touch arbitration</li>
+</ul>
+<p>Run via <code>npm test</code>. Each suite is fully node-based; no DOM dependency.
+Browser-only paths (Canvas2DDevice rasterization, AudioContext
+unlock, DOM event listeners) are exercised via the demo's preview
+verification, not unit tests.</p>
+<h2 id="docs-deploy" class="tsd-anchor-link">Docs deploy<a href="#docs-deploy" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p>The TypeDoc site at <strong><a href="https://loom-engine.pages.dev/">https://loom-engine.pages.dev/</a></strong> is served by
+Cloudflare Pages from the <code>gh-pages</code> branch of this repo. The chain:</p>
+<ol>
+<li>Push to <code>main</code> triggers <code>.github/workflows/docs.yml</code></li>
+<li>Workflow runs <code>npm ci</code>, <code>npm test</code>, <code>npm run docs:ci</code>, then publishes
+<code>./docs-build/</code> to the <code>gh-pages</code> branch via <code>peaceiris/actions-gh-pages</code></li>
+<li>Cloudflare Pages watches the <code>gh-pages</code> branch and auto-deploys on
+every push, typically within 1-2 min</li>
+</ol>
+<p>GitHub Pages itself is <strong>not</strong> used: the repo is private and free user
+plans do not include Pages on private repos. The 422 error from the
+Pages create API is the canonical signal: <code>&quot;Your current plan does not support GitHub Pages for this repository.&quot;</code></p>
+<h3 id="re-creating-the-deploy-from-scratch" class="tsd-anchor-link">Re-creating the deploy from scratch<a href="#re-creating-the-deploy-from-scratch" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>If the Cloudflare Pages project is ever deleted or the repo is forked
+to a new owner, re-activate as follows:</p>
+<ol>
+<li>Cloudflare dashboard -&gt; <strong>Workers &amp; Pages</strong> -&gt; <strong>Create</strong> -&gt; <strong>Pages</strong> -&gt;
+<strong>Connect to Git</strong></li>
+<li>Authorize Cloudflare on the GitHub account that owns the repo
+(only the engine repo needs to be granted access)</li>
+<li>Select <code>loom-engine</code>, name the project <code>loom-engine</code> (default URL
+becomes <code>loom-engine.pages.dev</code>)</li>
+<li><strong>Production branch</strong>: <code>gh-pages</code></li>
+<li><strong>Build command</strong>: leave empty (the gh-pages branch is already a
+built static site)</li>
+<li><strong>Build output directory</strong>: <code>/</code> (root)</li>
+<li>Save and deploy. First deploy reads whatever is currently on
+<code>gh-pages</code>; subsequent deploys auto-trigger on push to that branch</li>
+<li>Optional: assign a custom domain (e.g. <code>engine.theworldtable.ai</code>)
+under the project's <strong>Custom domains</strong> tab. CF DNS for
+<code>theworldtable.ai</code> is already on the same account, so this is a
+one-click CNAME add</li>
+</ol>
+<p>If the workflow ever stops updating <code>gh-pages</code> (CF Pages will keep
+serving the last successful build but go stale), check
+<code>gh run list --repo sadhaka/loom-engine --workflow=docs.yml</code>.</p>
+<h2 id="license" class="tsd-anchor-link">License<a href="#license" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p>Versions 0.11.0 and later are licensed under the
+<a href="media/LICENSE">Business Source License 1.1</a> (&quot;BUSL-1.1&quot;).
+Copyright (c) 2026 Misha Mitiev.</p>
+<ul>
+<li><strong>Free for use</strong> below USD $1,000,000 annual gross revenue from any
+product, game, or service that incorporates this engine. Personal
+projects, learning, prototyping, and indie games well under that
+threshold all qualify.</li>
+<li><strong>Commercial license required</strong> above the threshold. Contact
+<code>licensor@theworldtable.ai</code>. Standard terms include a 5% royalty on
+excess revenue; lump-sum buyouts and equity-for-license arrangements
+are negotiable. See
+<a href="media/COMMERCIAL_LICENSE_TERMS.md">COMMERCIAL_LICENSE_TERMS.md</a>.</li>
+<li><strong>Auto-converts to Apache 2.0</strong> on <strong>2030-05-08</strong> (4-year window per
+BUSL spec). After that date, all 0.11.0+ versions become permissive.</li>
+<li><strong>Patent strategy</strong>: novelty claims documented in <a href="http://PRIOR-ART.md">PRIOR-ART.md</a> are
+independent of the source-code license and apply to all versions
+regardless of license phase.</li>
+</ul>
+<p>Version 0.10.0 (the only previously-published release) remains
+permanently licensed under MIT for backwards compatibility. Projects
+pinned to <code>0.10.0</code> are unaffected by the license change but will not
+receive future updates without accepting BUSL-1.1.</p>
+<h2 id="publishing" class="tsd-anchor-link">Publishing<a href="#publishing" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p>Tagged releases publish to npm via
+<a href="media/npm-publish.yml"><code>.github/workflows/npm-publish.yml</code></a>.
+The workflow runs <code>npm test</code> and <code>npm run build</code>, then
+<code>npm publish --access public</code>, when a tag matching <code>v*</code> is pushed to
+<code>main</code>. It needs the <code>NPM_TOKEN</code> repo secret to authenticate.</p>
+<p>Manual publish from a local checkout:</p>
+<pre><code class="sh"><span class="hl-0">npm</span><span class="hl-1"> </span><span class="hl-2">login</span><span class="hl-1">                       </span><span class="hl-3"># one-time, npm account named sadhaka</span><br/><span class="hl-0">npm</span><span class="hl-1"> </span><span class="hl-2">test</span><span class="hl-1">                        </span><span class="hl-3"># 208/208 must pass</span><br/><span class="hl-0">npm</span><span class="hl-1"> </span><span class="hl-2">run</span><span class="hl-1"> </span><span class="hl-2">build</span><span class="hl-1">                   </span><span class="hl-3"># tsc -&gt; dist/</span><br/><span class="hl-0">npm</span><span class="hl-1"> </span><span class="hl-2">publish</span><span class="hl-1"> </span><span class="hl-6">--dry-run</span><span class="hl-1">           </span><span class="hl-3"># inspect tarball contents first</span><br/><span class="hl-0">npm</span><span class="hl-1"> </span><span class="hl-2">publish</span><span class="hl-1"> </span><span class="hl-6">--access</span><span class="hl-1"> </span><span class="hl-2">public</span><span class="hl-1">     </span><span class="hl-3"># scoped packages default to private; flag is required</span>
+</code><button type="button">Copy</button></pre>
+
+<p><code>prepublishOnly</code> in <code>package.json</code> re-runs <code>npm test &amp;&amp; npm run build</code>
+before any publish, so the dry-run and the final publish always rebuild
+from a clean source tree.</p>
+<h2 id="contributing" class="tsd-anchor-link">Contributing<a href="#contributing" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p>This is a single-author project (Misha Mitiev) for <a href="http://TheWorldTable.ai">TheWorldTable.ai</a>.
+The MIT license permits forking and modification; pull requests are
+welcome but not actively triaged - the canonical roadmap is the spec
+file (<code>LOOM-ENGINE-SPEC.md</code> in the parent repo) and capacity is
+limited. For bug reports, file an issue with a minimal repro.</p>
+</div></div><div class="col-sidebar"><div class="page-menu"><div class="tsd-navigation settings"><details class="tsd-accordion"><summary class="tsd-accordion-summary"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="assets/icons.svg#icon-chevronDown"></use></svg><h3>Settings</h3></summary><div class="tsd-accordion-details"><div class="tsd-filter-visibility"><span class="settings-label">Member Visibility</span><ul id="tsd-filter-options"><li class="tsd-filter-item"><label class="tsd-filter-input"><input type="checkbox" id="tsd-filter-protected" name="protected"/><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect class="tsd-checkbox-background" width="30" height="30" x="1" y="1" rx="6" fill="none"></rect><path class="tsd-checkbox-checkmark" d="M8.35422 16.8214L13.2143 21.75L24.6458 10.25" stroke="none" stroke-width="3.5" stroke-linejoin="round" fill="none"></path></svg><span>Protected</span></label></li><li class="tsd-filter-item"><label class="tsd-filter-input"><input type="checkbox" id="tsd-filter-inherited" name="inherited" checked/><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect class="tsd-checkbox-background" width="30" height="30" x="1" y="1" rx="6" fill="none"></rect><path class="tsd-checkbox-checkmark" d="M8.35422 16.8214L13.2143 21.75L24.6458 10.25" stroke="none" stroke-width="3.5" stroke-linejoin="round" fill="none"></path></svg><span>Inherited</span></label></li><li class="tsd-filter-item"><label class="tsd-filter-input"><input type="checkbox" id="tsd-filter-external" name="external"/><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect class="tsd-checkbox-background" width="30" height="30" x="1" y="1" rx="6" fill="none"></rect><path class="tsd-checkbox-checkmark" d="M8.35422 16.8214L13.2143 21.75L24.6458 10.25" stroke="none" stroke-width="3.5" stroke-linejoin="round" fill="none"></path></svg><span>External</span></label></li></ul></div><div class="tsd-theme-toggle"><label class="settings-label" for="tsd-theme">Theme</label><select id="tsd-theme"><option value="os">OS</option><option value="light">Light</option><option value="dark">Dark</option></select></div></div></details></div><details open class="tsd-accordion tsd-page-navigation"><summary class="tsd-accordion-summary"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="assets/icons.svg#icon-chevronDown"></use></svg><h3>On This Page</h3></summary><div class="tsd-accordion-details"><a href="#loom-engine"><span>Loom <wbr/>Engine</span></a><ul><li><a href="#install"><span>Install</span></a></li><li><a href="#documentation"><span>Documentation</span></a></li><li><a href="#quickstart"><span>Quickstart</span></a></li><li><a href="#configuration"><span>Configuration</span></a></li><li><ul><li><a href="#director-bridge-credentials-security-note"><span>Director-<wbr/>bridge credentials (security note)</span></a></li></ul></li><li><a href="#status"><span>Status</span></a></li><li><a href="#renderer-backends"><span>Renderer backends</span></a></li><li><ul><li><a href="#opt-into-webgl2"><span>Opt into <wbr/>Web<wbr/>GL2</span></a></li><li><a href="#how-batching-works"><span>How batching works</span></a></li><li><a href="#tree-shake-story"><span>Tree-<wbr/>shake story</span></a></li><li><a href="#webgl2-limits-fallback"><span>Web<wbr/>GL2 limits + fallback</span></a></li></ul></li><li><a href="#build"><span>Build</span></a></li><li><a href="#run-the-demos"><span>Run the demos</span></a></li><li><a href="#examples"><span>Examples</span></a></li><li><a href="#multiplayer"><span>Multiplayer</span></a></li><li><ul><li><a href="#wire-protocol"><span>Wire protocol</span></a></li><li><a href="#setup"><span>Setup</span></a></li><li><a href="#swapping-transports"><span>Swapping transports</span></a></li></ul></li><li><a href="#layout"><span>Layout</span></a></li><li><a href="#architecture-quick-reference"><span>Architecture quick-<wbr/>reference</span></a></li><li><a href="#public-api-surface-phase-5"><span>Public <wbr/>API surface (<wbr/>Phase 5)</span></a></li><li><a href="#patent-strategy"><span>Patent strategy</span></a></li><li><a href="#test-coverage"><span>Test coverage</span></a></li><li><a href="#docs-deploy"><span>Docs deploy</span></a></li><li><ul><li><a href="#re-creating-the-deploy-from-scratch"><span>Re-<wbr/>creating the deploy from scratch</span></a></li></ul></li><li><a href="#license"><span>License</span></a></li><li><a href="#publishing"><span>Publishing</span></a></li><li><a href="#contributing"><span>Contributing</span></a></li></ul></div></details></div><div class="site-menu"><nav id="tsd-sidebar-links" class="tsd-navigation"><a href="https://github.com/sadhaka/loom-engine" class="tsd-nav-link">GitHub</a><a href="https://theworldtable.ai" class="tsd-nav-link">TheWorldTable.ai</a></nav><nav class="tsd-navigation"><a href="modules.html">Loom Engine - v1.5.4</a><ul class="tsd-small-nested-navigation" id="tsd-nav-container"><li>Loading...</li></ul></nav></div></div></div><footer><p class="tsd-generator">Generated using <a href="https://typedoc.org/" target="_blank">TypeDoc</a></p></footer><div class="overlay"></div></body></html>
