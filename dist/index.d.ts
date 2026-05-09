@@ -1,4 +1,4 @@
-export declare const LOOM_ENGINE_VERSION = "0.68.0";
+export declare const LOOM_ENGINE_VERSION = "0.69.0";
 export type { Vec2, Vec3, Rect } from './util/math.js';
 export { vec2, vec3, rect, clamp, lerp, smoothstep, approxEq, rectContains, rectIntersects, visibleInView, } from './util/math.js';
 export type { ColorRGBA } from './util/color.js';
@@ -100,6 +100,8 @@ export { ActionHistory, RESOURCE_ACTION_HISTORY } from './runtime/action-history
 export type { Action as HistoryAction, ActionHistoryOptions } from './runtime/action-history.js';
 export { Coroutine, waitMs, waitUntil, waitFrames, RESOURCE_COROUTINE, } from './runtime/coroutine.js';
 export type { WaitMs, WaitUntil, WaitFrames, Yieldable, CoroutineOptions, StartOptions as CoroutineStartOptions, } from './runtime/coroutine.js';
+export { Watchdog, RESOURCE_WATCHDOG } from './runtime/watchdog.js';
+export type { WatchdogEntryOptions, WatchdogStatus, WatchdogOptions, } from './runtime/watchdog.js';
 export { ResourceRegistry, createTimeResource, createVeilBudgetResource, RESOURCE_TIME, RESOURCE_CAMERA, RESOURCE_DEVICE, RESOURCE_VEIL_BUDGET, } from './resources.js';
 export { SpriteRenderSystem } from './systems/sprite-render-system.js';
 export { Engine, registerBackend, isBackendRegistered } from './engine.js';
