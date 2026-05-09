@@ -1,4 +1,4 @@
-export declare const LOOM_ENGINE_VERSION = "1.6.3";
+export declare const LOOM_ENGINE_VERSION = "1.6.4";
 export type { Vec2, Vec3, Rect } from './util/math.js';
 export { vec2, vec3, rect, clamp, lerp, smoothstep, approxEq, rectContains, rectIntersects, visibleInView, } from './util/math.js';
 export type { ColorRGBA } from './util/color.js';
@@ -232,6 +232,8 @@ export { VoronoiPartition, RESOURCE_VORONOI_PARTITION } from './runtime/voronoi-
 export type { VoronoiOptions, VoronoiSite, DistanceFn, } from './runtime/voronoi-partition.js';
 export { DungeonGenerator, RESOURCE_DUNGEON_GENERATOR } from './runtime/dungeon-generator.js';
 export type { DungeonGeneratorOptions, DungeonResult, DungeonRoom, DungeonCorridor, } from './runtime/dungeon-generator.js';
+export { BiomeMixer, RESOURCE_BIOME_MIXER } from './runtime/biome-mixer.js';
+export type { BiomeSpec } from './runtime/biome-mixer.js';
 export { ResourceRegistry, createTimeResource, createVeilBudgetResource, RESOURCE_TIME, RESOURCE_CAMERA, RESOURCE_DEVICE, RESOURCE_VEIL_BUDGET, } from './resources.js';
 export { SpriteRenderSystem } from './systems/sprite-render-system.js';
 export { Engine, registerBackend, isBackendRegistered } from './engine.js';
