@@ -8,7 +8,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.78.0';
+export const LOOM_ENGINE_VERSION = '0.79.0';
 export { vec2, vec3, rect, clamp, lerp, smoothstep, approxEq, rectContains, rectIntersects, visibleInView, } from './util/math.js';
 export { rgba, hexToRgba, rgbaToHexString, rgbaToCssString, colorLerp, COLOR_WHITE, COLOR_BLACK, COLOR_TRANSPARENT, COLOR_KNOT_STR, COLOR_KNOT_DEX, COLOR_KNOT_INT, COLOR_KNOT_CENTER, } from './util/color.js';
 export { EntityAllocator, NULL_ENTITY, entityIndex, entityGeneration, makeEntity, } from './entity.js';
@@ -133,6 +133,8 @@ export { AggroTable, RESOURCE_AGGRO_TABLE } from './runtime/aggro-table.js';
 export { Reactivity, RESOURCE_REACTIVITY } from './runtime/reactivity.js';
 // 0.78.0 - local + remote leaderboard primitive.
 export { Leaderboard, RESOURCE_LEADERBOARD } from './runtime/leaderboard.js';
+// 0.79.0 - typewriter text reveal with skip-on-click.
+export { TextScroll, RESOURCE_TEXT_SCROLL } from './runtime/text-scroll.js';
 export { ResourceRegistry, createTimeResource, createVeilBudgetResource, RESOURCE_TIME, RESOURCE_CAMERA, RESOURCE_DEVICE, RESOURCE_VEIL_BUDGET, } from './resources.js';
 // Default systems
 export { SpriteRenderSystem } from './systems/sprite-render-system.js';
