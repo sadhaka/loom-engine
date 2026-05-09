@@ -7,6 +7,51 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 1.5.1 - 2026-05-09
+
+**TimelineLedger — events along a time axis (history view,
+replay scrubber, lesson timeline).** ChartRenderer (1.5.0) is for
+X/Y data series. TimelineLedger is purpose-built for time-anchored
+EVENTS: a flag at t=300s, a milestone at t=1200s, a phase change
+at t=1800s. The consumer's renderer reads `getSnapshot().events`
+each frame and draws ticks / pins / labels along the timeline UI.
+
+### Added
+
+- `src/runtime/timeline-ledger.ts` - `TimelineLedger<T>` class
+  (type-generic over per-event payload):
+  - `create<T>({ width, paddingLeft?, paddingRight? })`.
+  - `add({ id, atTime, kind, label?, tags?, payload? })`.
+  - `remove(id)` / `has(id)` / `get(id)` / `count()`.
+  - `list()` - all events sorted by atTime asc.
+  - `byRange(start, end)` / `byKind(kind)` / `byTag(tag)`.
+  - `setWindow(startTime, endTime)` - explicit visible window;
+    disables auto-window.
+  - `resetWindow()` / `getWindow()` - re-enable auto from data.
+  - `setSize(width, paddingLeft?, paddingRight?)`.
+  - `totalRange()` - { startTime, endTime } across all events.
+  - `getSnapshot()` returns
+    `{ width, paddingLeft, paddingRight, window, totalRange, events[] }`
+    with each event mapped to screen `px` and `inWindow` /
+    `windowPct`.
+  - `forEach(cb)` / `clear()` / `dispose()`.
+- Engine treats `atTime` as opaque scalar (ms / game-tick /
+  lesson-position - all work).
+- Auto-window: when no explicit `setWindow`, view auto-fits to
+  data range.
+- All callbacks isolated.
+- `RESOURCE_TIMELINE_LEDGER` constant.
+
+### Tests
+
+3006 -> 3031 (25 new).
+
+### Backwards compatibility
+
+Pure addition. Pairs with ChartRenderer (1.5.0, line/bar/scatter),
+ReplayRecorder (0.58, deterministic event recording),
+NarrativeMemory (1.3.5, remembered events).
+
 ## 1.5.0 - 2026-05-09
 
 **Wave 1.5 educational / interactive sim depth opens —

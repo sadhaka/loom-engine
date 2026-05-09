@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '1.5.0';
+export const LOOM_ENGINE_VERSION = '1.5.1';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -879,6 +879,15 @@ export type {
   RenderedSeries,
   ChartSnapshot,
 } from './runtime/chart-renderer.js';
+// 1.5.1 (Wave 1.5 educational depth) - events along time axis (history view, replay scrubber).
+export { TimelineLedger, RESOURCE_TIMELINE_LEDGER } from './runtime/timeline-ledger.js';
+export type {
+  TimelineEvent,
+  TimelineWindow,
+  RenderedEvent,
+  TimelineSnapshot,
+  TimelineLedgerOptions,
+} from './runtime/timeline-ledger.js';
 export {
   ResourceRegistry,
   createTimeResource,
