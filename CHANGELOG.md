@@ -7,6 +7,58 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.64.0 - 2026-05-09
+
+**SteeringBehaviors - 2D NPC navigation primitives.** Mob nav, NPC
+walk, projectile homing, crowd dispersion all share Reynolds-style
+steering math. Each behaviour returns a steering force; consumers
+sum/weight them and apply to a kinematic body.
+
+Pure functions, all return fresh `{ x, y }` so they compose:
+seek / flee / arrive (decelerating seek) / pursue (lead a moving
+target) / evade (anti-pursue) / separation (push from neighbours)
+/ wander (smoothed random heading).
+
+### Added
+
+- `src/runtime/steering-behaviors.ts`:
+  - `seek(agent, target)` — desired-velocity delta, capped at
+    `agent.maxForce` if set.
+  - `flee(agent, target)` — inverse of seek.
+  - `arrive(agent, target, slowRadius)` — seek + decelerate
+    inside slowRadius for stop-on-target.
+  - `pursue(agent, target)` — predict target's future position
+    based on time-to-reach, seek that point.
+  - `evade(agent, target)` — flee from predicted future position.
+  - `separation(agent, neighbours, radius)` — sum of inverse-
+    distance vectors from too-close neighbours.
+  - `wander(agent, state, forwardDistance, jitter, rng?)` —
+    state.angle drifts each call, returns seek-toward-heading.
+    Custom RNG for replay determinism.
+- `Agent` type: `{ x, y, vx, vy, maxSpeed, maxForce? }`.
+- `WanderState` type: `{ angle }` consumer stores per-agent.
+- All forces are pure functions; consumer integrates outside.
+- `RESOURCE_STEERING_BEHAVIORS` constant.
+
+### Tests
+
+1558 -> 1578 (20 new in tests/steering-behaviors.test.ts):
+- RESOURCE_STEERING_BEHAVIORS stable string.
+- seek toward target / on-target zero / maxForce cap.
+- flee invert / on-target zero.
+- arrive matches seek when far / decelerates inside slow radius
+  / counteracts velocity at target.
+- pursue leads moving target / equals seek for stationary.
+- evade flees from predicted future.
+- separation: empty / outside-radius / single neighbour pushes /
+  multi-neighbour sums / radius=0 zero.
+- wander state.angle drifts; returns seek-toward-heading.
+- Realistic pursue + separation combined.
+
+### Backwards compatibility
+
+Pure addition.
+
 ## 0.63.0 - 2026-05-09
 
 **QuestLog - quest state machine + objective tracking.** Quests

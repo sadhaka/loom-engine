@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.63.0';
+export const LOOM_ENGINE_VERSION = '0.64.0';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -386,6 +386,18 @@ export type {
   OfferQuestOptions,
   QuestLogOptions,
 } from './runtime/quest-log.js';
+// 0.64.0 - 2D steering behaviors (seek / flee / arrive / pursue / evade / separation / wander).
+export {
+  seek,
+  flee,
+  arrive,
+  pursue,
+  evade,
+  separation,
+  wander,
+  RESOURCE_STEERING_BEHAVIORS,
+} from './runtime/steering-behaviors.js';
+export type { Agent, WanderState } from './runtime/steering-behaviors.js';
 export {
   ResourceRegistry,
   createTimeResource,
