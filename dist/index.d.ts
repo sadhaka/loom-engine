@@ -1,4 +1,4 @@
-export declare const LOOM_ENGINE_VERSION = "1.3.5";
+export declare const LOOM_ENGINE_VERSION = "1.4.0";
 export type { Vec2, Vec3, Rect } from './util/math.js';
 export { vec2, vec3, rect, clamp, lerp, smoothstep, approxEq, rectContains, rectIntersects, visibleInView, } from './util/math.js';
 export type { ColorRGBA } from './util/color.js';
@@ -200,6 +200,8 @@ export { SchedulePlan, RESOURCE_SCHEDULE_PLAN } from './runtime/schedule-plan.js
 export type { ScheduleCondition, ScheduleBlock, ActiveBlock as ScheduleActiveBlock, ScheduleQueryContext, SchedulePlanOptions, } from './runtime/schedule-plan.js';
 export { NarrativeMemory, RESOURCE_NARRATIVE_MEMORY } from './runtime/narrative-memory.js';
 export type { MemoryKindSpec, MemoryFact, RecallContext, RecallResult, NarrativeMemoryOptions, } from './runtime/narrative-memory.js';
+export { AmbientLayerMixer, RESOURCE_AMBIENT_LAYER_MIXER } from './runtime/ambient-layer-mixer.js';
+export type { LayerSpec as AmbientLayerSpec, LayerSnapshot as AmbientLayerSnapshot, SetTargetOptions as AmbientLayerSetTargetOptions, AmbientLayerMixerOptions, } from './runtime/ambient-layer-mixer.js';
 export { ResourceRegistry, createTimeResource, createVeilBudgetResource, RESOURCE_TIME, RESOURCE_CAMERA, RESOURCE_DEVICE, RESOURCE_VEIL_BUDGET, } from './resources.js';
 export { SpriteRenderSystem } from './systems/sprite-render-system.js';
 export { Engine, registerBackend, isBackendRegistered } from './engine.js';
