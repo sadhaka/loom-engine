@@ -7,6 +7,53 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 1.5.3 - 2026-05-09
+
+**QuestionBank — quiz items + SM-2 spaced repetition scheduler.**
+Used for learning apps, in-game tutorials with knowledge checks,
+training simulations, language flashcards. Implements SuperMemo 2
+(SM-2): each item has an ease factor, interval (days), and
+repetition count. After each review, the consumer passes a 0-5
+rating and the algorithm updates state to schedule the next
+review.
+
+### Added
+
+- `src/runtime/question-bank.ts` - `QuestionBank<T>` class
+  (type-generic over per-item payload):
+  - `create<T>({ now?, initialEaseFactor?, minEaseFactor? })`.
+    Defaults: clock returns 0, ease 2.5, min 1.3.
+  - `add({ id, prompt, answers?, correct?, tags?, data? })` -
+    starts with fresh SRS state.
+  - `remove(id)` / `has(id)` / `get(id)` / `count`.
+  - `reviewState(id)` returns full SRS state
+    `{ easeFactor, intervalDays, repetitions, nextReviewAt, lastReviewAt, totalReviews, lastRating }`.
+  - `due({ now?, limit?, tag? })` - items where nextReviewAt <=
+    now, sorted asc.
+  - `review(itemId, rating, now?)` - apply SM-2 update:
+    - `rating < 3` resets interval to 1 day, repetitions=0.
+    - `rating >= 3`: interval grows (1 → 6 → 6 × ease → ...).
+    - `easeFactor` adjusts per `q` per SM-2 formula; clamped to
+      minEase.
+    - Returns updated state.
+  - `skip(itemId, now?)` - push to tomorrow without changing SRS.
+  - `reset(itemId, now?)` - back to fresh state.
+  - `byTag(tag)` / `list` / `totalReviews` / `unreviewed`.
+  - `clear()` / `dispose()`.
+- Engine doesn't pin to wall clock; consumer passes ms-timestamp
+  via `now` (or supplies a clock seam).
+- `RESOURCE_QUESTION_BANK` constant.
+
+### Tests
+
+3053 -> 3078 (25 new).
+
+### Backwards compatibility
+
+Pure addition. Pairs with ProgressTracker (1.5.4 next, mastery
+levels), KnowledgeMap (1.5.5 capstone, prerequisite graph),
+TimelineLedger (1.5.1, review history visualization).
+
 ## 1.5.2 - 2026-05-09
 
 **GraphLayout — force-directed node graph layout.** Used for

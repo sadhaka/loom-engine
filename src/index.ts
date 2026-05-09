@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '1.5.2';
+export const LOOM_ENGINE_VERSION = '1.5.3';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -898,6 +898,14 @@ export type {
   GraphSnapshot,
   GraphLayoutOptions,
 } from './runtime/graph-layout.js';
+// 1.5.3 (Wave 1.5 educational depth) - quiz items + SM-2 spaced repetition scheduler.
+export { QuestionBank, RESOURCE_QUESTION_BANK } from './runtime/question-bank.js';
+export type {
+  QuestionItem,
+  ReviewState,
+  DueOptions,
+  QuestionBankOptions,
+} from './runtime/question-bank.js';
 export {
   ResourceRegistry,
   createTimeResource,
