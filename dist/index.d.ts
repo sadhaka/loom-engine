@@ -1,4 +1,4 @@
-export declare const LOOM_ENGINE_VERSION = "1.4.0";
+export declare const LOOM_ENGINE_VERSION = "1.4.1";
 export type { Vec2, Vec3, Rect } from './util/math.js';
 export { vec2, vec3, rect, clamp, lerp, smoothstep, approxEq, rectContains, rectIntersects, visibleInView, } from './util/math.js';
 export type { ColorRGBA } from './util/color.js';
@@ -202,6 +202,8 @@ export { NarrativeMemory, RESOURCE_NARRATIVE_MEMORY } from './runtime/narrative-
 export type { MemoryKindSpec, MemoryFact, RecallContext, RecallResult, NarrativeMemoryOptions, } from './runtime/narrative-memory.js';
 export { AmbientLayerMixer, RESOURCE_AMBIENT_LAYER_MIXER } from './runtime/ambient-layer-mixer.js';
 export type { LayerSpec as AmbientLayerSpec, LayerSnapshot as AmbientLayerSnapshot, SetTargetOptions as AmbientLayerSetTargetOptions, AmbientLayerMixerOptions, } from './runtime/ambient-layer-mixer.js';
+export { AudioDuck, RESOURCE_AUDIO_DUCK } from './runtime/audio-duck.js';
+export type { DuckChannelSpec, DuckChannelSnapshot, DuckEventSpec, AudioDuckOptions, } from './runtime/audio-duck.js';
 export { ResourceRegistry, createTimeResource, createVeilBudgetResource, RESOURCE_TIME, RESOURCE_CAMERA, RESOURCE_DEVICE, RESOURCE_VEIL_BUDGET, } from './resources.js';
 export { SpriteRenderSystem } from './systems/sprite-render-system.js';
 export { Engine, registerBackend, isBackendRegistered } from './engine.js';
