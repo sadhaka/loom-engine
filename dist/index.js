@@ -8,7 +8,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '1.2.2';
+export const LOOM_ENGINE_VERSION = '1.2.3';
 export { vec2, vec3, rect, clamp, lerp, smoothstep, approxEq, rectContains, rectIntersects, visibleInView, } from './util/math.js';
 export { rgba, hexToRgba, rgbaToHexString, rgbaToCssString, colorLerp, COLOR_WHITE, COLOR_BLACK, COLOR_TRANSPARENT, COLOR_KNOT_STR, COLOR_KNOT_DEX, COLOR_KNOT_INT, COLOR_KNOT_CENTER, } from './util/color.js';
 export { EntityAllocator, NULL_ENTITY, entityIndex, entityGeneration, makeEntity, } from './entity.js';
@@ -195,6 +195,8 @@ export { PathfindingCache, RESOURCE_PATHFINDING_CACHE } from './runtime/pathfind
 export { RegionGraph, RESOURCE_REGION_GRAPH } from './runtime/region-graph.js';
 // 1.2.2 (Wave 1.2 world depth) - declarative spawn rules with rate-limits + caps.
 export { SpawnDirector, RESOURCE_SPAWN_DIRECTOR } from './runtime/spawn-director.js';
+// 1.2.3 (Wave 1.2 world depth) - weighted encounter pools per zone / phase / level.
+export { EncounterTable, RESOURCE_ENCOUNTER_TABLE } from './runtime/encounter-table.js';
 export { ResourceRegistry, createTimeResource, createVeilBudgetResource, RESOURCE_TIME, RESOURCE_CAMERA, RESOURCE_DEVICE, RESOURCE_VEIL_BUDGET, } from './resources.js';
 // Default systems
 export { SpriteRenderSystem } from './systems/sprite-render-system.js';
