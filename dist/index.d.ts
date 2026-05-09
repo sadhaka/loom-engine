@@ -1,4 +1,4 @@
-export declare const LOOM_ENGINE_VERSION = "1.5.4";
+export declare const LOOM_ENGINE_VERSION = "1.5.5";
 export type { Vec2, Vec3, Rect } from './util/math.js';
 export { vec2, vec3, rect, clamp, lerp, smoothstep, approxEq, rectContains, rectIntersects, visibleInView, } from './util/math.js';
 export type { ColorRGBA } from './util/color.js';
@@ -222,6 +222,8 @@ export { QuestionBank, RESOURCE_QUESTION_BANK } from './runtime/question-bank.js
 export type { QuestionItem, ReviewState, DueOptions, QuestionBankOptions, } from './runtime/question-bank.js';
 export { ProgressTracker, RESOURCE_PROGRESS_TRACKER } from './runtime/progress-tracker.js';
 export type { BloomLevel, SkillSpec, SkillState, ProgressTrackerOptions, } from './runtime/progress-tracker.js';
+export { KnowledgeMap, RESOURCE_KNOWLEDGE_MAP } from './runtime/knowledge-map.js';
+export type { TopicSpec, TopicState, PrerequisiteEdge, MasterySource, KnowledgeMapOptions, } from './runtime/knowledge-map.js';
 export { ResourceRegistry, createTimeResource, createVeilBudgetResource, RESOURCE_TIME, RESOURCE_CAMERA, RESOURCE_DEVICE, RESOURCE_VEIL_BUDGET, } from './resources.js';
 export { SpriteRenderSystem } from './systems/sprite-render-system.js';
 export { Engine, registerBackend, isBackendRegistered } from './engine.js';
