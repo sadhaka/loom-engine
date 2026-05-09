@@ -7,6 +7,46 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.77.0 - 2026-05-09
+
+**Reactivity — small Signal / Computed / Effect primitive system.**
+HUD bindings, derived stats, "live" inspector views,
+autosave-on-dirty all share a need: read a value, derive something
+from it, run a side effect when it changes. Reactivity owns the
+dependency tracking automatically: reading a Signal / Computed
+inside an Effect or Computed registers it as a dependency, and
+writes propagate to all dependents.
+
+### Added
+
+- `src/runtime/reactivity.ts` - `Reactivity` class:
+  - `create({ equals? })`. Default equals = `Object.is`.
+  - `signal(initial)` returns `{ get, set, peek }`. `set` skips when
+    the new value equals the old (per `equals`).
+  - `computed(fn)` returns `{ get, peek, dispose }`. Re-runs when any
+    dep changes; if the new value equals the old, downstream effects
+    do NOT re-fire. Throwing body keeps prior value.
+  - `effect(fn)` returns `{ dispose, isDisposed }`. Runs once on
+    creation + every time any dep changes. Throwing body isolated.
+  - `batch(fn)` coalesces nested writes into one re-run pass at the
+    outermost batch close.
+  - `untrack(fn)` reads inside don't subscribe.
+  - `dispose()` tears down the entire graph.
+- Dynamic dependency tracking: when an effect / computed body changes
+  which signals it reads, the dep set updates on each rerun (deps
+  cleared + retracked).
+- Cycle / re-entrancy guard caps flush at 1000 iterations.
+- `peek()` reads without subscribing (escape hatch).
+- `RESOURCE_REACTIVITY` constant.
+
+### Tests
+
+1840 -> 1862 (22 new in tests/reactivity.test.ts).
+
+### Backwards compatibility
+
+Pure addition.
+
 ## 0.76.0 - 2026-05-09
 
 **AggroTable — multi-target threat ledger for boss AI.** Bosses
