@@ -1,4 +1,4 @@
-export declare const LOOM_ENGINE_VERSION = "1.4.3";
+export declare const LOOM_ENGINE_VERSION = "1.4.4";
 export type { Vec2, Vec3, Rect } from './util/math.js';
 export { vec2, vec3, rect, clamp, lerp, smoothstep, approxEq, rectContains, rectIntersects, visibleInView, } from './util/math.js';
 export type { ColorRGBA } from './util/color.js';
@@ -208,6 +208,8 @@ export { SubtitleQueue, RESOURCE_SUBTITLE_QUEUE } from './runtime/subtitle-queue
 export type { SubtitleState, SubtitleSpec, SubtitleSnapshot, SubtitleQueueOptions, } from './runtime/subtitle-queue.js';
 export { VoiceLineQueue, RESOURCE_VOICE_LINE_QUEUE } from './runtime/voice-line-queue.js';
 export type { VOLineSpec, VOLineSnapshot, VoiceLineQueueOptions, } from './runtime/voice-line-queue.js';
+export { CinematicLetterbox, RESOURCE_CINEMATIC_LETTERBOX } from './runtime/cinematic-letterbox.js';
+export type { LetterboxState, CloseOptions as LetterboxCloseOptions, OpenOptions as LetterboxOpenOptions, PulseOptions as LetterboxPulseOptions, CinematicLetterboxOptions, } from './runtime/cinematic-letterbox.js';
 export { ResourceRegistry, createTimeResource, createVeilBudgetResource, RESOURCE_TIME, RESOURCE_CAMERA, RESOURCE_DEVICE, RESOURCE_VEIL_BUDGET, } from './resources.js';
 export { SpriteRenderSystem } from './systems/sprite-render-system.js';
 export { Engine, registerBackend, isBackendRegistered } from './engine.js';

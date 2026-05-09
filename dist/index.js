@@ -8,7 +8,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '1.4.3';
+export const LOOM_ENGINE_VERSION = '1.4.4';
 export { vec2, vec3, rect, clamp, lerp, smoothstep, approxEq, rectContains, rectIntersects, visibleInView, } from './util/math.js';
 export { rgba, hexToRgba, rgbaToHexString, rgbaToCssString, colorLerp, COLOR_WHITE, COLOR_BLACK, COLOR_TRANSPARENT, COLOR_KNOT_STR, COLOR_KNOT_DEX, COLOR_KNOT_INT, COLOR_KNOT_CENTER, } from './util/color.js';
 export { EntityAllocator, NULL_ENTITY, entityIndex, entityGeneration, makeEntity, } from './entity.js';
@@ -221,6 +221,8 @@ export { AudioDuck, RESOURCE_AUDIO_DUCK } from './runtime/audio-duck.js';
 export { SubtitleQueue, RESOURCE_SUBTITLE_QUEUE } from './runtime/subtitle-queue.js';
 // 1.4.3 (Wave 1.4 audio cinematic depth) - per-channel interruption-aware VO queue.
 export { VoiceLineQueue, RESOURCE_VOICE_LINE_QUEUE } from './runtime/voice-line-queue.js';
+// 1.4.4 (Wave 1.4 audio cinematic depth) - cutscene framing bars (top/bottom) with smooth open/close.
+export { CinematicLetterbox, RESOURCE_CINEMATIC_LETTERBOX } from './runtime/cinematic-letterbox.js';
 export { ResourceRegistry, createTimeResource, createVeilBudgetResource, RESOURCE_TIME, RESOURCE_CAMERA, RESOURCE_DEVICE, RESOURCE_VEIL_BUDGET, } from './resources.js';
 // Default systems
 export { SpriteRenderSystem } from './systems/sprite-render-system.js';
