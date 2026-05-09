@@ -7,6 +7,60 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.68.0 - 2026-05-09
+
+**Coroutine - generator-based multi-tick async over EngineClock.**
+Some game logic naturally spans multiple ticks: cinematic
+scripting, AI scripts, scripted boss patterns, tutorial overlays,
+NPC dialogue beats. Promises don't fit (microtask queue, not
+engine clock). Coroutine wraps a JavaScript generator; the
+generator yields wait values that tell the runtime when to resume.
+
+### Added
+
+- `src/runtime/coroutine.ts` - `Coroutine` class:
+  - `start(genFn, opts?)` — returns the routine id; opts:
+    `onDone`, `onError`.
+  - `cancel(id)` — remove a running routine.
+  - `cancelAll()` / `dispose()`.
+  - `tick(dtMs)` — drives every active routine forward.
+  - `activeCount()` / `isActive(id)`.
+- Yieldable wait helpers (consumer imports):
+  - `waitMs(ms)` — pause for ms of accumulated tick time.
+  - `waitFrames(n)` — pause for N ticks (regardless of dt).
+  - `waitUntil(predicate)` — poll the predicate every tick.
+  - `yield;` (or `yield null;`) — cooperative one-tick yield.
+- Defensive: throwing generator fires onError; throwing
+  predicate is treated as not-yet; sync throw at start fires
+  onError; large dt drains multiple stages in one tick.
+- Optional `onCompleted(id)` global callback; throwing isolated.
+- `WaitMs`, `WaitUntil`, `WaitFrames`, `Yieldable`,
+  `CoroutineOptions`, `CoroutineStartOptions` types exported.
+- `RESOURCE_COROUTINE` constant.
+
+### Tests
+
+1645 -> 1665 (20 new in tests/coroutine.test.ts):
+- RESOURCE_COROUTINE stable string; starts empty.
+- Instant routine completes immediately on tick.
+- waitMs / waitFrames / waitUntil semantics.
+- Chained yields advance through stages.
+- cancel removes; cancel missing returns false.
+- onDone fires; onCompleted fires per routine.
+- Throwing generator fires onError; sync throw at start fires
+  onError.
+- cancelAll wipes everything.
+- NaN / negative dt clamped (waits unchanged).
+- yield without wait runs again next tick (cooperative).
+- Large dt drains multi-stage routine in one tick.
+- Throwing waitUntil predicate treated as not-yet.
+- dispose locks ops.
+- Realistic boss spawn cinematic.
+
+### Backwards compatibility
+
+Pure addition.
+
 ## 0.67.0 - 2026-05-09
 
 **ActionHistory - undo / redo stack with command pattern.**

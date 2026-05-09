@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.67.0';
+export const LOOM_ENGINE_VERSION = '0.68.0';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -417,6 +417,22 @@ export type {
 // 0.67.0 - undo / redo stack with command pattern.
 export { ActionHistory, RESOURCE_ACTION_HISTORY } from './runtime/action-history.js';
 export type { Action as HistoryAction, ActionHistoryOptions } from './runtime/action-history.js';
+// 0.68.0 - generator-based multi-tick coroutine.
+export {
+  Coroutine,
+  waitMs,
+  waitUntil,
+  waitFrames,
+  RESOURCE_COROUTINE,
+} from './runtime/coroutine.js';
+export type {
+  WaitMs,
+  WaitUntil,
+  WaitFrames,
+  Yieldable,
+  CoroutineOptions,
+  StartOptions as CoroutineStartOptions,
+} from './runtime/coroutine.js';
 export {
   ResourceRegistry,
   createTimeResource,
