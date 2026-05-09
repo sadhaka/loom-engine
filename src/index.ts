@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.69.0';
+export const LOOM_ENGINE_VERSION = '0.70.0';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -440,6 +440,12 @@ export type {
   WatchdogStatus,
   WatchdogOptions,
 } from './runtime/watchdog.js';
+// 0.70.0 - day/night cycle with named phase transitions.
+export { TimeOfDay, RESOURCE_TIME_OF_DAY } from './runtime/time-of-day.js';
+export type {
+  PhaseBoundary,
+  TimeOfDayOptions,
+} from './runtime/time-of-day.js';
 export {
   ResourceRegistry,
   createTimeResource,

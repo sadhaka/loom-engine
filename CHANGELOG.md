@@ -7,6 +7,91 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.70.0 - 2026-05-09
+
+**TimeOfDay + M8 0.70 milestone — day/night cycle with named
+phase transitions.** Outdoor zones often have a day/night cycle
+that drives lighting, encounter pools, NPC schedules, and audio
+ambience. TimeOfDay tracks an in-game clock with a tick-driven
+acceleration factor and emits onPhaseChanged callbacks when the
+clock crosses configurable phase boundaries.
+
+This is the M8 finale and lands the engine at version **0.70.0** —
+36 versions shipped this session (0.34 → 0.70), zero breaking
+changes, ~1700 tests.
+
+### Added
+
+- `src/runtime/time-of-day.ts` - `TimeOfDay` class:
+  - `create({ dayLengthMs?, initialHour?, phases?, onPhaseChanged? })`.
+  - `tick(dtMs)` advances clock by `(dt / dayLengthMs) * 24` hours;
+    wraps past 24 + increments dayCount.
+  - `getHour()` / `getDayCount()` / `getPhase()` / `getPhases()`
+    (defensive copy).
+  - `setHour(hour)` — wraps to [0, 24); fires onPhaseChanged on
+    phase change.
+  - `setDayLengthMs(ms)` / `getDayLengthMs()` runtime tuning.
+  - `dispose()` locks ops.
+- Phases sorted by startHour internally; pre-dawn hours wrap to
+  the previous day's last phase (so phase coverage is total).
+- `onPhaseChanged(next, prev)` fires only on actual phase change
+  (no spurious fires on same-phase ticks). Throwing isolated.
+- Defensive: NaN / negative dt ignored; initialHour > 24 wraps;
+  dayLengthMs <= 0 keeps existing.
+- `PhaseBoundary`, `TimeOfDayOptions` types exported.
+- `RESOURCE_TIME_OF_DAY` constant.
+
+### Tests
+
+1689 -> 1710 (21 new in tests/time-of-day.test.ts):
+- RESOURCE_TIME_OF_DAY stable string; defaults.
+- initialHour respected + wraps past 24.
+- tick advances proportional to dayLengthMs; wraps past 24 +
+  increments dayCount; multi-day ticks accumulate.
+- setHour updates + wraps + fires onPhaseChanged on phase flip.
+- getPhase null when no phases; correct phase for hour;
+  pre-dawn wraps to last (yesterday's) phase.
+- onPhaseChanged fires across day boundary; not on same-phase
+  tick; throwing isolated.
+- setDayLengthMs updates acceleration.
+- NaN / negative dt ignored.
+- Phases sorted internally.
+- dispose locks ops.
+- Realistic full-day cycle.
+
+### Backwards compatibility
+
+Pure addition.
+
+### Milestone — engine 0.70.0
+
+36 versions shipped this M8 session (0.34 → 0.70), 0 breaking
+changes, 1710 tests across 80+ test files. The pure-additive
+policy held throughout: 0.10-era code compiles unmodified
+against 0.70.
+
+**0.61 - 0.70 game-systems wave:**
+- DialogTree (0.61): branching dialog with conditions + actions
+- LootTable (0.62): weighted random drops, seedable RNG
+- QuestLog (0.63): state machine + objective tracking
+- SteeringBehaviors (0.64): seek/flee/arrive/pursue/evade/
+  separation/wander
+- ToastQueue (0.65): severity-tiered notifications
+- DamageFormula (0.66): atk/def/crit/mit/resist canonical math
+- ActionHistory (0.67): undo / redo command stack
+- Coroutine (0.68): generator-based multi-tick async
+- Watchdog (0.69): heartbeat monitor with stale-detection
+- TimeOfDay (0.70): day/night cycle with named phases
+
+The 0.61 - 0.70 wave focuses on the gameplay surface a typical
+ARPG / hub-MMO consumer wires together — quest content, loot
+distribution, NPC behavior, combat math, undo/redo authoring
+tooling, async cinematics, connection health, ambient time-of-day.
+Combined with 0.34 - 0.60's runtime / audio / input / persistence
+infra, the engine surface is now broad enough to scaffold
+Loom Survivor v1, the Lastlight world hub, and the Founders
+homepage's interactive surface end-to-end without engine forks.
+
 ## 0.69.0 - 2026-05-09
 
 **Watchdog - heartbeat monitor with stale-detection callbacks.**
