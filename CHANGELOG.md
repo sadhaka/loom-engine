@@ -7,6 +7,47 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.78.0 - 2026-05-09
+
+**Leaderboard — local + remote leaderboard primitive.** Score
+boards, time trials, "fastest clear" rankings - all share a
+sorted-by-score map of player entries with top-N + around-me
+queries. Leaderboard owns the data structure plus optional
+adapter hooks for local persistence and remote sync.
+
+### Added
+
+- `src/runtime/leaderboard.ts` - `Leaderboard` class:
+  - `create({ order?, capacity?, persist?, remote? })`. order is
+    `'desc'` (higher = better, default) or `'asc'`. capacity default
+    1000.
+  - `submit({ id, name, score, data? })` - duplicate id keeps best
+    (per order); worse-than-current submission returns false.
+  - `remove(id)` / `clear()` / `size()`.
+  - `byIdEntry(id)` returns entry with rank assigned (or null).
+  - `rankOf(id)` 1-based rank; 0 if absent.
+  - `top(n)` highest-rank N entries.
+  - `around(id, before, after)` window across the player's rank.
+  - `list()` full sorted defensive copy.
+  - `saveLocal()` / `loadLocal()` via `persist` adapter.
+  - `uploadRemote(id)` / `syncRemote()` async via `remote` adapter.
+  - `setOrder(order)` / `getOrder()`.
+  - `dispose()` clears + locks ops.
+- Tied scores: earlier `submittedAt` (monotonic, replay-deterministic)
+  ranks higher.
+- `submittedAt` is a monotonic int (NOT Date.now); replay-safe.
+- Capacity overflow evicts the worst-score entry.
+- Missing `persist` / `remote` adapter calls are tolerated no-ops.
+- `RESOURCE_LEADERBOARD` constant.
+
+### Tests
+
+1862 -> 1884 (22 new in tests/leaderboard.test.ts).
+
+### Backwards compatibility
+
+Pure addition.
+
 ## 0.77.0 - 2026-05-09
 
 **Reactivity — small Signal / Computed / Effect primitive system.**
