@@ -7,6 +7,83 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 1.1.5 - 2026-05-09
+
+**🟦 Wave 1.1 milestone — GhostReplay: record + replay translucent
+shadow runs.** Souls-likes show "this is how the player who left
+the message died." Racers show your previous best lap as a ghost
+car. Survivor-likes show your last run's path so you can learn
+from it. GhostReplay is the engine-side machinery: record frames
+of an entity (position + rotation + animation), serialize the
+recording, then play it back as one or more concurrent ghost
+playbacks.
+
+### Added
+
+- `src/runtime/ghost-replay.ts` - `GhostReplay` class:
+  - `create({})`.
+  - **Recording**:
+    - `startRecording({ sampleRateMs?, maxFrames?, label? })`.
+      Defaults 50ms / 1200 frames.
+    - `recordSnapshot({ x, y, rotation?, animationId?, data? })` -
+      drops snapshot if non-finite coordinates.
+    - `stopRecording()` returns `Recording | null`.
+    - `cancelRecording()` discards.
+    - `isRecording()`.
+  - **Playback** (multiple concurrent ghosts):
+    - `play(recording, { id?, speed?, loop?, fadeInMs?, fadeOutMs?, onFinish? })`.
+    - `stop(id)` / `stopAll()`.
+    - `pause(id)` / `resume(id)` / `setSpeed(id, mult)`.
+    - `getGhost(id)` returns interpolated `GhostSnapshot` or `null`.
+    - `has(id)` / `list()` / `forEach(cb)` / `count()`.
+    - `tick(dtMs)` advances all active ghosts.
+  - **Serialization**:
+    - `exportRecording(recording)` -> JSON string.
+    - `importRecording(jsonString)` -> `Recording | null`.
+  - `dispose()` locks ops.
+- Snapshot interpolates position + rotation linearly between
+  surrounding frames; uses prior frame's `animationId` and
+  `data`.
+- `loop: true` modulos elapsed; `loop: false` clamps to last
+  frame and fires `onFinish` once.
+- `fadeInMs` / `fadeOutMs` produce alpha ramps (0 -> 1 / 1 -> 0)
+  at recording boundaries.
+- maxFrames cap drops oldest + rebases atMs so first frame stays
+  at 0.
+- Engine ships zero render path - consumer reads the snapshot and
+  draws the ghost in whatever style fits (translucent sprite,
+  outline shader, breadcrumb trail).
+- Throwing onFinish isolated.
+- NaN / Infinity / negative dt no-op.
+- `RESOURCE_GHOST_REPLAY` constant.
+
+### Tests
+
+2516 -> 2545 (29 new).
+
+### Backwards compatibility
+
+Pure addition. Pairs with ReplayRecorder (0.58, deterministic
+GAMEPLAY EVENT recording) - GhostReplay records VISUAL STATE for
+shadow rendering instead. Different layer; the two compose.
+
+### 🟦 Milestone — Wave 1.1 combat depth complete
+
+**6 versions shipped (1.1.0 -> 1.1.5)**: InputBuffer (input intent
+queue), StatusEffectStack (buff/debuff stacking with DR + immunity),
+BehaviorTree (pluggable AI decision tree), CameraDirector
+(cinematic camera sequencer), CutsceneSequencer (timed event
+timeline), GhostReplay (record + replay shadow runs).
+
+Together these unlock: combo-input combat, multi-source debuff
+mechanics, hierarchical NPC AI, scripted boss reveals, full
+cutscene orchestration, and replay-based metagame loops (best lap,
+death messages, dueling ghosts).
+
+Wave 1.2 (world / economy depth) opens next: PathfindingCache,
+RegionGraph, SpawnDirector, EncounterTable, MerchantStock,
+LootTier (1.2 milestone).
+
 ## 1.1.4 - 2026-05-09
 
 **CutsceneSequencer — generic timed-cue event timeline.**

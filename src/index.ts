@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '1.1.4';
+export const LOOM_ENGINE_VERSION = '1.1.5';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -701,6 +701,16 @@ export type {
   PlayOptions as CutscenePlayOptions,
   CutsceneSequencerOptions,
 } from './runtime/cutscene-sequencer.js';
+// 1.1.5 CAPSTONE (Wave 1.1 combat depth milestone) - record + replay translucent shadow runs.
+export { GhostReplay, RESOURCE_GHOST_REPLAY } from './runtime/ghost-replay.js';
+export type {
+  GhostFrame,
+  Recording as GhostRecording,
+  GhostSnapshot,
+  StartRecordingOptions as GhostStartRecordingOptions,
+  PlayGhostOptions,
+  GhostReplayOptions,
+} from './runtime/ghost-replay.js';
 export {
   ResourceRegistry,
   createTimeResource,
