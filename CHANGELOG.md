@@ -7,6 +7,46 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.79.0 - 2026-05-09
+
+**TextScroll — typewriter text reveal with skip-on-click.** Dialog
+boxes / lore text / cinematic captions all benefit from a
+typewriter-style reveal: characters appear one at a time, pauses
+linger on punctuation, the player can skip to the full text on
+click. TextScroll owns that state; consumers wire `visibleText()`
+into their renderer each frame and pipe input clicks to `skip()`.
+
+### Added
+
+- `src/runtime/text-scroll.ts` - `TextScroll` class:
+  - `create({ charsPerSecond?, punctPauseMs?, onChar?, onComplete? })`.
+    Default 60 cps; default punct pauses for `. ! ? , ; :`.
+  - `start(text)` / `append(text)` / `clear()`.
+  - `tick(dtMs)` advances reveal; honors current punctuation pause.
+  - `skip()` jumps to fully revealed; fires onComplete if not yet.
+  - `pause()` / `resume()` / `isPaused()`.
+  - `visibleText()` text revealed so far; `fullText()` source.
+  - `isComplete()` / `revealedCount()` / `totalCount()`.
+  - `setCharsPerSecond(rate)` runtime tuning.
+  - `dispose()` clears + locks ops.
+- Unicode-correct: text is split by codepoints (Array.from) so
+  surrogate pairs and emoji reveal as single characters.
+- Punctuation pauses fire AFTER the character is revealed
+  (typewriter convention - pause comes after the period).
+- onChar / onComplete callbacks; both isolated.
+- append() after a complete scroll re-arms onComplete.
+- Defensive: NaN / 0 / negative dt no-op; non-string text becomes
+  empty.
+- `RESOURCE_TEXT_SCROLL` constant.
+
+### Tests
+
+1886 -> 1908 (22 new in tests/text-scroll.test.ts).
+
+### Backwards compatibility
+
+Pure addition.
+
 ## 0.78.0 - 2026-05-09
 
 **Leaderboard — local + remote leaderboard primitive.** Score

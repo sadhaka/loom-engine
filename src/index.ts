@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.78.0';
+export const LOOM_ENGINE_VERSION = '0.79.0';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -515,6 +515,9 @@ export type {
   LeaderboardRemoteAdapter,
   LeaderboardOptions,
 } from './runtime/leaderboard.js';
+// 0.79.0 - typewriter text reveal with skip-on-click.
+export { TextScroll, RESOURCE_TEXT_SCROLL } from './runtime/text-scroll.js';
+export type { TextScrollOptions } from './runtime/text-scroll.js';
 export {
   ResourceRegistry,
   createTimeResource,
