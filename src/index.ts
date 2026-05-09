@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.64.0';
+export const LOOM_ENGINE_VERSION = '0.65.0';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -398,6 +398,14 @@ export {
   RESOURCE_STEERING_BEHAVIORS,
 } from './runtime/steering-behaviors.js';
 export type { Agent, WanderState } from './runtime/steering-behaviors.js';
+// 0.65.0 - severity-tiered notification queue with auto-dismiss.
+export { ToastQueue, RESOURCE_TOAST_QUEUE } from './runtime/toast-queue.js';
+export type {
+  ToastSeverity,
+  Toast,
+  PostOptions,
+  ToastQueueOptions,
+} from './runtime/toast-queue.js';
 export {
   ResourceRegistry,
   createTimeResource,

@@ -7,6 +7,57 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.65.0 - 2026-05-09
+
+**ToastQueue - severity-tiered notification queue with auto-dismiss.**
+"+50 gold", "Boss spawned", "Connection lost", "Quest accepted" -
+every game surface notification follows the same shape: severity,
+message, optional payload, auto-dismiss timer, optional manual
+dismiss. ToastQueue is that machinery.
+
+### Added
+
+- `src/runtime/toast-queue.ts` - `ToastQueue` class:
+  - `post(severity, message, opts?)` returns id; severity helpers
+    `info` / `success` / `warn` / `error` / `critical`.
+  - `tick(dtMs)` ages active toasts; expired ones auto-remove.
+  - `dismiss(id)` manual remove.
+  - `clear()` empties queue.
+  - `forEach(cb)` / `list()` (defensive copies) / `count()` /
+    `capacity()`.
+  - Default lifetimes per severity (info/success 3s, warn 5s,
+    error 8s, critical sticky); `lifetimeMs: -1` makes any
+    toast sticky.
+  - Capacity-bounded (default 16); when full, `post` evicts the
+    oldest lowest-severity toast.
+  - `onPost(toast)` and
+    `onRemoved(toast, 'expired' | 'dismissed' | 'evicted')`
+    callbacks; throwing isolated.
+  - `dispose()` locks ops.
+- `ToastSeverity`, `Toast`, `PostOptions`, `ToastQueueOptions`
+  types exported.
+- `RESOURCE_TOAST_QUEUE` constant.
+
+### Tests
+
+1578 -> 1602 (24 new in tests/toast-queue.test.ts):
+- RESOURCE_TOAST_QUEUE stable string; starts empty.
+- post + severity helpers.
+- tick decrements + expires; critical = sticky; explicit
+  lifetimeMs override; lifetimeMs < 0 sticky.
+- dismiss + missing id; clear fires onRemoved per toast.
+- Capacity caps; eviction picks oldest lowest-severity.
+- onPost / onRemoved fire; throwing isolated.
+- forEach / list / data payload preserved; ageMs accumulates.
+- Invalid severity rejected.
+- NaN / negative dt ignored.
+- dispose locks ops.
+- Realistic mixed-severity flow.
+
+### Backwards compatibility
+
+Pure addition.
+
 ## 0.64.0 - 2026-05-09
 
 **SteeringBehaviors - 2D NPC navigation primitives.** Mob nav, NPC
