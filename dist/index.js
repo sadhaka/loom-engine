@@ -8,7 +8,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '1.1.3';
+export const LOOM_ENGINE_VERSION = '1.1.4';
 export { vec2, vec3, rect, clamp, lerp, smoothstep, approxEq, rectContains, rectIntersects, visibleInView, } from './util/math.js';
 export { rgba, hexToRgba, rgbaToHexString, rgbaToCssString, colorLerp, COLOR_WHITE, COLOR_BLACK, COLOR_TRANSPARENT, COLOR_KNOT_STR, COLOR_KNOT_DEX, COLOR_KNOT_INT, COLOR_KNOT_CENTER, } from './util/color.js';
 export { EntityAllocator, NULL_ENTITY, entityIndex, entityGeneration, makeEntity, } from './entity.js';
@@ -185,6 +185,8 @@ export { StatusEffectStack, RESOURCE_STATUS_EFFECT_STACK } from './runtime/statu
 export { BehaviorTree, RESOURCE_BEHAVIOR_TREE } from './runtime/behavior-tree.js';
 // 1.1.3 (Wave 1.1 combat depth) - cinematic camera sequencer.
 export { CameraDirector, RESOURCE_CAMERA_DIRECTOR } from './runtime/camera-director.js';
+// 1.1.4 (Wave 1.1 combat depth) - generic timed-cue event timeline.
+export { CutsceneSequencer, RESOURCE_CUTSCENE_SEQUENCER } from './runtime/cutscene-sequencer.js';
 export { ResourceRegistry, createTimeResource, createVeilBudgetResource, RESOURCE_TIME, RESOURCE_CAMERA, RESOURCE_DEVICE, RESOURCE_VEIL_BUDGET, } from './resources.js';
 // Default systems
 export { SpriteRenderSystem } from './systems/sprite-render-system.js';
