@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.62.0';
+export const LOOM_ENGINE_VERSION = '0.63.0';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -377,6 +377,15 @@ export type {
   LootDrop,
   LootTableOptions,
 } from './runtime/loot-table.js';
+// 0.63.0 - quest log state machine + objective tracking.
+export { QuestLog, RESOURCE_QUEST_LOG } from './runtime/quest-log.js';
+export type {
+  QuestState,
+  QuestObjective,
+  QuestEntry,
+  OfferQuestOptions,
+  QuestLogOptions,
+} from './runtime/quest-log.js';
 export {
   ResourceRegistry,
   createTimeResource,

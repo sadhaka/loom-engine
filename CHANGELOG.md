@@ -7,6 +7,68 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.63.0 - 2026-05-09
+
+**QuestLog - quest state machine + objective tracking.** Quests
+follow a small state machine (offered → accepted → active →
+complete | failed) with one or more objectives that progress
+independently. QuestLog tracks every quest's state and per-
+objective counts. Snapshot-friendly for save data.
+
+The CATALOG (definitions) is consumer-side. QuestLog only stores
+runtime state by quest id.
+
+### Added
+
+- `src/runtime/quest-log.ts` - `QuestLog` class:
+  - `offer(questId, { objectives })` - registers in 'offered'.
+  - `accept(questId)` - offered → accepted → active in one call.
+  - `decline(questId)` - removes from log.
+  - `addProgress(questId, objectiveId, n)` - updates progress;
+    auto-marks done; auto-completes quest when all objectives
+    done.
+  - `fail(questId)` - active/accepted → failed.
+  - `complete(questId)` - force-complete from active (bypasses
+    objective checks; marks all objectives done).
+  - `getState(questId)` / `get(questId)` (defensive copy) /
+    `has(questId)`.
+  - `listIds(filter?)` / `list(filter?)` / `count(filter?)`.
+  - `toSnapshot()` / `fromSnapshot(snap)` for save data.
+  - `dispose()` locks subsequent ops.
+- Optional `onStateChanged(id, prev, next)` and
+  `onObjectiveProgress(id, oid, p, r)` callbacks; throwing
+  isolated.
+- Defensive: empty id rejected, double-offer no-op, addProgress
+  on non-active quest returns false, addProgress with 0/negative
+  ignored, etc.
+- Optional `now` clock seam for deterministic timestamps.
+- `QuestState`, `QuestObjective`, `QuestEntry`,
+  `OfferQuestOptions`, `QuestLogOptions` types exported.
+- `RESOURCE_QUEST_LOG` constant.
+
+### Tests
+
+1531 -> 1558 (27 new in tests/quest-log.test.ts):
+- RESOURCE_QUEST_LOG stable string; starts empty.
+- offer adds in offered; idempotent; rejects empty id.
+- accept transitions offered → active (offered → accepted →
+  active onStateChanged emitted in pairs).
+- decline removes; only on offered.
+- addProgress: tracks, caps at required, auto-marks done,
+  auto-completes quest when all objectives done.
+- addProgress on non-active / missing objective / 0/neg /
+  already-done returns false.
+- onObjectiveProgress fires with current + required.
+- fail / complete state guards.
+- list / count filter by state.
+- get returns defensive copy.
+- snapshot + fromSnapshot roundtrip.
+- dispose locks; throwing onStateChanged isolated.
+
+### Backwards compatibility
+
+Pure addition.
+
 ## 0.62.0 - 2026-05-09
 
 **LootTable - weighted random drop tables with seedable RNG.**
