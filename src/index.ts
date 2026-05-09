@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '1.4.5';
+export const LOOM_ENGINE_VERSION = '1.5.0';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -866,6 +866,19 @@ export type {
   SoundtrackSnapshot,
   SoundtrackDirectorOptions,
 } from './runtime/soundtrack-director.js';
+// 1.5.0 (Wave 1.5 educational depth opens) - line / bar / scatter chart render-state.
+export { ChartRenderer, RESOURCE_CHART_RENDERER } from './runtime/chart-renderer.js';
+export type {
+  SeriesKind,
+  ChartPoint,
+  SeriesSpec,
+  AxisRange,
+  ChartPadding,
+  ChartRendererOptions,
+  RenderedPoint,
+  RenderedSeries,
+  ChartSnapshot,
+} from './runtime/chart-renderer.js';
 export {
   ResourceRegistry,
   createTimeResource,

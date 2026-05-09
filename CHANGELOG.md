@@ -7,6 +7,52 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 1.5.0 - 2026-05-09
+
+**Wave 1.5 educational / interactive sim depth opens —
+ChartRenderer: line / bar / scatter chart render-state.**
+Tutorials, dashboards, training apps, learning platforms, in-game
+stat screens, end-of-run summaries - they all want charts.
+ChartRenderer is the data + axis + scaling layer the consumer's
+renderer reads each frame to draw lines, bars, scatter plots.
+
+### Added
+
+- `src/runtime/chart-renderer.ts` - `ChartRenderer` class:
+  - `create({ width, height, padding?, autoFitX?, autoFitY? })`.
+  - `addSeries({ id, kind?, points, color?, label?, data? })`.
+    Default kind 'line'. Points accept tuples `[x, y]` OR
+    objects `{ x, y }`.
+  - `updatePoints(id, points)` / `removeSeries(id)` / `hasSeries(id)` /
+    `seriesCount`.
+  - `setAxisRange(axis, min, max)` - explicit axis range; disables
+    auto-fit for that axis.
+  - `resetAxis(axis)` - re-enable auto-fit.
+  - `getAxisRange(axis)`.
+  - `setSize(width, height)`.
+  - `getSnapshot()` returns
+    `{ width, height, plotArea, axisX, axisY, series[] }` with
+    points already mapped to screen coords (pixels).
+  - `toScreen(x, y)` - convert one data point to pixels.
+  - `forEach(cb)` / `list()` / `clear()` / `dispose()`.
+- Engine ships zero render path - consumer reads `RenderedSeries.points`
+  (each with `px`, `py`, `x`, `y`) and draws in whatever style fits
+  (Canvas2D, WebGL, SVG, DOM).
+- Y-axis is inverted at render time (data y up, screen y down).
+- Non-finite points are filtered.
+- All callbacks isolated.
+- `RESOURCE_CHART_RENDERER` constant.
+
+### Tests
+
+2984 -> 3006 (22 new).
+
+### Backwards compatibility
+
+Pure addition. Pairs with TimelineLedger (1.5.1 next, time-series
+events), NumberFormatter (0.98, axis tick labels), Localization
+(0.46, chart titles).
+
 ## 1.4.5 - 2026-05-09
 
 **🟧 Wave 1.4 milestone — SoundtrackDirector: context-driven
