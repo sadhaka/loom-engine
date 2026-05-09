@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '1.2.0';
+export const LOOM_ENGINE_VERSION = '1.2.1';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -719,6 +719,15 @@ export type {
   CacheEntry as PathfindingCacheEntry,
   PathfindingCacheOptions,
 } from './runtime/pathfinding-cache.js';
+// 1.2.1 (Wave 1.2 world depth) - connected-zone topology + traversal.
+export { RegionGraph, RESOURCE_REGION_GRAPH } from './runtime/region-graph.js';
+export type {
+  RegionGate,
+  ZoneNode,
+  RegionEdge,
+  BidirectionalOptions as RegionBidirectionalOptions,
+  RegionGraphOptions,
+} from './runtime/region-graph.js';
 export {
   ResourceRegistry,
   createTimeResource,

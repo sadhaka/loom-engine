@@ -7,6 +7,50 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 1.2.1 - 2026-05-09
+
+**RegionGraph — connected-zone topology + traversal.** Pathfinder
+(0.55) handles tile-level A* within a single zone. RegionGraph
+is the world-scale counterpart: zones are nodes, connections
+(portals, doors, paths, ferry routes) are edges. "Find shortest
+route Hamlet → Lastlight," "which zones are reachable with a
+Mirror Shard?", "what zone do I land in if I cross this portal?".
+
+### Added
+
+- `src/runtime/region-graph.ts` - `RegionGraph` class:
+  - `create({})`.
+  - `addZone(id, data?)` / `removeZone(id)` / `hasZone(id)` /
+    `getZone(id)` / `zones()` / `zoneCount()`.
+  - `addConnection({ fromZone, toZone, weight?, kind?, gate?, data? })`
+    - directed edge. Returns false on missing zones / self-loop.
+  - `addBidirectional(fromZone, toZone, opts)` - both directions.
+  - `removeConnection(from, to)` / `hasConnection(from, to)` /
+    `getConnection(from, to)` / `edges()` / `edgeCount()`.
+  - `neighbors(zone, ctx?)` - reachable next zones, gate-filtered.
+  - `shortestPath(fromZone, toZone, ctx?)` - Dijkstra path or
+    null. Returns single-element array for same-zone query.
+  - `reachable(fromZone, ctx?)` - all zones reachable via BFS.
+  - `isReachable(fromZone, toZone, ctx?)` - boolean.
+  - `clear()` / `dispose()`.
+- Edge `gate` is a predicate `(ctx) => boolean`. Throwing gates
+  treated as closed.
+- Edge `kind` is opaque to engine (consumer filter for "walk" /
+  "teleport" / "boat" / etc).
+- Edge `weight` defaults to 1; use any positive number for travel
+  cost.
+- `RESOURCE_REGION_GRAPH` constant.
+
+### Tests
+
+2568 -> 2595 (27 new).
+
+### Backwards compatibility
+
+Pure addition. Pairs with Pathfinder (0.55, intra-zone A*),
+TileMap (0.56), FactionReputation (0.86, often gates region
+access).
+
 ## 1.2.0 - 2026-05-09
 
 **Wave 1.2 world depth opens — PathfindingCache: memoization
