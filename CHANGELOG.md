@@ -7,6 +7,50 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 1.4.2 - 2026-05-09
+
+**SubtitleQueue — timed subtitle display + fade for dialog,
+captions, narrator.** ToastQueue (0.65) is global notifications.
+TooltipQueue (0.97) is anchored UI hints. SubtitleQueue is the
+dialog-bottom-of-screen surface: speaker-attributed lines that
+appear in sync with voice, fade in / out, queue or display
+concurrently.
+
+### Added
+
+- `src/runtime/subtitle-queue.ts` - `SubtitleQueue` class:
+  - `create({ maxConcurrent?, onPush?, onRemoved? })`. Default
+    maxConcurrent 3.
+  - `push({ id, text, durationMs, speakerId?, priority?, fadeInMs?, fadeOutMs?, data? })`.
+    durationMs=-1 = sticky. Same id replaces existing line.
+  - `cancel(id)` - force fade-out.
+  - `cancelAll()` / `clear()` - immediate removal of all lines.
+  - `isShowing(id)` / `count()`.
+  - `visible(maxLines?)` - top-priority lines, capped at
+    maxConcurrent (or override). Sorted by priority desc.
+  - `list()` - all lines (unfiltered).
+  - `forEach(cb)` - iterates visible() result.
+  - `tick(dtMs)` - advances state with per-phase dt accounting.
+  - `dispose()`.
+- States: `'fadeIn' | 'visible' | 'fadeOut'`. Alpha ramps
+  computed each tick.
+- Default fadeInMs 150, fadeOutMs 250.
+- Priority filter: at most `maxConcurrent` lines visible; lower
+  priorities still tick + age but don't render.
+- All callbacks isolated.
+- NaN / Infinity / negative dt no-op.
+- `RESOURCE_SUBTITLE_QUEUE` constant.
+
+### Tests
+
+2899 -> 2922 (23 new).
+
+### Backwards compatibility
+
+Pure addition. Pairs with DialogVoice (1.3.3, the audio side -
+share `id` to link subtitle to spoken line), DialogTree (0.61),
+VoiceLineQueue (1.4.3 next).
+
 ## 1.4.1 - 2026-05-09
 
 **AudioDuck — automatic music ducking when high-priority SFX

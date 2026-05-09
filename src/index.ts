@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '1.4.1';
+export const LOOM_ENGINE_VERSION = '1.4.2';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -832,6 +832,14 @@ export type {
   DuckEventSpec,
   AudioDuckOptions,
 } from './runtime/audio-duck.js';
+// 1.4.2 (Wave 1.4 audio cinematic depth) - timed subtitle display + fade.
+export { SubtitleQueue, RESOURCE_SUBTITLE_QUEUE } from './runtime/subtitle-queue.js';
+export type {
+  SubtitleState,
+  SubtitleSpec,
+  SubtitleSnapshot,
+  SubtitleQueueOptions,
+} from './runtime/subtitle-queue.js';
 export {
   ResourceRegistry,
   createTimeResource,
