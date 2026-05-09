@@ -7,6 +7,41 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.84.0 - 2026-05-09
+
+**AssetManifest — declarative asset list + dependency graph.**
+AssetPreloader (0.34) takes a flat list of URLs to load, but real
+consumer apps have asset dependencies (animations depend on
+spritesheets, which depend on shared atlases). AssetManifest owns
+that graph: declare each asset with its dependencies, run
+`resolve()` to get a topologically-sorted load order.
+
+### Added
+
+- `src/runtime/asset-manifest.ts` - `AssetManifest` class:
+  - `create({ entries? })`.
+  - `add(entry)` / `remove(id)` / `has(id)` / `get(id)` / `size()`
+    / `list()` / `clear()`.
+  - `resolve()` topologically sorts the entire manifest.
+  - `resolveFor(id)` resolves the subgraph for a single id (and
+    transitive deps).
+  - `dispose()` clears + locks ops.
+- `ResolveResult` is a discriminated union: `{ ok: true, order }`
+  on success; `{ ok: false, reason, offenders }` for `cycle` /
+  `missing_dep` / `unknown_id`.
+- Topological sort is deterministic (alphabetical on ties).
+- Self-loops detected as cycles.
+- Defensive copy in / out of getters.
+- `RESOURCE_ASSET_MANIFEST` constant.
+
+### Tests
+
+1998 -> 2020 (22 new in tests/asset-manifest.test.ts).
+
+### Backwards compatibility
+
+Pure addition.
+
 ## 0.83.0 - 2026-05-09
 
 **EventLog — structured replay-friendly event log.** Different
