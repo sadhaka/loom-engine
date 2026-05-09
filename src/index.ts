@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '1.1.0';
+export const LOOM_ENGINE_VERSION = '1.1.1';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -656,6 +656,16 @@ export type {
   InputBufferOptions,
   RemovedReason as InputBufferRemovedReason,
 } from './runtime/input-buffer.js';
+// 1.1.1 (Wave 1.1 combat depth) - buff/debuff stacking with DR + immunity windows.
+export { StatusEffectStack, RESOURCE_STATUS_EFFECT_STACK } from './runtime/status-effect-stack.js';
+export type {
+  StackingRule,
+  EffectSpec,
+  ActiveEffect,
+  ApplyResult,
+  ApplyOptions,
+  StatusEffectStackOptions,
+} from './runtime/status-effect-stack.js';
 export {
   ResourceRegistry,
   createTimeResource,

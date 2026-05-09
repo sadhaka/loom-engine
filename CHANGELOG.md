@@ -7,6 +7,57 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 1.1.1 - 2026-05-09
+
+**StatusEffectStack — buff/debuff stacking with DR + immunity
+windows.** BuffLifecycle (0.74) handles "this character has buff X
+with timer Y" — a flat list. StatusEffectStack adds the rules
+ARPGs / RPGs need on top: bleed stacks up to 5, multiple slow
+sources don't stack (highest wins), stun has DR (each stun lasts
+75% of prior), stun grants immunity for 1s after expiry.
+
+### Added
+
+- `src/runtime/status-effect-stack.ts` - `StatusEffectStack` class:
+  - `create({ onApply?, onExpire? })`.
+  - `defineEffect({ id, stacking?, maxStacks?, defaultDurationMs?, defaultMagnitude?, durationDR?, immunityAfterExpireMs?, data? })`
+    - register an effect type. Returns false on invalid id.
+  - `apply(targetId, effectId, { magnitude?, durationMs?, source?, data? })`
+    - returns `ApplyResult`: `'applied' | 'stacked' | 'refreshed' |
+    'replaced' | 'rejected_immune' | 'rejected_lower' |
+    'rejected_unknown'`.
+  - `removeEffect(targetId, effectId)` - manual removal; triggers
+    immunity if configured.
+  - `has` / `isImmune` / `get` / `getStacks`.
+  - `listForTarget(targetId)` / `listByEffect(effectId)` / `forEach(cb)`.
+  - `clearTarget(targetId)` / `count()` / `dispose()`.
+  - `tick(dtMs)` ages all active effects + immunity windows.
+- Stacking rules:
+  - `'replace'` (default) - new fully replaces old.
+  - `'refresh'` - duration refreshed; magnitude / source preserved.
+  - `'stack'` - increment stackCount up to maxStacks; totalMagnitude
+    = perStack * stackCount; durationDR shrinks new duration per
+    existing stack.
+  - `'highest'` - keep entry with higher magnitude.
+  - `'longest'` - keep entry with longer remainingMs.
+- `immunityAfterExpireMs > 0` keeps a 0-stack entry alive for the
+  immunity window; apply during that window returns
+  `'rejected_immune'`.
+- All callbacks isolated; throwing onApply / onExpire cannot
+  destabilize the stack.
+- NaN / Infinity / negative dt no-op.
+- `RESOURCE_STATUS_EFFECT_STACK` constant.
+
+### Tests
+
+2411 -> 2435 (24 new).
+
+### Backwards compatibility
+
+Pure addition. Pairs with BuffLifecycle (0.74) for the simple flat
+case; AggroTable (0.78) for damage / threat conversion;
+DamageFormula (0.66) for crit / mitigation.
+
 ## 1.1.0 - 2026-05-09
 
 **Wave 1.1 combat depth opens — InputBuffer: input intent buffer
