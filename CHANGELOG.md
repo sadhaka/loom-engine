@@ -7,6 +7,50 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.75.0 - 2026-05-09
+
+**Achievements — milestone tracker with progress + unlock
+callbacks.** Achievements / trophies / titles all share the same
+shape: a named goal with a target progress value, a counter that
+the game advances as the player plays, and a flag that flips once
+when the counter crosses the target. The engine just owns the
+bookkeeping; consumers decide what counts as "progress" (kills,
+hours played, items collected, quests completed) and wire add() /
+set() at the appropriate sites.
+
+This is the first M9 batch-2 release (combat + UX track).
+
+### Added
+
+- `src/runtime/achievements.ts` - `Achievements` class:
+  - `create({ onUnlocked?, onProgress? })`.
+  - `register({ id, target?, data? })` - target defaults to 1
+    (binary one-shot); rejects duplicates / empty ids.
+  - `unregister(id)` / `has(id)` / `isUnlocked(id)` /
+    `getProgress(id)`.
+  - `add(id, delta)` / `set(id, value)` - clamps progress to
+    [0, target]; fires onProgress on every change; onUnlocked once
+    when crossing target.
+  - `reset(id)` zeros progress + unlocks; `resetAll()` does the
+    whole registry.
+  - `list()` defensive copy with `unlockedAt` (monotonic counter,
+    NOT a wall clock - replay-safe).
+  - `toSnapshot()` / `fromSnapshot(snap)` for save / load.
+    fromSnapshot does NOT fire callbacks (silent restore).
+  - `dispose()` clears + locks ops.
+- Defensive: invalid target (<= 0 or NaN) falls back to 1; NaN /
+  Infinity in add/set rejected; add of 0 is a no-op.
+- onProgress / onUnlocked isolated.
+- `RESOURCE_ACHIEVEMENTS` constant.
+
+### Tests
+
+1796 -> 1817 (21 new in tests/achievements.test.ts).
+
+### Backwards compatibility
+
+Pure addition.
+
 ## 0.74.0 - 2026-05-09
 
 **Crafting — recipe matcher + ingredient consumption + output
