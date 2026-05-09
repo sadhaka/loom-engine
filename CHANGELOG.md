@@ -7,6 +7,54 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 1.3.2 - 2026-05-09
+
+**EmotionState — per-character mood / fear / anger / joy gauges
+with threshold callbacks.** PersonaTrait (1.3.0) is the LONG-TERM
+bias of an NPC ("Mira is brave"). EmotionState is the RIGHT-NOW
+state ("Mira is terrified at this moment"). Different timescale:
+traits decay over hours; emotions decay over seconds. Pulse on
+events, decay otherwise, fire threshold callbacks (panic, rage,
+joy-spike) when intensities cross.
+
+### Added
+
+- `src/runtime/emotion-state.ts` - `EmotionState` class:
+  - `create({ valueClamp?, onChange? })`. Default clamp `[-1, 1]`.
+  - `defineEmotion({ id, baseline?, decayHalfLifeMs?, thresholds?, data? })`.
+    Default decay 5000ms (vs 0 for traits).
+  - `pulse(characterId, emotionId, delta)` - additive bump;
+    auto-defines spec.
+  - `set(characterId, emotionId, value)` - direct set.
+  - `getValue` / `get` (full snapshot) / `has` / `remove`.
+  - `isAbove(characterId, emotionId, threshold)` /
+    `isBelow(...)` - quick gate checks.
+  - `forCharacter(characterId)` - all emotions on one character.
+  - `dominant(characterId)` - highest absolute value emotion;
+    returns `DominantEmotion { ..., positive: boolean }` for
+    rendering / facial expression.
+  - `resetPeaks(characterId?)` - clear peak tracking.
+  - `tick(dtMs)` - exponential decay toward baseline.
+  - `removeEmotion(id)` - drops spec + all entries.
+  - `entryCount` / `emotionCount` / `list` / `clear` / `dispose`.
+- Threshold callbacks fire ONCE on upward cross; re-arm when
+  value falls back below.
+- Peak tracking: each entry tracks `peakValue` = highest absolute
+  value reached.
+- All callbacks isolated.
+- `RESOURCE_EMOTION_STATE` constant.
+
+### Tests
+
+2751 -> 2780 (29 new).
+
+### Backwards compatibility
+
+Pure addition. Pairs with PersonaTrait (1.3.0, long-term bias),
+RelationshipGraph (1.3.1, per-pair bonds), DialogTree (0.61, often
+gated by emotion thresholds), VignetteRenderState (0.99, visualize
+fear / panic as red overlay).
+
 ## 1.3.1 - 2026-05-09
 
 **RelationshipGraph — per-pair character bonds (asymmetric).**

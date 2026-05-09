@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '1.3.1';
+export const LOOM_ENGINE_VERSION = '1.3.2';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -779,6 +779,15 @@ export type {
   BondFilter,
   RelationshipGraphOptions,
 } from './runtime/relationship-graph.js';
+// 1.3.2 (Wave 1.3 AI persona depth) - per-character mood / fear / anger / joy gauges.
+export { EmotionState, RESOURCE_EMOTION_STATE } from './runtime/emotion-state.js';
+export type {
+  EmotionThreshold,
+  EmotionSpec,
+  EmotionEntry,
+  DominantEmotion,
+  EmotionStateOptions,
+} from './runtime/emotion-state.js';
 export {
   ResourceRegistry,
   createTimeResource,
