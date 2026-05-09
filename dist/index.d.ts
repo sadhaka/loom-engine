@@ -1,4 +1,4 @@
-export declare const LOOM_ENGINE_VERSION = "0.79.0";
+export declare const LOOM_ENGINE_VERSION = "0.80.0";
 export type { Vec2, Vec3, Rect } from './util/math.js';
 export { vec2, vec3, rect, clamp, lerp, smoothstep, approxEq, rectContains, rectIntersects, visibleInView, } from './util/math.js';
 export type { ColorRGBA } from './util/color.js';
@@ -122,6 +122,8 @@ export { Leaderboard, RESOURCE_LEADERBOARD } from './runtime/leaderboard.js';
 export type { ScoreEntry, LeaderboardSubmission, LeaderboardOrder, LeaderboardPersistAdapter, LeaderboardRemoteAdapter, LeaderboardOptions, } from './runtime/leaderboard.js';
 export { TextScroll, RESOURCE_TEXT_SCROLL } from './runtime/text-scroll.js';
 export type { TextScrollOptions } from './runtime/text-scroll.js';
+export { HealthBar, RESOURCE_HEALTH_BAR } from './runtime/health-bar.js';
+export type { HealthBarSpawn, HealthBarRenderState, HealthBarOptions, } from './runtime/health-bar.js';
 export { ResourceRegistry, createTimeResource, createVeilBudgetResource, RESOURCE_TIME, RESOURCE_CAMERA, RESOURCE_DEVICE, RESOURCE_VEIL_BUDGET, } from './resources.js';
 export { SpriteRenderSystem } from './systems/sprite-render-system.js';
 export { Engine, registerBackend, isBackendRegistered } from './engine.js';
