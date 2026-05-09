@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.68.0';
+export const LOOM_ENGINE_VERSION = '0.69.0';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -433,6 +433,13 @@ export type {
   CoroutineOptions,
   StartOptions as CoroutineStartOptions,
 } from './runtime/coroutine.js';
+// 0.69.0 - heartbeat watchdog with stale-detection callbacks.
+export { Watchdog, RESOURCE_WATCHDOG } from './runtime/watchdog.js';
+export type {
+  WatchdogEntryOptions,
+  WatchdogStatus,
+  WatchdogOptions,
+} from './runtime/watchdog.js';
 export {
   ResourceRegistry,
   createTimeResource,

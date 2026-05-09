@@ -7,6 +7,59 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.69.0 - 2026-05-09
+
+**Watchdog - heartbeat monitor with stale-detection callbacks.**
+Long-running connections (SSE streams, plugin processes,
+multiplayer peers, asset workers) need "did this thing crash?"
+checks. Watchdog tracks named heartbeats, marks them stale when
+too long passes between pings, and fires onStale / onAlive
+callbacks on state flips.
+
+### Added
+
+- `src/runtime/watchdog.ts` - `Watchdog` class:
+  - `register(name, opts?)` — begins watching; returns false on
+    duplicate or empty name.
+  - `unregister(name)` / `has(name)` / `count()`.
+  - `heartbeat(name)` — resets age; revives stale entries (fires
+    onAlive on flip).
+  - `tick(dtMs)` — advances every entry's age; entries crossing
+    timeoutMs flip alive→stale + fire onStale once.
+  - `status(name)` / `isAlive(name)` / `list()` / `staleNames()`.
+  - `setTimeout(name, ms)` — runtime threshold update.
+  - `clear()` / `dispose()`.
+- Per-entry `timeoutMs` override; `defaultTimeoutMs` falls back
+  (default 5000ms).
+- onStale / onAlive callbacks; throwing isolated.
+- Defensive: NaN / negative dt ignored; missing entry returns
+  false / null cleanly.
+- `WatchdogEntryOptions`, `WatchdogStatus`, `WatchdogOptions`
+  types exported.
+- `RESOURCE_WATCHDOG` constant.
+
+### Tests
+
+1665 -> 1689 (24 new in tests/watchdog.test.ts):
+- RESOURCE_WATCHDOG stable string; starts empty.
+- register adds; duplicate returns false; empty name rejected.
+- unregister / missing returns false.
+- tick keeps alive within timeout; crosses timeout = stale.
+- heartbeat resets age + revives stale.
+- onStale fires once at flip; onAlive only on stale → alive.
+- Throwing onStale / onAlive isolated.
+- Per-entry timeoutMs override; setTimeout updates.
+- setTimeout / heartbeat on missing return false.
+- status returns full info; missing returns null.
+- list / staleNames work.
+- NaN / negative dt ignored.
+- clear / dispose lock ops.
+- Realistic multi-connection example.
+
+### Backwards compatibility
+
+Pure addition.
+
 ## 0.68.0 - 2026-05-09
 
 **Coroutine - generator-based multi-tick async over EngineClock.**
