@@ -7,6 +7,39 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.96.0 - 2026-05-09
+
+**ComboCounter — chain hit counter with reset timer + thresholds.**
+ARPGs / brawlers reward consecutive hits with combo callouts ("10
+HIT!", "50 HIT!"), crit multipliers, and SFX. ComboCounter is the
+per-character ledger: hit() bumps the count, tick(dt) advances the
+reset timer, reaching a threshold fires a callback. Resets if no
+hit lands within timeoutMs.
+
+### Added
+
+- `src/runtime/combo-counter.ts` - `ComboCounter` class:
+  - `create({ timeoutMs?, thresholds?, onChain?, onReset? })`.
+    Default timeout 2500ms.
+  - `hit()` bumps + refreshes timer + fires thresholds + onChain;
+    returns new count.
+  - `reset()` manual reset; fires onReset with peak.
+  - `tick(dtMs)` advances timer; auto-resets on expiry.
+  - `getCount` / `getPeak` / `getRemainingMs` / `isActive`.
+  - `setTimeoutMs` / `addThreshold` / `removeThreshold` runtime tuning.
+  - `dispose()` clears + locks ops.
+- Thresholds fire exactly once per chain; re-arm on reset.
+- All callbacks isolated; NaN / negative dt no-op.
+- `RESOURCE_COMBO_COUNTER` constant.
+
+### Tests
+
+2254 -> 2275 (21 new).
+
+### Backwards compatibility
+
+Pure addition.
+
 ## 0.95.0 - 2026-05-09
 
 **MusicPlaylist — track sequencer for ambient music.** Zones /

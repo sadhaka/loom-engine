@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.95.0';
+export const LOOM_ENGINE_VERSION = '0.96.0';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -606,6 +606,12 @@ export type { AudioCue, AudioCueQueueOptions } from './runtime/audio-cue-queue.j
 // 0.95.0 - track sequencer for ambient music.
 export { MusicPlaylist, RESOURCE_MUSIC_PLAYLIST } from './runtime/music-playlist.js';
 export type { MusicTrack, MusicPlaylistOptions } from './runtime/music-playlist.js';
+// 0.96.0 - chain hit counter with reset timer + thresholds.
+export { ComboCounter, RESOURCE_COMBO_COUNTER } from './runtime/combo-counter.js';
+export type {
+  ComboThreshold,
+  ComboCounterOptions,
+} from './runtime/combo-counter.js';
 export {
   ResourceRegistry,
   createTimeResource,
