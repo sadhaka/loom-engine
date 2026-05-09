@@ -8,7 +8,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '1.6.0';
+export const LOOM_ENGINE_VERSION = '1.6.1';
 export { vec2, vec3, rect, clamp, lerp, smoothstep, approxEq, rectContains, rectIntersects, visibleInView, } from './util/math.js';
 export { rgba, hexToRgba, rgbaToHexString, rgbaToCssString, colorLerp, COLOR_WHITE, COLOR_BLACK, COLOR_TRANSPARENT, COLOR_KNOT_STR, COLOR_KNOT_DEX, COLOR_KNOT_INT, COLOR_KNOT_CENTER, } from './util/color.js';
 export { EntityAllocator, NULL_ENTITY, entityIndex, entityGeneration, makeEntity, } from './entity.js';
@@ -240,6 +240,8 @@ export { ProgressTracker, RESOURCE_PROGRESS_TRACKER } from './runtime/progress-t
 export { KnowledgeMap, RESOURCE_KNOWLEDGE_MAP } from './runtime/knowledge-map.js';
 // 1.6.0 (Wave 1.6 procgen depth opens) - Markov-chain procedural names.
 export { NameGenerator, RESOURCE_NAME_GENERATOR } from './runtime/name-generator.js';
+// 1.6.1 (Wave 1.6 procgen) - deterministic 2D fractal noise field.
+export { NoiseField, RESOURCE_NOISE_FIELD } from './runtime/noise-field.js';
 export { ResourceRegistry, createTimeResource, createVeilBudgetResource, RESOURCE_TIME, RESOURCE_CAMERA, RESOURCE_DEVICE, RESOURCE_VEIL_BUDGET, } from './resources.js';
 // Default systems
 export { SpriteRenderSystem } from './systems/sprite-render-system.js';
