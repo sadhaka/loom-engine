@@ -7,6 +7,55 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 1.3.1 - 2026-05-09
+
+**RelationshipGraph — per-pair character bonds (asymmetric).**
+PersonaTrait (1.3.0) is what an NPC IS in isolation.
+RelationshipGraph is who they CARE about, in both directions:
+Mira's friendship for Thane is one bond; Thane's friendship for
+Mira is a separate bond. The asymmetric model makes unrequited
+love, one-sided rivalries, stalker dynamics, and uneven mentor-
+student relationships expressible.
+
+### Added
+
+- `src/runtime/relationship-graph.ts` - `RelationshipGraph` class:
+  - `create({ valueClamp?, onChange? })`. Default clamp `[-1, 1]`.
+  - `defineBondType({ id, baseline?, decayHalfLifeMs?, data? })` -
+    register a bond type.
+  - `setBond(fromId, toId, bondType, value)` - directed bond;
+    auto-defines spec.
+  - `setMutual(aId, bId, bondType, value)` - sets both directions.
+  - `adjustBond(fromId, toId, bondType, delta)` - additive update.
+  - `getBond(fromId, toId, bondType)` - single bond snapshot.
+  - `removeBond(fromId, toId, bondType)` / `hasBond`.
+  - `bondsFor(characterId, filter?)` - outgoing bonds.
+  - `bondsTo(characterId, filter?)` - incoming bonds.
+  - `bondsBetween(aId, bId, filter?)` - both directions.
+  - `list(filter?)` - all bonds (filtered).
+  - `findStrongest(bondType, filter?)` / `findWeakest(...)` -
+    extreme picks with optional fromId / toId / minLevel /
+    maxLevel filters.
+  - `tick(dtMs)` - exponential decay toward baseline.
+  - `removeBondType(id)` - drops the spec AND all bonds of that
+    type.
+  - `bondCount` / `bondTypeCount` / `clear` / `dispose`.
+- Self-loops rejected (fromId === toId).
+- `BondFilter`: `{ bondType?, minLevel?, maxLevel?, fromId?, toId? }`.
+- All callbacks isolated.
+- `RESOURCE_RELATIONSHIP_GRAPH` constant.
+
+### Tests
+
+2721 -> 2751 (30 new).
+
+### Backwards compatibility
+
+Pure addition. Pairs with PersonaTrait (1.3.0, individual character
+traits), EmotionState (1.3.2 next, mood gauges), DialogTree (0.61,
+often gated by relationship strength), NarrativeMemory (1.3.5
+capstone, remembers what shifted bonds).
+
 ## 1.3.0 - 2026-05-09
 
 **Wave 1.3 AI persona depth opens — PersonaTrait: NPC personality

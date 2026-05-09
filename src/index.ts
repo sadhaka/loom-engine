@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '1.3.0';
+export const LOOM_ENGINE_VERSION = '1.3.1';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -771,6 +771,14 @@ export type {
   FindOptions as PersonaFindOptions,
   PersonaTraitOptions,
 } from './runtime/persona-trait.js';
+// 1.3.1 (Wave 1.3 AI persona depth) - per-pair character bonds (asymmetric).
+export { RelationshipGraph, RESOURCE_RELATIONSHIP_GRAPH } from './runtime/relationship-graph.js';
+export type {
+  BondTypeSpec,
+  Bond,
+  BondFilter,
+  RelationshipGraphOptions,
+} from './runtime/relationship-graph.js';
 export {
   ResourceRegistry,
   createTimeResource,
