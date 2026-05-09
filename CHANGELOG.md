@@ -7,6 +7,51 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.99.0 - 2026-05-09
+
+**VignetteRenderState — full-screen overlay tint primitive for
+low-HP / danger / status states.** Low-HP red pulse, poison green
+tint, berserker rage bloom, stunned grayscale, underwater blue -
+every game wants a sustained colored full-screen overlay that
+tracks one or more active "vignette sources" and renders the
+dominant one per frame. VignetteRenderState owns that ledger.
+
+### Added
+
+- `src/runtime/vignette-render-state.ts` - `VignetteRenderState`
+  class:
+  - `create({ capacity?, minIntensity? })`. Defaults 16 / 0.001.
+  - `upsert({ id, color, intensity, pulseHz?, pulseAmp?, data? })`
+    add or update a source; keyed by id. Returns false on
+    rejection (invalid id / color, capacity full for new id).
+  - `setIntensity(id, value)` - quick intensity update; clamps
+    to `[0, 1]`.
+  - `remove(id)` / `has(id)`.
+  - `tick(dtMs)` - advance pulse phases (sine wave).
+  - `getState()` - composited render state. Highest effective
+    intensity wins; returns `{ active, color, alpha, dominantId }`.
+  - `forEach(cb)` / `list()` - defensive snapshots of every
+    source.
+  - `count()` / `capacity()` / `clear()` / `dispose()`.
+- Per-source pulse: `pulseHz` cycles/sec, `pulseAmp` 0..1
+  modulation. Effective intensity = `intensity * (1 + pulseAmp *
+  sin(phase))`. Pulse phase preserved across intensity updates so
+  the pulse continues smoothly.
+- Engine ships zero render path - consumer reads
+  `getState()` and draws the overlay in whatever style fits
+  (CSS box-shadow, fragment shader, fullscreen quad).
+- `RESOURCE_VIGNETTE_RENDER_STATE` constant.
+
+### Tests
+
+2331 -> 2354 (23 new).
+
+### Backwards compatibility
+
+Pure addition. Pairs with HealthBar (0.80) per-entity HP, DamageFlash
+(0.93) per-entity hit tint, ScreenFader (0.91) one-shot full-screen
+fade. This fills the sustained-colored-tint slot.
+
 ## 0.98.0 - 2026-05-09
 
 **NumberFormatter — i18n number formatting helper.** HUD damage
