@@ -1,4 +1,4 @@
-export declare const LOOM_ENGINE_VERSION = "0.75.0";
+export declare const LOOM_ENGINE_VERSION = "0.76.0";
 export type { Vec2, Vec3, Rect } from './util/math.js';
 export { vec2, vec3, rect, clamp, lerp, smoothstep, approxEq, rectContains, rectIntersects, visibleInView, } from './util/math.js';
 export type { ColorRGBA } from './util/color.js';
@@ -114,6 +114,8 @@ export { Crafting, RESOURCE_CRAFTING } from './runtime/crafting.js';
 export type { Recipe, RecipeIngredient, RecipeOutput, CraftFailureReason, CraftSuccess, CraftFailure, CraftResult, IInventoryAdapter, CraftingOptions, } from './runtime/crafting.js';
 export { Achievements, RESOURCE_ACHIEVEMENTS } from './runtime/achievements.js';
 export type { AchievementSpec, ActiveAchievement, AchievementsOptions, AchievementSnapshotEntry, } from './runtime/achievements.js';
+export { AggroTable, RESOURCE_AGGRO_TABLE } from './runtime/aggro-table.js';
+export type { AggroTableOptions, AggroEntry } from './runtime/aggro-table.js';
 export { ResourceRegistry, createTimeResource, createVeilBudgetResource, RESOURCE_TIME, RESOURCE_CAMERA, RESOURCE_DEVICE, RESOURCE_VEIL_BUDGET, } from './resources.js';
 export { SpriteRenderSystem } from './systems/sprite-render-system.js';
 export { Engine, registerBackend, isBackendRegistered } from './engine.js';
