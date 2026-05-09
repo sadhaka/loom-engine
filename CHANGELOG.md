@@ -7,6 +7,38 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.95.0 - 2026-05-09
+
+**MusicPlaylist — track sequencer for ambient music.** Zones /
+scenes often want a queue of 2-5 ambient tracks that rotate over
+time without any single track replaying back-to-back. MusicPlaylist
+owns the order + playback cursor; MusicDirector / AudioBus consume
+the current track URL each frame and crossfade between them.
+
+### Added
+
+- `src/runtime/music-playlist.ts` - `MusicPlaylist` class:
+  - `create({ loopAtEnd?, shuffleOnLoop?, rng? })`.
+  - `addTrack({ id, url, durationMs?, loop?, data? })` rejects
+    duplicates / invalid.
+  - `removeTrack(id)` drops + adjusts cursor.
+  - `play` / `next` / `prev` / `stop` / `jumpTo(id)`.
+  - `current` / `isPlaying` / `size` / `has` / `list` (defensive).
+  - `setLoopAtEnd` / `setShuffleOnLoop` runtime tuning.
+  - `shuffle()` Fisher-Yates via injected RNG.
+  - `dispose()` clears + locks ops.
+- Pairs with MusicDirector (Phase 17 audio Track B) for the
+  crossfade + decode side.
+- `RESOURCE_MUSIC_PLAYLIST` constant.
+
+### Tests
+
+2235 -> 2253 (18 new).
+
+### Backwards compatibility
+
+Pure addition.
+
 ## 0.94.0 - 2026-05-09
 
 **AudioCueQueue — prioritized one-shot SFX queue.** Combat is

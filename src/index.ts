@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.94.0';
+export const LOOM_ENGINE_VERSION = '0.95.0';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -603,6 +603,9 @@ export type {
 // 0.94.0 - prioritized one-shot SFX queue.
 export { AudioCueQueue, RESOURCE_AUDIO_CUE_QUEUE } from './runtime/audio-cue-queue.js';
 export type { AudioCue, AudioCueQueueOptions } from './runtime/audio-cue-queue.js';
+// 0.95.0 - track sequencer for ambient music.
+export { MusicPlaylist, RESOURCE_MUSIC_PLAYLIST } from './runtime/music-playlist.js';
+export type { MusicTrack, MusicPlaylistOptions } from './runtime/music-playlist.js';
 export {
   ResourceRegistry,
   createTimeResource,
