@@ -175,6 +175,12 @@ const DATE_NOW_WHITELIST = [
   // -> Date.now fallback; consumers wanting replay-tight timestamps
   // pass `now` via LogRingBufferOptions. Diagnostic surface only.
   'runtime/log-ring-buffer.ts',          // defaultNowMs fallback (clock seam)
+  // Phase 1.0.0 BenchmarkHarness. Performance baseline tracker uses
+  // performance.now -> Date.now fallback as the wall-clock seam for
+  // measurement; consumers running deterministic replays inject
+  // their own `now` via BenchmarkHarnessOptions. Out-of-tick: bench
+  // results are diagnostics, not part of the world simulation.
+  'runtime/benchmark-harness.ts',        // defaultNowMs fallback (clock seam)
 ];
 
 function isWhitelisted(file: string, list: string[]): boolean {

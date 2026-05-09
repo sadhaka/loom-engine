@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.99.0';
+export const LOOM_ENGINE_VERSION = '1.0.0';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -638,6 +638,16 @@ export type {
   VignetteSnapshot,
   VignetteRenderStateOptions,
 } from './runtime/vignette-render-state.js';
+// 1.0.0 CAPSTONE - performance baseline tracker.
+export { BenchmarkHarness, RESOURCE_BENCHMARK_HARNESS } from './runtime/benchmark-harness.js';
+export type {
+  BenchmarkSpec,
+  BenchmarkResult,
+  BenchmarkBaseline,
+  RegressionReport,
+  BaselineStorage,
+  BenchmarkHarnessOptions,
+} from './runtime/benchmark-harness.js';
 export {
   ResourceRegistry,
   createTimeResource,

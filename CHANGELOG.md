@@ -7,6 +7,94 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 1.0.0 - 2026-05-09
+
+**🟢 1.0.0 CAPSTONE — BenchmarkHarness: performance baseline tracker.**
+
+Loom Engine ships 1.0.0. The capstone primitive is the one we
+needed to ship 1.0 at all: a way to *measure ourselves*. Register
+named benchmarks, run them across warmup + measurement iterations,
+capture per-iteration timings, persist a baseline, detect
+regressions on subsequent runs.
+
+The engine ships zero benchmarks; consumers register what they
+care about.
+
+### Added
+
+- `src/runtime/benchmark-harness.ts` - `BenchmarkHarness` class:
+  - `create({ now?, defaultWarmup?, defaultIterations?, storage?, regressionThreshold? })`.
+    Defaults: `performance.now` -> `Date.now` clock, 1 warmup, 10
+    iterations, no storage, threshold ratio 1.2.
+  - `register({ name, fn, warmup?, iterations?, beforeEach?, afterEach? })`
+    - returns `false` on invalid spec.
+  - `unregister(name)` / `has(name)` / `list()`.
+  - `run(name)` - returns `BenchmarkResult` with
+    `{ durations[], meanMs, medianMs, minMs, maxMs, p95Ms, totalMs, errorCount, recordedAt }`.
+    Throws if `name` not registered.
+  - `runAll()` - runs every registered spec in registration order.
+  - `setBaseline(name, result | baseline)` / `getBaseline(name)` /
+    `hasBaseline(name)` / `clearBaseline(name)`.
+  - `saveBaselines()` / `loadBaselines()` - persist via
+    consumer-supplied `BaselineStorage` adapter
+    (`{ saveAll, loadAll }`). No-op without storage.
+  - `detectRegression(result, threshold?)` - returns
+    `RegressionReport { name, baseline, current, ratio, isRegression, threshold }`.
+    `ratio = current.medianMs / baseline.medianMs`. With no
+    baseline, `ratio = NaN` and `isRegression = false`.
+  - `dispose()` clears + locks ops.
+- Throwing `fn` is caught and recorded in `errorCount`; tries do
+  not abort the iteration loop.
+- `beforeEach` / `afterEach` run outside the timed window.
+- All callbacks isolated.
+- Sync-only at 1.0; async benchmark support to come in 1.x without
+  breaking compat.
+- `RESOURCE_BENCHMARK_HARNESS` constant.
+
+### Tests
+
+2354 -> 2385 (31 new). Determinism whitelist updated to admit
+`runtime/benchmark-harness.ts` (`Date.now` fallback in the clock
+seam).
+
+### Backwards compatibility
+
+Pure addition. Pairs with FrameBudgetScheduler (0.36, soft-deadline
+queue), LogRingBuffer (0.50, structured logs), DebugHUD (0.24,
+fps tracker). Those are the *runtime* diagnostic primitives;
+BenchmarkHarness is the *test-time / dev-time* counterpart.
+
+### 🟢 Milestone — engine 1.0.0
+
+**30 versions shipped from 0.71 to 1.0.0** across the M9 wave
+(0.71-0.90) and the M10 polish push (0.91-1.0): WeatherSystem,
+DamageNumberPipeline, BuffLifecycle, Crafting, Achievements,
+AggroTable, Reactivity, Leaderboard, TextScroll, HealthBar,
+Quadtree, ThresholdTrigger, EventLog, AssetManifest, HotKeyProfile,
+FactionReputation, CrowdSpawner, TutorialFlow, DialogChoiceHistory,
+AssetVariant (M9 0.90 milestone), ScreenFader, ScreenShake,
+DamageFlash, AudioCueQueue, MusicPlaylist, ComboCounter,
+TooltipQueue, NumberFormatter, VignetteRenderState, and now
+BenchmarkHarness.
+
+Total this 1.0 push: **2385 tests, 0 breaking changes**. Every
+release through the entire 1.0.0 line has been pure-additive;
+0.10-era code compiles unmodified against 1.0.
+
+What 1.0 means for the Loom Engine:
+- The surface is wide enough to ship a real ARPG / MMORPG slice.
+- Determinism is enforced by tripwire tests, not convention.
+- Every primitive has a stable public surface, a resource key,
+  isolation around throwing callbacks, and a `dispose()` lifecycle.
+- The engine still ships **zero render path** - it's a runtime
+  + ECS + render-graph contract, not a renderer. Consumers bring
+  the pixels.
+
+Next: 1.x is for async benchmark support, the V3 Director envelope
+expansions, and the subprocess sandbox v2 for marketplace plugins.
+
+GOGOGO.
+
 ## 0.99.0 - 2026-05-09
 
 **VignetteRenderState — full-screen overlay tint primitive for
