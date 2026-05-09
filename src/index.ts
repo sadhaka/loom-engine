@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.72.0';
+export const LOOM_ENGINE_VERSION = '0.73.0';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -463,6 +463,16 @@ export type {
   DamageNumberPipelineOptions,
   FloatingTextEmitter,
 } from './runtime/damage-number-pipeline.js';
+// 0.73.0 - duration-tracked StatStack modifiers with auto-expire (buffs / debuffs).
+export {
+  BuffLifecycle,
+  RESOURCE_BUFF_LIFECYCLE,
+} from './runtime/buff-lifecycle.js';
+export type {
+  Buff,
+  ActiveBuff,
+  BuffLifecycleOptions,
+} from './runtime/buff-lifecycle.js';
 export {
   ResourceRegistry,
   createTimeResource,

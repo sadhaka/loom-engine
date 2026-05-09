@@ -7,6 +7,76 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.73.0 - 2026-05-09
+
+**BuffLifecycle — duration-tracked StatStack modifiers with
+auto-expire.** Buffs and debuffs - "rage for 8 seconds", "burn for
+5 seconds dealing damage every 0.5s", "speed boost from potion" -
+share a common shape: a named effect that contributes some
+StatStack modifiers, optionally fires a periodic tick, and either
+runs out after a duration or sticks until manually removed.
+BuffLifecycle owns that lifecycle: apply pushes modifiers, tick
+expires them, remove cleans up.
+
+This is the third M9 release. Pairs with StatStack (0.59) +
+CooldownManager (0.52) for the standard ARPG / hub-MMO buff bar.
+
+### Added
+
+- `src/runtime/buff-lifecycle.ts` - `BuffLifecycle` class:
+  - `create({ statStack?, sourcePrefix?, onApplied?, onExpired?, onRemoved?, onTick? })`.
+  - `apply(buff)` pushes modifiers under
+    `${sourcePrefix}${buff.id}` (default prefix `buff:`); refreshes
+    in place if id already active (replaces modifiers + resets
+    timer); fires `onApplied(buff, isRefresh)`.
+  - `refresh(id)` resets duration without re-applying modifiers;
+    returns false if not active.
+  - `remove(id)` strips modifiers + fires `onRemoved`.
+  - `removeAll()` clears all + per-buff `onRemoved`.
+  - `tick(dtMs)` advances elapsed time; fires `onTick` at every
+    `tickIntervalMs` boundary (multiple per dt allowed); fires
+    `onExpired` on natural duration runout + strips modifiers.
+  - `has(id)` / `remainingMs(id)` (-1 for permanent, 0 if inactive)
+    / `list()` (defensive copy).
+  - `dispose()` strips ALL pending StatStack modifiers + locks ops.
+- `Buff` shape: `{ id, durationMs, modifiers?, tickIntervalMs?, data? }`.
+- `ActiveBuff` shape: `{ buff, remainingMs, elapsedMs, ticksFired }`.
+- Permanent buffs (durationMs <= 0) advance but never auto-expire.
+- Ticks bounded by durationMs (no over-tick on expiry).
+- All callbacks isolated (throwing handler doesn't break the engine).
+- Defensive: NaN / negative dt ignored; empty / invalid buff ids
+  rejected; modifiers undefined treated as no-op.
+- StatStack receiver is OPTIONAL (use the lifecycle as a pure timer
+  + tick orchestrator without modifier routing).
+- `RESOURCE_BUFF_LIFECYCLE` constant.
+
+### Tests
+
+1752 -> 1774 (22 new in tests/buff-lifecycle.test.ts):
+- RESOURCE constant.
+- apply pushes modifiers under prefixed source; without StatStack is
+  a no-op for routing.
+- duplicate apply refreshes (isRefresh=true) + replaces modifiers.
+- remove drops modifiers + fires onRemoved (not onExpired).
+- tick advances elapsedMs; expires on duration runout; strips mods.
+- permanent buff (durationMs <= 0) never expires; remainingMs = -1.
+- tickIntervalMs cadence; large dt fires multiple ticks; boundary
+  exact crossings; ticks bounded by durationMs.
+- has + remainingMs reflect state.
+- list defensive copy.
+- removeAll clears + per-buff onRemoved.
+- NaN / negative dt ignored.
+- All four callbacks isolated when throwing.
+- dispose strips all StatStack mods + locks ops.
+- Multiple distinct buff ids stack independently.
+- buff.modifiers undefined treated as no-op.
+- refresh resets timer + tick counter; doesn't re-apply mods.
+- Realistic DoT (3s burn ticking every 500ms with damage data).
+
+### Backwards compatibility
+
+Pure addition.
+
 ## 0.72.0 - 2026-05-09
 
 **DamageNumberPipeline — bridge from DamageFormula (0.66) to
