@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '1.1.3';
+export const LOOM_ENGINE_VERSION = '1.1.4';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -693,6 +693,14 @@ export type {
   PlayOptions as CameraPlayOptions,
   CameraDirectorOptions,
 } from './runtime/camera-director.js';
+// 1.1.4 (Wave 1.1 combat depth) - generic timed-cue event timeline.
+export { CutsceneSequencer, RESOURCE_CUTSCENE_SEQUENCER } from './runtime/cutscene-sequencer.js';
+export type {
+  Cue,
+  CutsceneState,
+  PlayOptions as CutscenePlayOptions,
+  CutsceneSequencerOptions,
+} from './runtime/cutscene-sequencer.js';
 export {
   ResourceRegistry,
   createTimeResource,

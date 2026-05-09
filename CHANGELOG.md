@@ -7,6 +7,51 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 1.1.4 - 2026-05-09
+
+**CutsceneSequencer — generic timed-cue event timeline.**
+CameraDirector (1.1.3) is camera-specific. CutsceneSequencer is
+the broader orchestrator: schedule arbitrary events at specific
+times in a scripted sequence. "At t=0 play voice line, at t=500
+emit a particle effect, at t=1500 trigger dialog, at t=3500 emit
+gameplay event, at t=4000 end." The consumer's `onCue` callback
+dispatches each cue to the right subsystem.
+
+### Added
+
+- `src/runtime/cutscene-sequencer.ts` - `CutsceneSequencer` class:
+  - `create({})`.
+  - `play({ cues, totalMs?, speed?, onCue?, onFinish? })` returns
+    true if accepted (false on empty / disposed).
+  - `tick(dtMs)` advances; fires cues whose `atMs` is crossed.
+  - `pause()` / `resume()` / `stop()` (stop does NOT fire onFinish).
+  - `setSpeed(multiplier)` for slow-mo / fast-forward.
+  - `jumpTo(ms)` scrubs forward (fires intervening cues) or
+    backward (no replay); clamped to `[0, totalMs]`.
+  - `getState()` returns
+    `{ elapsedMs, totalMs, isPlaying, isPaused, progress, speed, firedCount }`.
+  - `isPlaying()` / `isPaused()` / `dispose()`.
+- Cues are sorted by `atMs` on play; consumer can pass them in
+  any order.
+- Multiple cues at the same `atMs` all fire in the order they
+  appear.
+- `totalMs` defaults to the last cue's `atMs`; pass an explicit
+  larger `totalMs` to add tail time.
+- Throwing onCue / onFinish isolated.
+- NaN / Infinity / negative dt no-op.
+- `RESOURCE_CUTSCENE_SEQUENCER` constant.
+
+### Tests
+
+2492 -> 2516 (24 new).
+
+### Backwards compatibility
+
+Pure addition. Pairs with CameraDirector (1.1.3, camera channel),
+AudioCueQueue (0.94, audio channel), Coroutine (0.69, multi-frame
+logic). Works with any consumer-defined event channel via the
+`kind` string.
+
 ## 1.1.3 - 2026-05-09
 
 **CameraDirector — cinematic camera sequencer.** CameraController
