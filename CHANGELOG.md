@@ -7,6 +7,53 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.62.0 - 2026-05-09
+
+**LootTable - weighted random drop tables with seedable RNG.**
+Boss kills, chest opens, mob despawns, daily rewards share the
+"pick a few items from a weighted pool" pattern. LootTable is
+that primitive: register entries with a weight, optional
+guaranteed drops, optional count or count range, and a seedable
+RNG (mulberry32) so loot is replay-deterministic.
+
+### Added
+
+- `src/runtime/loot-table.ts` - `LootTable` class:
+  - `create({ entries, rollCount?, guaranteed?, seed? })`.
+  - `roll()` returns LootDrop[] (guaranteed first, then weighted
+    picks).
+  - `rollMultiple(times)` aggregates N rolls.
+  - `probabilityOf(itemId)` returns weight / total for tooltips.
+  - `reseed(seed?)` resets the RNG (or rebases to a new seed).
+  - `poolSize()` / `totalWeightSum()` introspection.
+  - `dispose()` locks subsequent ops.
+- Defensive: invalid entries (no id / weight <= 0) silently
+  filtered. Empty pool returns no weighted drops (guaranteed
+  still appear).
+- `LootEntry`, `LootDrop`, `LootTableOptions` types exported.
+- `RESOURCE_LOOT_TABLE` constant.
+
+### Tests
+
+1510 -> 1531 (21 new in tests/loot-table.test.ts):
+- RESOURCE_LOOT_TABLE stable string.
+- Empty entries throws; invalid filter (no id / weight <= 0).
+- Single roll; rollCount=N produces N drops.
+- count + countRange resolve; flipped countRange handled.
+- Deterministic with seed; different seeds differ.
+- reseed resets; reseed with new seed changes output.
+- Guaranteed drops always appear; use registered count;
+  unregistered guaranteed defaults count=1.
+- rollMultiple sums; 0/negative returns empty.
+- probabilityOf returns weight / total; unknown returns 0.
+- Empty pool returns empty drops.
+- dispose locks ops.
+- Distribution roughly matches weights at scale.
+
+### Backwards compatibility
+
+Pure addition.
+
 ## 0.61.0 - 2026-05-09
 
 **DialogTree - branching dialog with conditions + actions.**
