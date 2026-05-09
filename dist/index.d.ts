@@ -1,4 +1,4 @@
-export declare const LOOM_ENGINE_VERSION = "1.1.1";
+export declare const LOOM_ENGINE_VERSION = "1.1.2";
 export type { Vec2, Vec3, Rect } from './util/math.js';
 export { vec2, vec3, rect, clamp, lerp, smoothstep, approxEq, rectContains, rectIntersects, visibleInView, } from './util/math.js';
 export type { ColorRGBA } from './util/color.js';
@@ -168,6 +168,8 @@ export { InputBuffer, RESOURCE_INPUT_BUFFER } from './runtime/input-buffer.js';
 export type { BufferedInput, BufferOptions as InputBufferBufferOptions, InputBufferOptions, RemovedReason as InputBufferRemovedReason, } from './runtime/input-buffer.js';
 export { StatusEffectStack, RESOURCE_STATUS_EFFECT_STACK } from './runtime/status-effect-stack.js';
 export type { StackingRule, EffectSpec, ActiveEffect, ApplyResult, ApplyOptions, StatusEffectStackOptions, } from './runtime/status-effect-stack.js';
+export { BehaviorTree, RESOURCE_BEHAVIOR_TREE } from './runtime/behavior-tree.js';
+export type { BTStatus, BTContext, BTConditionFn, BTActionFn, BTNode, BTSequenceNode, BTSelectorNode, BTParallelNode, BTInverterNode, BTRepeatNode, BTCooldownNode, BTConditionNode, BTActionNode, BehaviorTreeOptions, } from './runtime/behavior-tree.js';
 export { ResourceRegistry, createTimeResource, createVeilBudgetResource, RESOURCE_TIME, RESOURCE_CAMERA, RESOURCE_DEVICE, RESOURCE_VEIL_BUDGET, } from './resources.js';
 export { SpriteRenderSystem } from './systems/sprite-render-system.js';
 export { Engine, registerBackend, isBackendRegistered } from './engine.js';
