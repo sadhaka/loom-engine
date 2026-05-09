@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '1.3.5';
+export const LOOM_ENGINE_VERSION = '1.4.0';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -816,6 +816,14 @@ export type {
   RecallResult,
   NarrativeMemoryOptions,
 } from './runtime/narrative-memory.js';
+// 1.4.0 (Wave 1.4 audio cinematic depth opens) - cross-faded ambient music layer mixer.
+export { AmbientLayerMixer, RESOURCE_AMBIENT_LAYER_MIXER } from './runtime/ambient-layer-mixer.js';
+export type {
+  LayerSpec as AmbientLayerSpec,
+  LayerSnapshot as AmbientLayerSnapshot,
+  SetTargetOptions as AmbientLayerSetTargetOptions,
+  AmbientLayerMixerOptions,
+} from './runtime/ambient-layer-mixer.js';
 export {
   ResourceRegistry,
   createTimeResource,

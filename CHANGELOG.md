@@ -7,6 +7,46 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 1.4.0 - 2026-05-09
+
+**Wave 1.4 audio cinematic depth opens — AmbientLayerMixer:
+cross-faded ambient music layer mixer.** MusicPlaylist (0.95) is
+a track sequencer (one ambient track at a time). AmbientLayerMixer
+is what plays UNDER the music: layered ambient stems (rain, wind,
+crickets, distant battle) that fade in / out independently as
+zone or context changes.
+
+### Added
+
+- `src/runtime/ambient-layer-mixer.ts` - `AmbientLayerMixer` class:
+  - `create({ volumeClamp? })`. Default clamp `[0, 1]`.
+  - `registerLayer({ id, volume?, target?, defaultFadeMs?, data? })`.
+  - `removeLayer(id)` / `hasLayer(id)` / `getLayer(id)` /
+    `layerCount` / `layerIds`.
+  - `setTarget(id, target, { fadeMs? })` - lerp current toward
+    target over fadeMs (default `defaultFadeMs` from spec, or
+    1000ms).
+  - `setTargets(targetsMap, opts?)` - batch update.
+  - `snap(id, volume)` - shorthand for setTarget with fadeMs=0.
+  - `silenceAll()` - snap every layer to 0.
+  - `tick(dtMs)` - advance active fades.
+  - `forEach(cb)` / `list()` / `clear()` / `dispose()`.
+- Mid-fade `setTarget` restarts the lerp from the current
+  in-flight volume (smooth handoff).
+- All callbacks isolated.
+- NaN / Infinity / negative dt no-op.
+- `RESOURCE_AMBIENT_LAYER_MIXER` constant.
+
+### Tests
+
+2853 -> 2875 (22 new).
+
+### Backwards compatibility
+
+Pure addition. Pairs with MusicPlaylist (0.95, music tracks above
+the ambient bed), AudioCueQueue (0.94, one-shot SFX), AudioBus,
+AudioDuck (1.4.1 next, ducks ambient when SFX fires).
+
 ## 1.3.5 - 2026-05-09
 
 **🟪 Wave 1.3 milestone — NarrativeMemory: cross-session NPC
