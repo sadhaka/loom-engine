@@ -1,4 +1,4 @@
-export declare const LOOM_ENGINE_VERSION = "0.89.0";
+export declare const LOOM_ENGINE_VERSION = "0.90.0";
 export type { Vec2, Vec3, Rect } from './util/math.js';
 export { vec2, vec3, rect, clamp, lerp, smoothstep, approxEq, rectContains, rectIntersects, visibleInView, } from './util/math.js';
 export type { ColorRGBA } from './util/color.js';
@@ -142,6 +142,8 @@ export { TutorialFlow, RESOURCE_TUTORIAL_FLOW } from './runtime/tutorial-flow.js
 export type { TutorialStep, TutorialPersistAdapter, TutorialFlowOptions, } from './runtime/tutorial-flow.js';
 export { DialogChoiceHistory, RESOURCE_DIALOG_CHOICE_HISTORY } from './runtime/dialog-choice-history.js';
 export type { DialogChoiceRecord, DialogChoiceHistoryOptions, } from './runtime/dialog-choice-history.js';
+export { AssetVariant, RESOURCE_ASSET_VARIANT } from './runtime/asset-variant.js';
+export type { AssetVariantSpec, AssetVariantOptions, } from './runtime/asset-variant.js';
 export { ResourceRegistry, createTimeResource, createVeilBudgetResource, RESOURCE_TIME, RESOURCE_CAMERA, RESOURCE_DEVICE, RESOURCE_VEIL_BUDGET, } from './resources.js';
 export { SpriteRenderSystem } from './systems/sprite-render-system.js';
 export { Engine, registerBackend, isBackendRegistered } from './engine.js';
