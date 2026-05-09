@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.89.0';
+export const LOOM_ENGINE_VERSION = '0.90.0';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -577,6 +577,12 @@ export type {
   DialogChoiceRecord,
   DialogChoiceHistoryOptions,
 } from './runtime/dialog-choice-history.js';
+// 0.90.0 - per-locale / per-platform asset selection (M9 0.90 milestone).
+export { AssetVariant, RESOURCE_ASSET_VARIANT } from './runtime/asset-variant.js';
+export type {
+  AssetVariantSpec,
+  AssetVariantOptions,
+} from './runtime/asset-variant.js';
 export {
   ResourceRegistry,
   createTimeResource,

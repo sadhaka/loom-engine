@@ -7,6 +7,56 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.90.0 - 2026-05-09
+
+**AssetVariant + M9 0.90 milestone — per-locale / per-platform
+asset selection.** AssetPreloader (0.34) + AssetManifest (0.84)
+handle the WHAT and the WHERE-IN-THE-DEP-GRAPH; AssetVariant
+handles the WHICH-COPY: localized audio, platform-specific
+textures, accessibility variants. Each asset declares URLs per
+variant key; resolve() picks the best match from a configurable
+variant chain.
+
+This is the M9 0.90 milestone - 5 versions shipped this batch
+(0.86 → 0.90) on the world-feel + tutorial track:
+FactionReputation (0.86), CrowdSpawner (0.87), TutorialFlow
+(0.88), DialogChoiceHistory (0.89), AssetVariant (0.90).
+
+### Added
+
+- `src/runtime/asset-variant.ts` - `AssetVariant` class:
+  - `create({ variants })` (variant chain).
+  - `registerAsset({ id, variants })` (id + variantKey -> URL map).
+  - `unregisterAsset` / `has` / `size` / `list` / `clear` / `dispose`.
+  - `resolve(id)` - picks first variant in chain matching the asset.
+  - `resolveWith(id, variants)` - explicit chain override.
+  - `setVariants(chain)` / `getVariants()`.
+  - `variantsOf(id)` - keys defined for an asset.
+- `RESOURCE_ASSET_VARIANT` constant.
+
+### Tests
+
+2130 -> 2151 (21 new in tests/asset-variant.test.ts).
+
+### Milestone — engine 0.90.0
+
+5 versions shipped this M9 batch-3 wave (0.86 → 0.90) on the
+world-feel + tutorial track. Total this M9 session: 20 versions
+(0.71 → 0.90), 0 breaking changes, ~2150 tests.
+
+The combined 0.71-0.90 surface covers:
+- World ambient (Weather, Aggro, Faction, CrowdSpawner)
+- Combat UX (DamageNumberPipeline, BuffLifecycle, HealthBar, AggroTable)
+- HUD primitives (Reactivity, TextScroll, FloatingText pipeline)
+- Game systems (Crafting, Achievements, Leaderboard, DialogChoiceHistory)
+- Infra + tooling (Quadtree, ThresholdTrigger, EventLog,
+  AssetManifest, AssetVariant, HotKeyProfile)
+- Tutorialization (TutorialFlow with anchor + condition + persistence)
+
+### Backwards compatibility
+
+Pure addition. 0.10-era code compiles unmodified against 0.90.
+
 ## 0.89.0 - 2026-05-09
 
 **DialogChoiceHistory — record + replay dialog choices.** DialogTree
