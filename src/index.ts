@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '1.4.3';
+export const LOOM_ENGINE_VERSION = '1.4.4';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -847,6 +847,15 @@ export type {
   VOLineSnapshot,
   VoiceLineQueueOptions,
 } from './runtime/voice-line-queue.js';
+// 1.4.4 (Wave 1.4 audio cinematic depth) - cutscene framing bars (top/bottom) with smooth open/close.
+export { CinematicLetterbox, RESOURCE_CINEMATIC_LETTERBOX } from './runtime/cinematic-letterbox.js';
+export type {
+  LetterboxState,
+  CloseOptions as LetterboxCloseOptions,
+  OpenOptions as LetterboxOpenOptions,
+  PulseOptions as LetterboxPulseOptions,
+  CinematicLetterboxOptions,
+} from './runtime/cinematic-letterbox.js';
 export {
   ResourceRegistry,
   createTimeResource,

@@ -7,6 +7,42 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 1.4.4 - 2026-05-09
+
+**CinematicLetterbox — cutscene framing bars with smooth open/close.**
+Standard movie-style framing for cutscenes / dialogue / boss
+reveals: black bars slide in from top + bottom to crop the frame,
+then slide out when the moment ends.
+
+### Added
+
+- `src/runtime/cinematic-letterbox.ts` - `CinematicLetterbox` class:
+  - `create({ defaultBarPct?, defaultFadeMs? })`. Defaults 0.12 / 600ms.
+  - `close(opts?)` - slide bars in (target=1).
+  - `open(opts?)` - slide bars out (target=0).
+  - `toggle(opts?)` - flip between open / closed.
+  - `setTarget(value, opts?)` - manual 0..1 control.
+  - `pulse({ barPct?, holdMs?, fadeMs?, onComplete? })` - one-shot
+    flash: close, hold, open.
+  - `getState()` returns `{ current, target, topBarPct, bottomBarPct, isAnimating }`.
+  - `isOpen()` / `isClosed()` / `isAnimating()`.
+  - `tick(dtMs)` / `dispose()`.
+- Engine ships zero render path - consumer reads `topBarPct` /
+  `bottomBarPct` and draws the bars.
+- All callbacks isolated.
+- NaN / Infinity / negative dt no-op.
+- `RESOURCE_CINEMATIC_LETTERBOX` constant.
+
+### Tests
+
+2945 -> 2961 (16 new).
+
+### Backwards compatibility
+
+Pure addition. Pairs with CameraDirector (1.1.3, camera moves),
+CutsceneSequencer (1.1.4, broader timeline), AmbientLayerMixer
+(1.4.0, ambient bed often dips during letterboxed sequences).
+
 ## 1.4.3 - 2026-05-09
 
 **VoiceLineQueue — per-channel interruption-aware VO queue.**
