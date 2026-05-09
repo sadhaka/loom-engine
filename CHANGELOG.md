@@ -7,6 +7,41 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 0.93.0 - 2026-05-09
+
+**DamageFlash — per-entity tint reaction on hit.** The "white
+flash" or "red flash" the player sees the instant their character
+(or a boss) takes a hit. Standalone from HealthBar (0.80) which
+renders the bar; this renders a per-frame TINT applied to the
+entity's sprite.
+
+### Added
+
+- `src/runtime/damage-flash.ts` - `DamageFlash` class:
+  - `create({ capacity?, defaultColor?, defaultDurationMs? })`.
+    Defaults: 64 capacity, 0xffffff white, 150ms duration.
+  - `flash({ entityId, color?, durationMs?, intensity? })`.
+    Re-flashing an entity overwrites + resets age. Returns false
+    on capacity full.
+  - `remove(entityId)` / `clearAll()` / `has(id)` / `activeCount()`
+    / `capacity()`.
+  - `tick(dtMs)` advances ages; auto-removes expired entries.
+  - `forEach(cb)` yields render state with linear alpha falloff.
+    Throwing cb isolated.
+  - `dispose()` clears + locks ops.
+- Render state: `entityId`, `color`, `alpha` (post-falloff),
+  `intensity`, `ageMs`, `durationMs`.
+- Linear falloff: `alpha = intensity * (1 - ageMs / durationMs)`.
+- `RESOURCE_DAMAGE_FLASH` constant.
+
+### Tests
+
+2196 -> 2217 (21 new).
+
+### Backwards compatibility
+
+Pure addition.
+
 ## 0.92.0 - 2026-05-09
 
 **ScreenShake — camera trauma model.** Standard "trauma" approach

@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '0.92.0';
+export const LOOM_ENGINE_VERSION = '0.93.0';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -593,6 +593,13 @@ export type {
 // 0.92.0 - camera trauma model for screen shake effects.
 export { ScreenShake, RESOURCE_SCREEN_SHAKE } from './runtime/screen-shake.js';
 export type { ScreenShakeOptions, ShakeOffset } from './runtime/screen-shake.js';
+// 0.93.0 - per-entity tint reaction on hit.
+export { DamageFlash, RESOURCE_DAMAGE_FLASH } from './runtime/damage-flash.js';
+export type {
+  DamageFlashSpawn,
+  DamageFlashRenderState,
+  DamageFlashOptions,
+} from './runtime/damage-flash.js';
 export {
   ResourceRegistry,
   createTimeResource,
