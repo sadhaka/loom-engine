@@ -120,10 +120,17 @@ jobs:
       # One-time npm-side setup: package settings -> Trusted Publishers
       # -> add this repo + workflow filename. See L-06 from
       # SECURITY-AUDIT-0.10.0.md.
+      # Rapid-stream policy (2026-05-09):
+      # - Every tag-triggered publish lands on --tag beta.
+      # - The npm `latest` tag is only moved on milestones via the
+      #   separate npm-promote.yml workflow (workflow_dispatch).
+      # - Keeps the npmjs.com headline version stable at the most
+      #   recent milestone while rapid releases stay installable
+      #   via @beta or explicit version pin.
       - name: Publish to npm (dry-run)
         if: github.event.inputs.dry_run == 'true'
-        run: npm publish --access public --provenance --dry-run
+        run: npm publish --access public --provenance --tag beta --dry-run
 
       - name: Publish to npm
         if: github.event.inputs.dry_run != 'true'
-        run: npm publish --access public --provenance
+        run: npm publish --access public --provenance --tag beta
