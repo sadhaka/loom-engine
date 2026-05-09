@@ -7,6 +7,54 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 1.5.4 - 2026-05-09
+
+**ProgressTracker — skill mastery ledger using Bloom's taxonomy.**
+Used for learning-progress dashboards, adaptive content selection
+(only show advanced material once basics are mastered), achievement
+milestones based on mastery, learning analytics. Each skill tracks
+per-level mastery (0..1) across Bloom's six cognitive levels
+(remember / understand / apply / analyze / evaluate / create) plus
+a weighted aggregate.
+
+### Added
+
+- `src/runtime/progress-tracker.ts` - `ProgressTracker<T>` class
+  (type-generic over per-skill payload):
+  - `create<T>({ now?, defaultDecayPerDay? })`.
+  - `defineSkill({ id, name, decayPerDay?, levelWeights?, data? })` -
+    `levelWeights` defaults favor higher Bloom's levels.
+  - `recordEvidence(skillId, level, score, now?)` - EMA toward
+    score (alpha=0.3 = ~3-4 events for 75% influence).
+  - `tick(now?)` - applies decay since last tick.
+  - `getSkill(id)` returns
+    `{ id, name, levels (per-Bloom), overallMastery, evidenceCount, lastEvidenceAt, data? }`.
+  - `list()` / `count()`.
+  - `highMastery(threshold)` / `lowMastery(threshold)` - filtered
+    skill lists.
+  - `resetSkill(id)` / `removeSkill(id)` / `hasSkill(id)`.
+  - `clear()` / `dispose()`.
+- `BloomLevel`: `'remember' | 'understand' | 'apply' | 'analyze' | 'evaluate' | 'create'`.
+- `overallMastery` is weighted average across **measured** levels
+  using per-skill `levelWeights` (default ascending). Untouched
+  levels are excluded so they do not dilute the aggregate; a
+  skill practiced only at `remember` and `create` reads as the
+  weighted blend of just those two.
+- Engine doesn't pin to wall clock; consumer supplies `now` /
+  clock seam.
+- `RESOURCE_PROGRESS_TRACKER` constant.
+
+### Tests
+
+3078 -> 3098 (20 new).
+
+### Backwards compatibility
+
+Pure addition. Pairs with QuestionBank (1.5.3, evidence source -
+quiz scores feed mastery), KnowledgeMap (1.5.5 capstone,
+prerequisite gating), ChartRenderer (1.5.0, mastery-over-time
+visualization).
+
 ## 1.5.3 - 2026-05-09
 
 **QuestionBank — quiz items + SM-2 spaced repetition scheduler.**

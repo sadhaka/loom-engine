@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '1.5.3';
+export const LOOM_ENGINE_VERSION = '1.5.4';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -906,6 +906,14 @@ export type {
   DueOptions,
   QuestionBankOptions,
 } from './runtime/question-bank.js';
+// 1.5.4 (Wave 1.5 educational depth) - skill mastery via Bloom's taxonomy + decay.
+export { ProgressTracker, RESOURCE_PROGRESS_TRACKER } from './runtime/progress-tracker.js';
+export type {
+  BloomLevel,
+  SkillSpec,
+  SkillState,
+  ProgressTrackerOptions,
+} from './runtime/progress-tracker.js';
 export {
   ResourceRegistry,
   createTimeResource,
