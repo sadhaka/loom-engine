@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '1.6.0';
+export const LOOM_ENGINE_VERSION = '1.6.1';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -931,6 +931,9 @@ export type {
   GenerateOptions as NameGeneratorGenerateOptions,
   MarkovOrder,
 } from './runtime/name-generator.js';
+// 1.6.1 (Wave 1.6 procgen) - deterministic 2D fractal noise field.
+export { NoiseField, RESOURCE_NOISE_FIELD } from './runtime/noise-field.js';
+export type { NoiseFieldOptions } from './runtime/noise-field.js';
 export {
   ResourceRegistry,
   createTimeResource,

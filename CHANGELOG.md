@@ -7,6 +7,22 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 1.6.1 - 2026-05-09 (Wave 1.6 procgen)
+
+**NoiseField — deterministic 2D fractal noise (multi-octave).**
+Workhorse for terrain elevation, moisture maps, density fields,
+fog. Same seed + same (x, y) always returns the same value, so
+worlds reproduce from a seed string. Internal: value noise with
+smootherstep interpolation + summed octaves, configurable
+persistence + lacunarity + scale.
+
+Public surface: `create({ seed?, octaves?, persistence?,
+lacunarity?, scale? })`, `sample(x, y)` -> [-1, 1], `sample01(x, y)`
+-> [0, 1], `setSeed(seed)`, plus `getSeed / getOctaves /
+getPersistence / getLacunarity / getScale` for diagnostics.
+
+Tests 3140 -> 3155 (15 new). Pure addition.
+
 ## 1.6.0 - 2026-05-09 (Wave 1.6 procgen opens)
 
 **NameGenerator — Markov-chain procedural names.**
