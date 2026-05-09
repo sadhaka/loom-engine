@@ -7,6 +7,62 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 1.6.5 - 2026-05-09 (Wave 1.6 procgen MILESTONE)
+
+**WorldSeed — single-seed reproducible worlds.**
+The capstone of Wave 1.6. One seed string deterministically
+reproduces an entire world: a name, regions, biomes, dungeons,
+elevation + moisture maps. Stitches all five Wave 1.6 enabling
+primitives + NameGenerator into one call:
+
+  NameGenerator (1.6.0)     -> world / region / dungeon names
+  NoiseField (1.6.1)        -> elevation + moisture scalar fields
+  VoronoiPartition (1.6.2)  -> region boundaries
+  DungeonGenerator (1.6.3)  -> N dungeons placed at region centers
+  BiomeMixer (1.6.4)        -> per-cell biome classification
+
+Each primitive gets its own derived sub-seed so they are
+independently reproducible AND the whole world is reproducible.
+
+### Public surface
+
+- `WorldSeed.create({ seed, nameCorpus? })`
+- `generateWorld({ width, height, regionCount?, dungeonCount?,
+   dungeonWidth?, dungeonHeight?, biomes?, elevationScale?,
+   moistureScale?, octaves? })` -> `WorldSeedSnapshot`
+- `WorldSeedSnapshot`:
+  - `seed`, `worldName`, `width`, `height`
+  - `elevation: Float32Array(width * height)`
+  - `moisture: Float32Array(width * height)`
+  - `biomeId: Uint16Array(width * height)`  (index into `biomeNames`)
+  - `regionId: Uint16Array(width * height)` (index into `regions`)
+  - `biomeNames: string[]`
+  - `regions: WorldRegion[]`
+  - `dungeons: WorldDungeon[]` (each with placement + DungeonResult)
+- `RESOURCE_WORLD_SEED` constant.
+
+### Wave 1.6 procgen depth - complete
+
+  1.6.0  NameGenerator      - Markov-chain procedural names
+  1.6.1  NoiseField         - deterministic 2D fractal noise
+  1.6.2  VoronoiPartition   - 2D region partitioning
+  1.6.3  DungeonGenerator   - BSP rooms + corridors
+  1.6.4  BiomeMixer         - Whittaker climate classifier
+  1.6.5  WorldSeed          - single-seed reproducible worlds (this)
+
+### Tests
+
+3199 -> 3218 (19 new). Includes byte-for-byte determinism test:
+two WorldSeeds with the same seed produce identical
+`elevation`/`moisture`/`biomeId`/`regionId` arrays + identical
+region + dungeon names.
+
+### Backwards compatibility
+
+Pure addition. Type renamed `WorldSnapshot` -> `WorldSeedSnapshot`
+to avoid collision with the existing save-system `WorldSnapshot`
+(0.45). No existing exports affected.
+
 ## 1.6.4 - 2026-05-09 (Wave 1.6 procgen)
 
 **BiomeMixer — Whittaker-style biome classifier.**

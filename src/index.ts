@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '1.6.4';
+export const LOOM_ENGINE_VERSION = '1.6.5';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -952,6 +952,19 @@ export type {
 // 1.6.4 (Wave 1.6 procgen) - Whittaker-style biome classifier.
 export { BiomeMixer, RESOURCE_BIOME_MIXER } from './runtime/biome-mixer.js';
 export type { BiomeSpec } from './runtime/biome-mixer.js';
+// 1.6.5 CAPSTONE (Wave 1.6 procgen MILESTONE) - WorldSeed orchestrator
+// stitching all 5 procgen primitives + NameGenerator into a single
+// deterministic world. Type renamed WorldSeedSnapshot to avoid
+// collision with the older save-system WorldSnapshot.
+export { WorldSeed, RESOURCE_WORLD_SEED } from './runtime/world-seed.js';
+export type {
+  WorldSeedOptions,
+  GenerateWorldOptions,
+  WorldSeedSnapshot,
+  WorldRegion,
+  WorldDungeon,
+  BiomeSpecLike,
+} from './runtime/world-seed.js';
 export {
   ResourceRegistry,
   createTimeResource,
