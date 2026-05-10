@@ -7,6 +7,34 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 1.7.4 - 2026-05-10 (Wave 1.7 networking)
+
+**LagCompensation — client-side rollback netcode primitive.**
+Stores a circular buffer of (tick, state) snapshots + (tick, input)
+records. When authoritative state arrives for a past tick, rewind()
+returns the snapshot at-or-before that tick PLUS the inputs recorded
+since, so the consumer's tick function can re-simulate forward from
+the auth state. resync() drops obsolete history + returns the inputs
+needing re-application.
+
+Public surface: `create({ historySize?, stateSerialize? })`,
+`recordState(tick, state)`, `recordInput(tick, input)`, `rewind(tick)`
+returning RewindResult | null, `resync(tick, authState)` returning
+surviving inputs, `snapshotCount / inputCount / oldestSnapshotTick /
+newestSnapshotTick / newestInputTick / setHistorySize / clear`.
+
+Out-of-order input arrival handled (sorted insert). Optional
+stateSerialize lets consumer deep-clone snapshots so post-record
+mutation doesn't poison the history.
+
+Reference WebSocket adapter shipped (attachLagCompensationToWs).
+Inbound: input / state / auth-state / rewind. Outbound onResync()
+fires after auth-state ingest with surviving inputs to re-apply.
+
+Tests 3295 -> 3315 (+20). Pure addition. Pairs with PresenceTracker
+(1.7.0) for round-trip ping; with AuthorityHandoff (1.7.3) for who
+emits authoritative state.
+
 ## 1.7.3 - 2026-05-10 (Wave 1.7 networking)
 
 **AuthorityHandoff — host election + failover when current authority drops.**

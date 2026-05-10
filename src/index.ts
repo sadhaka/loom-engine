@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '1.7.3';
+export const LOOM_ENGINE_VERSION = '1.7.4';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -985,6 +985,12 @@ export { AuthorityHandoff, RESOURCE_AUTHORITY_HANDOFF } from './runtime/authorit
 export type { AuthorityPeer, AuthorityChange, AuthorityOptions, ElectionStrategy } from './runtime/authority-handoff.js';
 export { attachAuthorityHandoffToWs } from './runtime/ws-adapters/authority-handoff-ws.js';
 export type { AuthorityWsAdapterOptions, AuthorityWsHandle } from './runtime/ws-adapters/authority-handoff-ws.js';
+// 1.7.4 (Wave 1.7 networking) - LagCompensation: client-side rollback
+// netcode primitive (snapshot + input ring buffer).
+export { LagCompensation, RESOURCE_LAG_COMPENSATION } from './runtime/lag-compensation.js';
+export type { SnapshotEntry, InputEntry, RewindResult, LagCompensationOptions } from './runtime/lag-compensation.js';
+export { attachLagCompensationToWs } from './runtime/ws-adapters/lag-compensation-ws.js';
+export type { LagCompensationWsAdapterOptions, LagCompensationWsHandle } from './runtime/ws-adapters/lag-compensation-ws.js';
 export {
   ResourceRegistry,
   createTimeResource,
