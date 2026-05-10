@@ -1,4 +1,4 @@
-export declare const LOOM_ENGINE_VERSION = "1.7.4";
+export declare const LOOM_ENGINE_VERSION = "1.7.5";
 export type { Vec2, Vec3, Rect } from './util/math.js';
 export { vec2, vec3, rect, clamp, lerp, smoothstep, approxEq, rectContains, rectIntersects, visibleInView, } from './util/math.js';
 export type { ColorRGBA } from './util/color.js';
@@ -252,6 +252,10 @@ export { LagCompensation, RESOURCE_LAG_COMPENSATION } from './runtime/lag-compen
 export type { SnapshotEntry, InputEntry, RewindResult, LagCompensationOptions } from './runtime/lag-compensation.js';
 export { attachLagCompensationToWs } from './runtime/ws-adapters/lag-compensation-ws.js';
 export type { LagCompensationWsAdapterOptions, LagCompensationWsHandle } from './runtime/ws-adapters/lag-compensation-ws.js';
+export { ChatChannel, ChatChannelRegistry, RESOURCE_CHAT_CHANNEL, RESOURCE_CHAT_CHANNEL_REGISTRY } from './runtime/chat-channel.js';
+export type { ChatMessage, ChatMember, SendResult, ChatFilter, ChatChannelOptions } from './runtime/chat-channel.js';
+export { attachChatChannelToWs } from './runtime/ws-adapters/chat-channel-ws.js';
+export type { ChatWsAdapterOptions, ChatWsHandle } from './runtime/ws-adapters/chat-channel-ws.js';
 export { ResourceRegistry, createTimeResource, createVeilBudgetResource, RESOURCE_TIME, RESOURCE_CAMERA, RESOURCE_DEVICE, RESOURCE_VEIL_BUDGET, } from './resources.js';
 export { SpriteRenderSystem } from './systems/sprite-render-system.js';
 export { Engine, registerBackend, isBackendRegistered } from './engine.js';
