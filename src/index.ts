@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '1.7.1';
+export const LOOM_ENGINE_VERSION = '1.7.2';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -973,6 +973,12 @@ export type { PresenceEntry, PresenceOptions } from './runtime/presence-tracker.
 // with ready states + host election.
 export { LobbyState, RESOURCE_LOBBY_STATE } from './runtime/lobby-state.js';
 export type { LobbyMember, LobbyOptions, LobbyStatus } from './runtime/lobby-state.js';
+// 1.7.2 (Wave 1.7 networking) - MatchmakingPool: skill-based pairing
+// with widening windows so rare-skill queues don't starve.
+export { MatchmakingPool, RESOURCE_MATCHMAKING_POOL } from './runtime/matchmaking-pool.js';
+export type { QueueEntry, QueueOptions, Match, MatchmakingOptions } from './runtime/matchmaking-pool.js';
+export { attachMatchmakingPoolToWs } from './runtime/ws-adapters/matchmaking-pool-ws.js';
+export type { MatchmakingWsAdapterOptions, MatchmakingWsHandle } from './runtime/ws-adapters/matchmaking-pool-ws.js';
 export {
   ResourceRegistry,
   createTimeResource,

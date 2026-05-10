@@ -7,6 +7,27 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 1.7.2 - 2026-05-10 (Wave 1.7 networking)
+
+**MatchmakingPool — skill-based pairing with widening windows.**
+Players queue with a skill rating + party size; tick() greedily
+groups them by sorted skill within a per-player skill window that
+EXPANDS the longer they wait. Rare-skill / low-traffic queues
+resolve eventually instead of starving. The longest-waiting player
+in a candidate group drives the match window (the smallest range
+across the party wins).
+
+Public surface: `create({ partySize?, initialSkillRange?,
+expansionPerSec?, maxSkillRange?, maxEntries? })`, `queue(id,
+skill, now, opts?)`, `cancel(id)`, `tick(now)` (returns matches +
+removes matched ids), `currentRange / waitMs / has / get / count
+/ list / clear`. Buckets by partySize so a 4-player queue can't
+fill from a 2-player request.
+
+Tests 3252 -> 3274 (22 new). Pure addition. Pairs with
+PresenceTracker (1.7.0) for liveness checks before honoring
+matches; with LobbyState (1.7.1) to spin up a lobby per match.
+
 ## 1.7.1 - 2026-05-09 (Wave 1.7 networking)
 
 **LobbyState — pre-game waiting room with ready states.**
