@@ -8,7 +8,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '1.7.2';
+export const LOOM_ENGINE_VERSION = '1.7.3';
 export { vec2, vec3, rect, clamp, lerp, smoothstep, approxEq, rectContains, rectIntersects, visibleInView, } from './util/math.js';
 export { rgba, hexToRgba, rgbaToHexString, rgbaToCssString, colorLerp, COLOR_WHITE, COLOR_BLACK, COLOR_TRANSPARENT, COLOR_KNOT_STR, COLOR_KNOT_DEX, COLOR_KNOT_INT, COLOR_KNOT_CENTER, } from './util/color.js';
 export { EntityAllocator, NULL_ENTITY, entityIndex, entityGeneration, makeEntity, } from './entity.js';
@@ -263,6 +263,10 @@ export { LobbyState, RESOURCE_LOBBY_STATE } from './runtime/lobby-state.js';
 // with widening windows so rare-skill queues don't starve.
 export { MatchmakingPool, RESOURCE_MATCHMAKING_POOL } from './runtime/matchmaking-pool.js';
 export { attachMatchmakingPoolToWs } from './runtime/ws-adapters/matchmaking-pool-ws.js';
+// 1.7.3 (Wave 1.7 networking) - AuthorityHandoff: host election +
+// failover when current authority drops.
+export { AuthorityHandoff, RESOURCE_AUTHORITY_HANDOFF } from './runtime/authority-handoff.js';
+export { attachAuthorityHandoffToWs } from './runtime/ws-adapters/authority-handoff-ws.js';
 export { ResourceRegistry, createTimeResource, createVeilBudgetResource, RESOURCE_TIME, RESOURCE_CAMERA, RESOURCE_DEVICE, RESOURCE_VEIL_BUDGET, } from './resources.js';
 // Default systems
 export { SpriteRenderSystem } from './systems/sprite-render-system.js';

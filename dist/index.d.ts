@@ -1,4 +1,4 @@
-export declare const LOOM_ENGINE_VERSION = "1.7.2";
+export declare const LOOM_ENGINE_VERSION = "1.7.3";
 export type { Vec2, Vec3, Rect } from './util/math.js';
 export { vec2, vec3, rect, clamp, lerp, smoothstep, approxEq, rectContains, rectIntersects, visibleInView, } from './util/math.js';
 export type { ColorRGBA } from './util/color.js';
@@ -244,6 +244,10 @@ export { MatchmakingPool, RESOURCE_MATCHMAKING_POOL } from './runtime/matchmakin
 export type { QueueEntry, QueueOptions, Match, MatchmakingOptions } from './runtime/matchmaking-pool.js';
 export { attachMatchmakingPoolToWs } from './runtime/ws-adapters/matchmaking-pool-ws.js';
 export type { MatchmakingWsAdapterOptions, MatchmakingWsHandle } from './runtime/ws-adapters/matchmaking-pool-ws.js';
+export { AuthorityHandoff, RESOURCE_AUTHORITY_HANDOFF } from './runtime/authority-handoff.js';
+export type { AuthorityPeer, AuthorityChange, AuthorityOptions, ElectionStrategy } from './runtime/authority-handoff.js';
+export { attachAuthorityHandoffToWs } from './runtime/ws-adapters/authority-handoff-ws.js';
+export type { AuthorityWsAdapterOptions, AuthorityWsHandle } from './runtime/ws-adapters/authority-handoff-ws.js';
 export { ResourceRegistry, createTimeResource, createVeilBudgetResource, RESOURCE_TIME, RESOURCE_CAMERA, RESOURCE_DEVICE, RESOURCE_VEIL_BUDGET, } from './resources.js';
 export { SpriteRenderSystem } from './systems/sprite-render-system.js';
 export { Engine, registerBackend, isBackendRegistered } from './engine.js';
