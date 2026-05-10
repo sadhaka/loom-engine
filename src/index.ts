@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '1.7.4';
+export const LOOM_ENGINE_VERSION = '1.7.5';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -991,6 +991,13 @@ export { LagCompensation, RESOURCE_LAG_COMPENSATION } from './runtime/lag-compen
 export type { SnapshotEntry, InputEntry, RewindResult, LagCompensationOptions } from './runtime/lag-compensation.js';
 export { attachLagCompensationToWs } from './runtime/ws-adapters/lag-compensation-ws.js';
 export type { LagCompensationWsAdapterOptions, LagCompensationWsHandle } from './runtime/ws-adapters/lag-compensation-ws.js';
+// 1.7.5 MILESTONE (Wave 1.7 networking complete) - ChatChannel +
+// ChatChannelRegistry: moderated multi-channel chat with rate
+// limit + filter hooks.
+export { ChatChannel, ChatChannelRegistry, RESOURCE_CHAT_CHANNEL, RESOURCE_CHAT_CHANNEL_REGISTRY } from './runtime/chat-channel.js';
+export type { ChatMessage, ChatMember, SendResult, ChatFilter, ChatChannelOptions } from './runtime/chat-channel.js';
+export { attachChatChannelToWs } from './runtime/ws-adapters/chat-channel-ws.js';
+export type { ChatWsAdapterOptions, ChatWsHandle } from './runtime/ws-adapters/chat-channel-ws.js';
 export {
   ResourceRegistry,
   createTimeResource,

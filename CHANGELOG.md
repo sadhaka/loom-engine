@@ -7,6 +7,48 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 1.7.5 MILESTONE - 2026-05-10 (Wave 1.7 networking COMPLETE)
+
+**ChatChannel + ChatChannelRegistry — moderated multi-channel chat
+with rate limit + filter hooks. Closes Wave 1.7 networking.**
+
+ChatChannel: per-channel member roster + rolling message history +
+per-sender rate limit (N msgs in M ms) + filter chain. Filters are
+consumer-supplied predicates that pass / drop / transform messages
+(badword filter, sanitizer, link rewriter, etc). Filter exceptions
+are caught + treated as drops (safe).
+
+ChatChannelRegistry: multi-channel container so a chat app can
+manage many parallel channels (global, guild, party, whisper) by id
+without juggling instances.
+
+Public surface (ChatChannel): `create({ id, historySize?,
+rateLimitMessages?, rateLimitWindowMs?, maxBodyLen? })`,
+`join(id, now)`, `leave(id)`, `send(senderId, body, now, meta?)`
+returning SendResult, `installFilter(fn)`, `uninstallFilter(fn)`,
+`recent(limit?)`, `sendsInWindow(senderId, now)`, `members$ /
+hasMember / memberCount / clearHistory`.
+
+Public surface (Registry): `create()`, `create(opts)`, `get(id)`,
+`has(id)`, `remove(id)`, `count()`, `ids()`, `clear()`.
+
+SendResult.reason: 'not-member' | 'rate-limit' | 'filtered' |
+'empty' | 'too-long'. Filter drops do NOT count toward rate limit
+(consumer's moderation choice shouldn't punish sender mechanically).
+
+Reference WebSocket adapter shipped (attachChatChannelToWs).
+Inbound: join / leave / send (channelId routes to right channel).
+Outbound onMessage(channelId, msg) for broadcast; onReject for
+rate-limit / filter explanations.
+
+Tests 3316 -> 3349 (+33). Pure addition.
+
+### Wave 1.7 networking - COMPLETE
+Five primitives shipped (1.7.0 PresenceTracker, 1.7.1 LobbyState,
+1.7.2 MatchmakingPool, 1.7.3 AuthorityHandoff, 1.7.4 LagCompensation,
+1.7.5 ChatChannel) + matching WebSocket reference adapters. Engine
+remains transport-agnostic; adapters demonstrate one wire pattern.
+
 ## 1.7.4 - 2026-05-10 (Wave 1.7 networking)
 
 **LagCompensation — client-side rollback netcode primitive.**
