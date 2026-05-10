@@ -1,4 +1,4 @@
-export declare const LOOM_ENGINE_VERSION = "1.7.1";
+export declare const LOOM_ENGINE_VERSION = "1.7.2";
 export type { Vec2, Vec3, Rect } from './util/math.js';
 export { vec2, vec3, rect, clamp, lerp, smoothstep, approxEq, rectContains, rectIntersects, visibleInView, } from './util/math.js';
 export type { ColorRGBA } from './util/color.js';
@@ -240,6 +240,10 @@ export { PresenceTracker, RESOURCE_PRESENCE_TRACKER } from './runtime/presence-t
 export type { PresenceEntry, PresenceOptions } from './runtime/presence-tracker.js';
 export { LobbyState, RESOURCE_LOBBY_STATE } from './runtime/lobby-state.js';
 export type { LobbyMember, LobbyOptions, LobbyStatus } from './runtime/lobby-state.js';
+export { MatchmakingPool, RESOURCE_MATCHMAKING_POOL } from './runtime/matchmaking-pool.js';
+export type { QueueEntry, QueueOptions, Match, MatchmakingOptions } from './runtime/matchmaking-pool.js';
+export { attachMatchmakingPoolToWs } from './runtime/ws-adapters/matchmaking-pool-ws.js';
+export type { MatchmakingWsAdapterOptions, MatchmakingWsHandle } from './runtime/ws-adapters/matchmaking-pool-ws.js';
 export { ResourceRegistry, createTimeResource, createVeilBudgetResource, RESOURCE_TIME, RESOURCE_CAMERA, RESOURCE_DEVICE, RESOURCE_VEIL_BUDGET, } from './resources.js';
 export { SpriteRenderSystem } from './systems/sprite-render-system.js';
 export { Engine, registerBackend, isBackendRegistered } from './engine.js';
