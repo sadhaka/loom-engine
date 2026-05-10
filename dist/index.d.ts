@@ -1,4 +1,4 @@
-export declare const LOOM_ENGINE_VERSION = "1.7.3";
+export declare const LOOM_ENGINE_VERSION = "1.7.4";
 export type { Vec2, Vec3, Rect } from './util/math.js';
 export { vec2, vec3, rect, clamp, lerp, smoothstep, approxEq, rectContains, rectIntersects, visibleInView, } from './util/math.js';
 export type { ColorRGBA } from './util/color.js';
@@ -248,6 +248,10 @@ export { AuthorityHandoff, RESOURCE_AUTHORITY_HANDOFF } from './runtime/authorit
 export type { AuthorityPeer, AuthorityChange, AuthorityOptions, ElectionStrategy } from './runtime/authority-handoff.js';
 export { attachAuthorityHandoffToWs } from './runtime/ws-adapters/authority-handoff-ws.js';
 export type { AuthorityWsAdapterOptions, AuthorityWsHandle } from './runtime/ws-adapters/authority-handoff-ws.js';
+export { LagCompensation, RESOURCE_LAG_COMPENSATION } from './runtime/lag-compensation.js';
+export type { SnapshotEntry, InputEntry, RewindResult, LagCompensationOptions } from './runtime/lag-compensation.js';
+export { attachLagCompensationToWs } from './runtime/ws-adapters/lag-compensation-ws.js';
+export type { LagCompensationWsAdapterOptions, LagCompensationWsHandle } from './runtime/ws-adapters/lag-compensation-ws.js';
 export { ResourceRegistry, createTimeResource, createVeilBudgetResource, RESOURCE_TIME, RESOURCE_CAMERA, RESOURCE_DEVICE, RESOURCE_VEIL_BUDGET, } from './resources.js';
 export { SpriteRenderSystem } from './systems/sprite-render-system.js';
 export { Engine, registerBackend, isBackendRegistered } from './engine.js';
