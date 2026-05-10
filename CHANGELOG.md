@@ -7,6 +7,29 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 1.7.3 - 2026-05-10 (Wave 1.7 networking)
+
+**AuthorityHandoff — host election + failover when current authority drops.**
+Tracks a current host across a peer set; on heartbeat expiry of the
+host, promotes the next candidate via deterministic election. Pairs
+with PresenceTracker (1.7.0) for the heartbeat signal. Three election
+strategies: 'oldest' (earliest firstSeenAt wins, most stable),
+'lowest-id' (lex order, deterministic across peers without coordination),
+or a custom function over the peer list.
+
+Public surface: `create({ hostId?, timeoutMs?, electionStrategy? })`,
+`heartbeat(id, now)`, `setHost(newHost|null, now)`, `removePeer(id, now)`,
+`tick(now)` returning AuthorityChange | null, `elect()` for diagnostics,
+`getHostId / hasPeer / peerCount / list / setTimeoutMs / clear`.
+
+AuthorityChange.kind: 'handoff' | 'host-leave' | 'no-host' | 'reclaim'.
+
+Reference WebSocket adapter shipped (attachAuthorityHandoffToWs).
+Inbound: heartbeat / leave / set-host / tick. Outbound onChange()
+broadcasts new host to peers so they agree on the new authority.
+
+Tests 3274 -> 3294 (+20). Pure addition.
+
 ## 1.7.2 - 2026-05-10 (Wave 1.7 networking)
 
 **MatchmakingPool — skill-based pairing with widening windows.**
