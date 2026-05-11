@@ -1,6 +1,6 @@
 {
   "name": "@sadhaka/loom-engine",
-  "version": "1.7.5",
+  "version": "1.7.6",
   "description": "Browser-first 2D / 2.5D game engine. Canvas2D, ECS, render-graph stages, Director-bridge SSE integration. Built from scratch in TypeScript for TheWorldTable.ai.",
   "type": "module",
   "main": "./dist/index.js",
@@ -36,7 +36,7 @@
     "type": "git",
     "url": "https://github.com/sadhaka/loom-engine"
   },
-  "homepage": "https://loom-engine.pages.dev/",
+  ""homepage": "https://theworldtable.ai/engine",
   "bugs": {
     "url": "https://github.com/sadhaka/loom-engine/issues"
   },
