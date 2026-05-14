@@ -30,6 +30,7 @@ export type { EventHandler } from './runtime/event-bus.js';
 export { Tween, Easings, cubicBezier, RESOURCE_TWEEN } from './runtime/tween.js';
 export type { TweenHandle, TweenOptions, EasingFn, EasingName } from './runtime/tween.js';
 export { SpatialHash, RESOURCE_SPATIAL_HASH } from './runtime/spatial-hash.js';
+export { SpatialGrid } from './runtime/spatial-grid.js';
 export { InputActions, RESOURCE_INPUT_ACTIONS } from './input/input-actions.js';
 export { ObjectPool } from './runtime/object-pool.js';
 export type { ObjectPoolOptions } from './runtime/object-pool.js';

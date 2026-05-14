@@ -43,6 +43,8 @@ export { EventBus, RESOURCE_EVENT_BUS } from './runtime/event-bus.js';
 export { Tween, Easings, cubicBezier, RESOURCE_TWEEN } from './runtime/tween.js';
 // 0.30.0 - spatial hash for nearby-entity queries.
 export { SpatialHash, RESOURCE_SPATIAL_HASH } from './runtime/spatial-hash.js';
+// 1.7.7 - dense bounded uniform grid; zero-allocation fixed-arena counterpart to SpatialHash.
+export { SpatialGrid } from './runtime/spatial-grid.js';
 // 0.31.0 - declarative input actions.
 export { InputActions, RESOURCE_INPUT_ACTIONS } from './input/input-actions.js';
 // 0.32.0 - generic object pool for short-lived reusable objects.
