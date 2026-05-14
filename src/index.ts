@@ -1558,6 +1558,20 @@ export {
   PeerRenderSystem,
 } from './systems/peer-presence-system.js';
 
+// DeltaCompressor (Loom-Wire): per-record binary delta - a one-u32
+// change mask plus only the changed columns, built on the canonical
+// SnapshotWriter / SnapshotReader byte format. deltaFrameTo/FromBase64
+// wrap a frame for the SSE text channel.
+export type { DeltaFrameInfo } from './network/delta-compressor.js';
+export {
+  DeltaCompressor,
+  DELTA_WIRE_MAGIC,
+  DELTA_WIRE_VERSION,
+  DELTA_MAX_COLUMNS,
+  deltaFrameToBase64,
+  deltaFrameFromBase64,
+} from './network/delta-compressor.js';
+
 // ===== Phase 0.19 client-side plugin SDK =====
 //
 // TypeScript companion of api/loom_ai_plugin_runtime.py. Lets Founders
