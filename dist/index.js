@@ -373,5 +373,6 @@ export { SSEMultiplayerBridge } from './network/sse-multiplayer-bridge.js';
 export { PeerSpritePool, POOL_PEER_SPRITE } from './components/peer-sprite.js';
 export { PeerPresenceSystem, PeerRenderSystem, } from './systems/peer-presence-system.js';
 export { DeltaCompressor, DELTA_WIRE_MAGIC, DELTA_WIRE_VERSION, DELTA_MAX_COLUMNS, deltaFrameToBase64, deltaFrameFromBase64, } from './network/delta-compressor.js';
+export { InputReconciliation, FIXED_POINT_SHIFT, FIXED_POINT_ONE, floatToFixed, fixedToFloat, } from './network/input-reconciliation.js';
 export { ClientPluginRegistry, MapPluginStorage as ClientMapPluginStorage, ConsolePluginLogger as ClientConsolePluginLogger, PluginEntropy, PluginError, ALL_SCOPES as CLIENT_PLUGIN_SCOPES, DEFAULT_PLUGIN_STORAGE_MAX_BYTES as CLIENT_PLUGIN_DEFAULT_STORAGE_MAX_BYTES, DEFAULT_PLUGIN_TICK_BUDGET_MS as CLIENT_PLUGIN_DEFAULT_TICK_BUDGET_MS, setWithTtl as clientPluginSetWithTtl, getWithTtlCheck as clientPluginGetWithTtlCheck, } from './plugins/index.js';
 //# sourceMappingURL=index.js.map
