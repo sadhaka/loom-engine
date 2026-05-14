@@ -287,6 +287,10 @@ export { AIActionInterpreter } from './runtime/ai-action-interpreter.js';
 // tick. Relevance scoring + fast-forward are the deferred
 // integration layer (need Omniveil / nav).
 export { LoomFlux } from './runtime/loom-flux.js';
+// LoomDecay - procedural material entropy: a chunked, seeded-PRNG
+// material-fatigue pool that decays materials toward phase changes
+// and recycling, via a generation-validated phase-change command buffer.
+export { LoomDecay, makeMaterialHandle, materialSlot, materialGeneration } from './runtime/loom-decay.js';
 // 1.7.5 MILESTONE (Wave 1.7 networking complete) - ChatChannel +
 // ChatChannelRegistry: moderated multi-channel chat with rate
 // limit + filter hooks.
