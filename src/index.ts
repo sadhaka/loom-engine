@@ -1556,6 +1556,20 @@ export {
   PeerRenderSystem,
 } from './systems/peer-presence-system.js';
 
+// InputReconciliation: fixed-point Int32 client-side prediction ring.
+// reconcile() applies an authoritative server position; the static
+// smoothVisual() eases the rendered position toward it without
+// touching gameplay state. The fixed-point counterpart to the generic
+// LagCompensation rewind buffer.
+export type { ReconcileResult } from './network/input-reconciliation.js';
+export {
+  InputReconciliation,
+  FIXED_POINT_SHIFT,
+  FIXED_POINT_ONE,
+  floatToFixed,
+  fixedToFloat,
+} from './network/input-reconciliation.js';
+
 // ===== Phase 0.19 client-side plugin SDK =====
 //
 // TypeScript companion of api/loom_ai_plugin_runtime.py. Lets Founders
