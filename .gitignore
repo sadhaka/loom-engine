@@ -1,6 +1,13 @@
 # Build output
 dist/
 *.tsbuildinfo
+# Stale generated JS under src/. tsc emits to dist/ - the
+# src/**/*.js + .js.map siblings were build artifacts committed by
+# mistake. They drift from the .ts sources (the no-nondeterminism
+# tripwire only scans .ts), so anything importing src/**/*.js
+# directly could silently load non-deterministic stale code.
+src/**/*.js
+src/**/*.js.map
 # Compiled demo (demo/*.ts is tracked source; demo/*.js is generated)
 demo/*.js
 demo/*.js.map
