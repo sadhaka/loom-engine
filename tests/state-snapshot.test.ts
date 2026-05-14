@@ -29,6 +29,8 @@ import {
   ParticlePool,
   ProjectilePool,
   InteractablePool,
+  AnimationStatePool,
+  type SpriteSheetManifest,
   World,
   RESOURCE_ENTROPY,
   isSnapshotable,
@@ -375,6 +377,20 @@ test('state snapshot: restore rejects a part that under-reads its blob', () => {
 
 // ----- Component pools as ISnapshotable -----
 
+// A minimal sprite-sheet manifest for exercising AnimationStatePool.
+// The manifest is intentionally outside the snapshot, so its only
+// role here is to give play() an object ref to store.
+function makeAnimManifest(name: string): SpriteSheetManifest {
+  return {
+    name,
+    image: name + '.png',
+    frames: [{ x: 0, y: 0, w: 16, h: 16 }, { x: 16, y: 0, w: 16, h: 16 }],
+    anchor: { x: 8, y: 16 },
+    fps: 8,
+    clips: [{ name: 'walk', frames: [0, 1], loop: true }],
+  };
+}
+
 // Build one of every snapshotable pool, populated with non-trivial
 // state (varied columns, set flags, recycled free-list slots), plus
 // the allocator + entropy - all registered into a StateSnapshot in a
@@ -391,6 +407,7 @@ function buildPopulated() {
   const particles = new ParticlePool();
   const projectiles = new ProjectilePool();
   const interactable = new InteractablePool();
+  const animation = new AnimationStatePool();
 
   // Entities with a recycle history.
   const e: number[] = [];
@@ -457,6 +474,11 @@ function buildPopulated() {
   interactable.attach(e[5]!, { kind: 'lore', prompt: 'Читать', payload: 'lore.01', radius: 2 });
   interactable.detach(e[4]!);   // flags-cleared slot inside the high-water mark
 
+  animation.play(e[0]!, makeAnimManifest('knight-walk'), 'walk', { startMs: 90 });
+  animation.play(e[2]!, makeAnimManifest('goblin-idle'), 'idle');
+  animation.play(e6, makeAnimManifest('knight-walk'), 'attack');
+  animation.stop(e[2]!);   // flags-cleared slot inside the high-water mark
+
   const snap = new StateSnapshot();
   snap.register(alloc);
   snap.register(entropy);
@@ -469,8 +491,9 @@ function buildPopulated() {
   snap.register(particles);
   snap.register(projectiles);
   snap.register(interactable);
+  snap.register(animation);
 
-  return { alloc, entropy, transform, sprite, health, pursue, ranged, emitter, particles, projectiles, interactable, snap };
+  return { alloc, entropy, transform, sprite, health, pursue, ranged, emitter, particles, projectiles, interactable, animation, snap };
 }
 
 function buildEmpty(): StateSnapshot {
@@ -486,6 +509,7 @@ function buildEmpty(): StateSnapshot {
   snap.register(new ParticlePool());
   snap.register(new ProjectilePool());
   snap.register(new InteractablePool());
+  snap.register(new AnimationStatePool());
   return snap;
 }
 
@@ -497,9 +521,9 @@ test('component pools: every pool round-trips through StateSnapshot byte-identic
   empty.restore(bytesA);
   const bytesB = empty.serialize().slice();
 
-  assert.equal(empty.partCount, 11, 'allocator + entropy + 9 pools registered');
+  assert.equal(empty.partCount, 12, 'allocator + entropy + 10 pools registered');
   assert.deepEqual(Array.from(bytesB), Array.from(bytesA),
-    'restore -> re-serialize must reproduce the exact frame for all 11 parts');
+    'restore -> re-serialize must reproduce the exact frame for all 12 parts');
 });
 
 test('component pools: hash diverges when any pool column is mutated', () => {
@@ -600,6 +624,39 @@ test('component pools: InteractablePool round-trips kind/prompt/payload + radius
   assert.equal(q.isActive(e2), false, 'detached slot stays detached');
   assert.equal(q.getPayload(e2), 'lore.stone.01', 'detached slot keeps its cold columns');
   assert.equal(q.isActive(e0), true, 'attached slot stays active');
+});
+
+test('component pools: AnimationStatePool round-trips elapsedMs/clipName/flags; manifest is excluded', () => {
+  const alloc = new EntityAllocator();
+  const e0 = alloc.create();
+  const e1 = alloc.create();
+  const e2 = alloc.create();
+
+  const p = new AnimationStatePool();
+  p.play(e0, makeAnimManifest('knight-walk'), 'walk', { startMs: 120 });
+  p.play(e1, makeAnimManifest('goblin-attack'), 'attack', { startMs: 0 });
+  p.play(e2, makeAnimManifest('knight-walk'), 'idle');
+  p.stop(e1);   // flags-cleared slot inside the high-water mark
+
+  const w = new SnapshotWriter();
+  p.snapshotInto(w);
+  const q = new AnimationStatePool();
+  q.restoreFrom(new SnapshotReader(w.bytes().slice()));
+
+  assert.equal(q.getHighWaterMark(), p.getHighWaterMark());
+  for (const e of [e0, e1, e2]) {
+    const i = entityIndex(e);
+    assert.equal(q.elapsedMs[i], p.elapsedMs[i], 'elapsedMs at ' + i);
+    assert.equal(q.getClipName(e), p.getClipName(e), 'clipName at ' + i);
+    assert.equal(q.isActive(e), p.isActive(e), 'active flag at ' + i);
+    assert.equal(q.isFinished(e), p.isFinished(e), 'finished flag at ' + i);
+  }
+  assert.equal(q.isActive(e1), false, 'stopped slot stays stopped');
+  assert.equal(q.isActive(e0), true, 'playing slot stays active');
+  // The manifest is deliberately outside the snapshot - a restored
+  // pool has null manifests regardless of what was playing.
+  assert.equal(q.getManifest(e0), null, 'restore does not rebind the manifest');
+  assert.equal(q.getManifest(e2), null);
 });
 
 // ----- isSnapshotable + World.snapshotState -----

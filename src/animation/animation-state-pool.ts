@@ -18,11 +18,12 @@
 import { type EntityId, entityIndex } from '../entity.js';
 import { growF32, growU8, nextPow2, tightenHighWaterMark } from '../util/typed-arrays.js';
 import type { SpriteSheetManifest } from '../asset/sprite-sheet-loader.js';
+import type { ISnapshotable, SnapshotWriter, SnapshotReader } from '../runtime/state-snapshot.js';
 
 export const ANIMATION_FLAG_ACTIVE = 1 << 0;
 export const ANIMATION_FLAG_FINISHED = 1 << 1;
 
-export class AnimationStatePool {
+export class AnimationStatePool implements ISnapshotable {
   // Hot data
   elapsedMs: Float32Array;
 
@@ -130,5 +131,51 @@ export class AnimationStatePool {
   // marks a slot with no animation.
   tighten(): void {
     this.highWaterMark = tightenHighWaterMark(this.flags, this.highWaterMark);
+  }
+
+  // --- ISnapshotable: the hot elapsedMs column, the clipName string
+  // column, and flags - all [0, highWaterMark). ---
+  //
+  // The manifest column is deliberately NOT in the snapshot. It is a
+  // runtime ref to static, asset-loaded data, and excluding it is
+  // correct for both jobs the snapshot does:
+  //
+  //   - Determinism hash: manifest is only ever written next to
+  //     clipName - play() sets both, stop() clears both - so a pool
+  //     can never differ in manifest without also differing in
+  //     clipName or flags. The three serialized columns already
+  //     witness every reachable divergence.
+  //   - Restore: the pool has no name -> SpriteSheetManifest
+  //     registry, so restoreFrom cannot rebind the object; it leaves
+  //     manifest[i] null. AnimationSystem already skips an ACTIVE
+  //     slot whose manifest is null, so a restored pool is safe to
+  //     tick - it just will not advance until a layer that owns the
+  //     asset registry rebinds the manifests.
+
+  readonly snapshotKey: string = 'loom.animation-state-pool';
+
+  snapshotInto(w: SnapshotWriter): void {
+    const n = this.highWaterMark;
+    w.writeU32(n);
+    w.writeF32Slice(this.elapsedMs, n);
+    // clipName is a plain array with no self-describing slice writer,
+    // so n (written above) is its element count.
+    for (let i = 0; i < n; i++) w.writeString(this.clipName[i] ?? '');
+    w.writeU8Slice(this.flags, n);
+  }
+
+  restoreFrom(r: SnapshotReader): void {
+    const n = r.readU32();
+    this.elapsedMs = r.readF32Slice();
+    this.clipName = new Array<string>(n);
+    for (let i = 0; i < n; i++) this.clipName[i] = r.readString();
+    this.flags = r.readU8Slice();
+    // manifest is not in the snapshot (see above): a restored pool
+    // has null manifests until a higher layer rebinds them.
+    this.manifest = new Array<SpriteSheetManifest | null>(n).fill(null);
+    // Match TransformPool: a restored pool is exactly-sized, capacity
+    // == highWaterMark, growing via nextPow2 on the next play().
+    this.capacity = n;
+    this.highWaterMark = n;
   }
 }
