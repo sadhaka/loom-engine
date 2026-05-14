@@ -1021,6 +1021,22 @@ export { LoomFlux } from './runtime/loom-flux.js';
 // and recycling, via a generation-validated phase-change command buffer.
 export { LoomDecay, makeMaterialHandle, materialSlot, materialGeneration } from './runtime/loom-decay.js';
 export type { MaterialHandle, TransitionRule, DecayStats, CommitStats } from './runtime/loom-decay.js';
+// WebGPURenderer - the safe pure-logic core of the WebGPU SoA bridge:
+// a double-buffered staging ring, upload validation against the
+// device storage-buffer limit, an explicit bind-group-layout
+// descriptor, and device-lost state. The actual GPU API calls are the
+// deferred integration layer.
+export {
+  WebGPURenderer,
+  SHADER_STAGE_VERTEX,
+  SHADER_STAGE_FRAGMENT,
+  SHADER_STAGE_COMPUTE,
+  BUFFER_TYPE_UNIFORM,
+  BUFFER_TYPE_STORAGE,
+  BUFFER_TYPE_READ_ONLY_STORAGE,
+  UPLOAD_NONE,
+} from './runtime/webgpu-renderer.js';
+export type { BufferBindingDescriptor, WebGPURendererConfig } from './runtime/webgpu-renderer.js';
 // 1.7.5 MILESTONE (Wave 1.7 networking complete) - ChatChannel +
 // ChatChannelRegistry: moderated multi-channel chat with rate
 // limit + filter hooks.
