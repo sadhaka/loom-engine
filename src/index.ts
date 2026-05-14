@@ -1004,6 +1004,11 @@ export { LagCompensation, RESOURCE_LAG_COMPENSATION } from './runtime/lag-compen
 export type { SnapshotEntry, InputEntry, RewindResult, LagCompensationOptions } from './runtime/lag-compensation.js';
 export { attachLagCompensationToWs } from './runtime/ws-adapters/lag-compensation-ws.js';
 export type { LagCompensationWsAdapterOptions, LagCompensationWsHandle } from './runtime/ws-adapters/lag-compensation-ws.js';
+// LoomDecay - procedural material entropy: a chunked, seeded-PRNG
+// material-fatigue pool that decays materials toward phase changes
+// and recycling, via a generation-validated phase-change command buffer.
+export { LoomDecay, makeMaterialHandle, materialSlot, materialGeneration } from './runtime/loom-decay.js';
+export type { MaterialHandle, TransitionRule, DecayStats, CommitStats } from './runtime/loom-decay.js';
 // 1.7.5 MILESTONE (Wave 1.7 networking complete) - ChatChannel +
 // ChatChannelRegistry: moderated multi-channel chat with rate
 // limit + filter hooks.
