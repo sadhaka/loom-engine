@@ -28,6 +28,9 @@ import {
   ParticleEmitterPool,
   ParticlePool,
   ProjectilePool,
+  World,
+  RESOURCE_ENTROPY,
+  isSnapshotable,
 } from '../src/index.js';
 
 // A stand-in component pool: exactly the shape the dossier names -
@@ -518,4 +521,105 @@ test('component pools: ParticlePool free-list + live count survive a round-trip'
   // The restored free list must hand recycled slots back on spawn.
   const slot = q.spawn({ x: 0, y: 0, z: 0, life: 1, color });
   assert.ok(slot === 2 || slot === 4, 'spawn recycles a freed slot, got ' + slot);
+});
+
+// ----- isSnapshotable + World.snapshotState -----
+
+test('isSnapshotable: duck-types ISnapshotable parts', () => {
+  assert.equal(isSnapshotable(new EntityAllocator()), true);
+  assert.equal(isSnapshotable(createEntropy(1)), true);
+  assert.equal(isSnapshotable(new TransformPool()), true);
+  assert.equal(isSnapshotable({ notAPart: true }), false);
+  assert.equal(isSnapshotable(null), false);
+  assert.equal(isSnapshotable(42), false);
+  // Has the keys but wrong member types.
+  assert.equal(isSnapshotable({ snapshotKey: 'x', snapshotInto: 1, restoreFrom: 2 }), false);
+});
+
+// Builds a World with two snapshotable pools + a seeded entropy
+// resource + 8 entities carrying transform + health state.
+function makeTestWorld(seed: number) {
+  const w = new World();
+  const transform = new TransformPool();
+  const health = new HealthPool();
+  const entropy = createEntropy(seed);
+  w.registerPool('transform', transform);
+  w.registerPool('health', health);
+  w.resources.set(RESOURCE_ENTROPY, entropy);
+  for (let i = 0; i < 8; i++) {
+    const e = w.createEntity();
+    transform.attach(e, i, i * 2, 0);
+    health.attach(e, 100 - i);
+  }
+  return { w, transform, health, entropy };
+}
+
+// One tick of deterministic, seeded-entropy-driven mutation - stands
+// in for a real simulation system advancing pool state.
+function jitterTick(
+  transform: TransformPool,
+  entropy: { random(): number },
+  count: number,
+): void {
+  for (let i = 1; i <= count; i++) {
+    transform.x[i] = (transform.x[i] ?? 0) + entropy.random();
+    transform.y[i] = (transform.y[i] ?? 0) - entropy.random();
+  }
+}
+
+test('world snapshotState: collects the allocator, snapshotable pools, and snapshotable resources', () => {
+  const w = new World();
+  w.registerPool('transform', new TransformPool());     // ISnapshotable
+  w.registerPool('health', new HealthPool());           // ISnapshotable
+  w.registerPool('plain', { notAPool: true });          // skipped
+  w.resources.set(RESOURCE_ENTROPY, createEntropy(1));  // ISnapshotable
+  w.resources.set('misc', { value: 42 });               // skipped
+
+  // allocator + transform + health + entropy = 4; the plain pool and
+  // misc resource are not snapshotable and are not registered.
+  assert.equal(w.snapshotState().partCount, 4);
+});
+
+test('world snapshotState: hash is deterministic and catches state drift', () => {
+  const a = makeTestWorld(77);
+  const b = makeTestWorld(77);
+  assert.equal(a.w.snapshotState().hash(), b.w.snapshotState().hash(),
+    'identically-built worlds hash identically');
+
+  // Mutate one entity's health in world B.
+  b.health.applyDamage(b.w.entityAt(1), 5, 0);
+  assert.notEqual(a.w.snapshotState().hash(), b.w.snapshotState().hash(),
+    'a single applyDamage must change the world hash');
+});
+
+test('world determinism: per-tick hash sequences match identical runs, diverge on a different seed', () => {
+  function run(seed: number): number[] {
+    const { w, transform, entropy } = makeTestWorld(seed);
+    const snap = w.snapshotState();          // build once after setup
+    const hashes: number[] = [];
+    for (let tick = 0; tick < 20; tick++) {
+      jitterTick(transform, entropy, 8);
+      hashes.push(snap.hash());              // hash every tick
+    }
+    return hashes;
+  }
+  const a = run(0xABCD);
+  const b = run(0xABCD);
+  assert.deepEqual(a, b, 'same seed must produce an identical per-tick hash sequence');
+  const c = run(0x1234);
+  assert.notDeepEqual(c, a, 'a different seed must diverge the hash sequence');
+});
+
+test('world snapshotState: serialize -> restore -> re-serialize is byte-identical', () => {
+  const a = makeTestWorld(0xBEEF);
+  for (let t = 0; t < 5; t++) jitterTick(a.transform, a.entropy, 8);
+  const bytesA = a.w.snapshotState().serialize().slice();
+
+  // A different world (different seed + state); restore overwrites it.
+  const b = makeTestWorld(0x9999);
+  const bSnap = b.w.snapshotState();
+  bSnap.restore(bytesA);
+  const bytesB = bSnap.serialize().slice();
+
+  assert.deepEqual(Array.from(bytesB), Array.from(bytesA));
 });

@@ -356,6 +356,19 @@ export interface ISnapshotable {
   restoreFrom(r: SnapshotReader): void;
 }
 
+// Duck-type guard for ISnapshotable. The World holds pools and
+// resources as opaque values; this is how snapshotState() discovers
+// which of them can take part in a snapshot.
+export function isSnapshotable(x: unknown): x is ISnapshotable {
+  if (typeof x !== 'object' || x === null) return false;
+  const s = x as Partial<ISnapshotable>;
+  return (
+    typeof s.snapshotKey === 'string'
+    && typeof s.snapshotInto === 'function'
+    && typeof s.restoreFrom === 'function'
+  );
+}
+
 // Registers an ordered set of ISnapshotable parts and serializes them
 // into a single canonical frame that can be hashed (per-tick
 // determinism fingerprint) or restored (rewind / replay).

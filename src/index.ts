@@ -127,6 +127,7 @@ export {
   SnapshotReader,
   StateSnapshot,
   fnv1a32,
+  isSnapshotable,
   STATE_SNAPSHOT_VERSION,
 } from './runtime/state-snapshot.js';
 export type { ISnapshotable } from './runtime/state-snapshot.js';
