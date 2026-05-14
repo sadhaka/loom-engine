@@ -1,8 +1,9 @@
 import { type EntityId } from '../entity.js';
 import type { SpriteSheetManifest } from '../asset/sprite-sheet-loader.js';
+import type { ISnapshotable, SnapshotWriter, SnapshotReader } from '../runtime/state-snapshot.js';
 export declare const ANIMATION_FLAG_ACTIVE: number;
 export declare const ANIMATION_FLAG_FINISHED: number;
-export declare class AnimationStatePool {
+export declare class AnimationStatePool implements ISnapshotable {
     elapsedMs: Float32Array;
     manifest: Array<SpriteSheetManifest | null>;
     clipName: string[];
@@ -21,5 +22,9 @@ export declare class AnimationStatePool {
     getManifest(e: EntityId): SpriteSheetManifest | null;
     getHighWaterMark(): number;
     getCapacity(): number;
+    tighten(): void;
+    readonly snapshotKey: string;
+    snapshotInto(w: SnapshotWriter): void;
+    restoreFrom(r: SnapshotReader): void;
 }
 //# sourceMappingURL=animation-state-pool.d.ts.map

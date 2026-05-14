@@ -1,4 +1,5 @@
 import { type EntityId } from '../entity.js';
+import type { ISnapshotable, SnapshotWriter, SnapshotReader } from '../runtime/state-snapshot.js';
 export declare const INTERACTABLE_FLAG_ACTIVE: number;
 export type InteractableKind = 'npc' | 'portal' | 'lore' | 'item';
 export interface InteractableConfig {
@@ -7,7 +8,7 @@ export interface InteractableConfig {
     payload: string;
     radius: number;
 }
-export declare class InteractablePool {
+export declare class InteractablePool implements ISnapshotable {
     radius: Float32Array;
     kind: InteractableKind[];
     prompt: string[];
@@ -25,6 +26,10 @@ export declare class InteractablePool {
     getPayload(e: EntityId): string;
     getHighWaterMark(): number;
     getCapacity(): number;
+    tighten(): void;
+    readonly snapshotKey: string;
+    snapshotInto(w: SnapshotWriter): void;
+    restoreFrom(r: SnapshotReader): void;
 }
 export declare const POOL_INTERACTABLE = "interactable";
 //# sourceMappingURL=interactable.d.ts.map

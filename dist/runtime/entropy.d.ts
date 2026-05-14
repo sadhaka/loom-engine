@@ -1,3 +1,4 @@
+import type { ISnapshotable, SnapshotWriter, SnapshotReader } from './state-snapshot.js';
 export declare const RESOURCE_ENTROPY = "loom.entropy";
 export declare const DEFAULT_ENTROPY_SEED = 2654435769;
 export interface IEntropy {
@@ -8,7 +9,7 @@ export interface IEntropy {
     setState(s: number): void;
     reseed(seed: number): void;
 }
-export declare class Entropy implements IEntropy {
+export declare class Entropy implements IEntropy, ISnapshotable {
     private state;
     constructor(seed?: number);
     random(): number;
@@ -17,6 +18,9 @@ export declare class Entropy implements IEntropy {
     getState(): number;
     setState(s: number): void;
     reseed(seed: number): void;
+    readonly snapshotKey: string;
+    snapshotInto(w: SnapshotWriter): void;
+    restoreFrom(r: SnapshotReader): void;
 }
 export declare function createEntropy(seed?: number): Entropy;
 //# sourceMappingURL=entropy.d.ts.map

@@ -21,6 +21,8 @@ export { EngineClock, RESOURCE_ENGINE_CLOCK } from './runtime/engine-clock.js';
 export type { EngineClockOptions } from './runtime/engine-clock.js';
 export { serializeWorldSnapshot, deserializeWorldSnapshot, SNAPSHOT_SCHEMA_VERSION, RESOURCE_WORLD_SNAPSHOT, } from './runtime/world-snapshot.js';
 export type { IPersistableResource, WorldSnapshot, } from './runtime/world-snapshot.js';
+export { SnapshotWriter, SnapshotReader, StateSnapshot, fnv1a32, isSnapshotable, STATE_SNAPSHOT_VERSION, } from './runtime/state-snapshot.js';
+export type { ISnapshotable } from './runtime/state-snapshot.js';
 export { CameraController, RESOURCE_CAMERA_CONTROLLER, } from './renderer/camera-controller.js';
 export type { CameraControllerOptions } from './renderer/camera-controller.js';
 export { EventBus, RESOURCE_EVENT_BUS } from './runtime/event-bus.js';

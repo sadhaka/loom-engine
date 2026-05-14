@@ -114,6 +114,15 @@ export class Entropy {
     reseed(seed) {
         this.state = mulberry32Seed(seed);
     }
+    // --- ISnapshotable: the RNG state is a single u32 and it is the
+    // whole story - same state + same call sequence => same stream. ---
+    snapshotKey = 'loom.entropy';
+    snapshotInto(w) {
+        w.writeU32(this.getState());
+    }
+    restoreFrom(r) {
+        this.setState(r.readU32());
+    }
 }
 // Factory helper - shorter than `new Entropy(seed)` at call sites.
 export function createEntropy(seed = DEFAULT_ENTROPY_SEED) {

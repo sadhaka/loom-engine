@@ -8,7 +8,7 @@
 // TransformPool's structure-of-arrays layout. Atlas + frame are
 // tightly packed. Tint is split into rgba arrays so iteration
 // stays cache-friendly.
-import { growF32, growI32, growU8, nextPow2 } from '../util/typed-arrays.js';
+import { growF32, growI32, growU8, nextPow2, tightenHighWaterMark } from '../util/typed-arrays.js';
 import { entityIndex } from '../entity.js';
 export const SPRITE_FLAG_ACTIVE = 1 << 0;
 export const SPRITE_FLAG_TINTED = 1 << 1;
@@ -117,6 +117,37 @@ export class SpritePool {
     }
     getCapacity() {
         return this.capacity;
+    }
+    // Lower highWaterMark past trailing detached slots. SPRITE_FLAG_-
+    // ACTIVE is set by attach and cleared only by detach, so a zero
+    // flags byte marks a free slot.
+    tighten() {
+        this.highWaterMark = tightenHighWaterMark(this.flags, this.highWaterMark);
+    }
+    // --- ISnapshotable: canonical SoA columns [0, highWaterMark). ---
+    snapshotKey = 'loom.sprite-pool';
+    snapshotInto(w) {
+        const n = this.highWaterMark;
+        w.writeU32(n);
+        w.writeI32Slice(this.atlas, n);
+        w.writeI32Slice(this.frame, n);
+        w.writeF32Slice(this.tintR, n);
+        w.writeF32Slice(this.tintG, n);
+        w.writeF32Slice(this.tintB, n);
+        w.writeF32Slice(this.tintA, n);
+        w.writeU8Slice(this.flags, n);
+    }
+    restoreFrom(r) {
+        const n = r.readU32();
+        this.atlas = r.readI32Slice();
+        this.frame = r.readI32Slice();
+        this.tintR = r.readF32Slice();
+        this.tintG = r.readF32Slice();
+        this.tintB = r.readF32Slice();
+        this.tintA = r.readF32Slice();
+        this.flags = r.readU8Slice();
+        this.capacity = n;
+        this.highWaterMark = n;
     }
 }
 //# sourceMappingURL=sprite.js.map

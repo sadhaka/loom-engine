@@ -4,6 +4,7 @@ export declare class ComponentSignature {
     private masks;
     private cap;
     private versionValue;
+    private hwm;
     constructor(initialCapacity?: number);
     ensureCapacity(idx: number): void;
     setBit(entityIdx: number, bit: number): void;
@@ -15,6 +16,7 @@ export declare class ComponentSignature {
     version(): number;
     collectMatching(mask: number): Int32Array;
     capacity(): number;
+    highWaterMark(): number;
 }
 export declare const RESOURCE_COMPONENT_SIGNATURE = "loom.component_signature";
 //# sourceMappingURL=component-signature.d.ts.map

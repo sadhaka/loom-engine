@@ -12,8 +12,8 @@
 import { POOL_TRANSFORM } from '../world.js';
 import { POOL_PURSUE, PURSUE_FLAG_ACTIVE } from '../components/pursue.js';
 import { POOL_HEALTH } from '../components/health.js';
-import { makeEntity } from '../entity.js';
 import { RESOURCE_TIME } from '../resources.js';
+import { entityIndex, NULL_ENTITY } from '../entity.js';
 export class PursueSystem {
     name = 'pursue';
     update(world, dt) {
@@ -33,23 +33,31 @@ export class PursueSystem {
                 continue;
             // Skip dead pursuers.
             if (health) {
-                const e = makeEntity(i, 0);
+                const e = world.entityAt(i);
                 if (health.isDead(e)) {
                     pursuit.flags[i] = 0;
                     continue;
                 }
             }
-            const targetIdx = pursuit.targetIndex[i] ?? -1;
-            if (targetIdx < 0)
+            const target = pursuit.targetEntity[i] ?? NULL_ENTITY;
+            if (target === NULL_ENTITY)
                 continue;
-            // If the target is dead, stop pursuing.
-            if (health && health.isDead(makeEntity(targetIdx, 0))) {
+            // Stop pursuing if the target is no longer the entity we
+            // locked onto - destroyed, or its slot recycled into a fresh
+            // tenant (the stored handle's generation no longer matches).
+            // A raw-index targetIndex silently followed the slot onto
+            // whatever new entity took it; the generation check does not.
+            if (!world.entities.isAlive(target))
                 continue;
-            }
+            // Also stop on a target that is dead in gameplay terms - a
+            // lethal hit landed but DamageSystem has not swept it yet.
+            if (health && health.isDead(target))
+                continue;
+            const ti = entityIndex(target);
             const myX = transforms.x[i] ?? 0;
             const myY = transforms.y[i] ?? 0;
-            const tx = transforms.x[targetIdx] ?? 0;
-            const ty = transforms.y[targetIdx] ?? 0;
+            const tx = transforms.x[ti] ?? 0;
+            const ty = transforms.y[ti] ?? 0;
             const dx = tx - myX;
             const dy = ty - myY;
             const dist = Math.sqrt(dx * dx + dy * dy);
@@ -63,7 +71,7 @@ export class PursueSystem {
                 // Don't overshoot.
                 const moveX = step >= dist ? dx : nx * step;
                 const moveY = step >= dist ? dy : ny * step;
-                const e = makeEntity(i, 0);
+                const e = world.entityAt(i);
                 transforms.setPosition(e, myX + moveX, myY + moveY, transforms.z[i] ?? 0);
             }
             else {
@@ -73,7 +81,6 @@ export class PursueSystem {
                     const lastHit = pursuit.lastHitMs[i] ?? -1;
                     const cooldown = pursuit.contactCooldownMs[i] ?? 1000;
                     if (lastHit < 0 || now - lastHit >= cooldown) {
-                        const target = makeEntity(targetIdx, 0);
                         const applied = health.applyDamage(target, damage, now);
                         if (applied > 0) {
                             pursuit.lastHitMs[i] = now;

@@ -15,8 +15,8 @@ import { POOL_TRANSFORM } from '../world.js';
 import { POOL_RANGED, RANGED_FLAG_ACTIVE, RANGED_FLAG_HOMING, } from '../components/ranged-attack.js';
 import { POOL_PROJECTILE } from '../vfx/projectile-pool.js';
 import { POOL_HEALTH } from '../components/health.js';
-import { makeEntity } from '../entity.js';
 import { RESOURCE_TIME } from '../resources.js';
+import { entityIndex, NULL_ENTITY } from '../entity.js';
 export class RangedAttackSystem {
     name = 'ranged-attack';
     update(world, _dt) {
@@ -37,16 +37,22 @@ export class RangedAttackSystem {
             const f = ranged.flags[i] ?? 0;
             if ((f & RANGED_FLAG_ACTIVE) === 0)
                 continue;
-            // Skip dead firers.
-            const firer = makeEntity(i, 0);
+            // Skip dead firers. entityAt(i) is the canonical handle for
+            // the slot - makeEntity(i, 0) would go stale once the slot is
+            // recycled.
+            const firer = world.entityAt(i);
             if (!health.isAlive(firer)) {
                 ranged.flags[i] = 0;
                 continue;
             }
-            const targetIdx = ranged.targetIndex[i] ?? -1;
-            if (targetIdx < 0)
+            const target = ranged.targetEntity[i] ?? NULL_ENTITY;
+            if (target === NULL_ENTITY)
                 continue;
-            const target = makeEntity(targetIdx, 0);
+            // Validate the stored handle's generation - if the target
+            // died and its slot was recycled, skip rather than fire at
+            // whatever new entity now holds the slot.
+            if (!world.entities.isAlive(target))
+                continue;
             if (!health.isAlive(target))
                 continue;
             // Cooldown gate.
@@ -55,10 +61,11 @@ export class RangedAttackSystem {
             if (lastFire >= 0 && now - lastFire < cooldown)
                 continue;
             // Range check.
+            const ti = entityIndex(target);
             const myX = transforms.x[i] ?? 0;
             const myY = transforms.y[i] ?? 0;
-            const tx = transforms.x[targetIdx] ?? 0;
-            const ty = transforms.y[targetIdx] ?? 0;
+            const tx = transforms.x[ti] ?? 0;
+            const ty = transforms.y[ti] ?? 0;
             const dx = tx - myX;
             const dy = ty - myY;
             const dist = Math.sqrt(dx * dx + dy * dy);
@@ -72,27 +79,8 @@ export class RangedAttackSystem {
             const vx = dx * norm * speed;
             const vy = dy * norm * speed;
             const homing = (f & RANGED_FLAG_HOMING) !== 0;
-            const slot = projectiles.spawn({
-                x: myX,
-                y: myY,
-                z: transforms.z[i] ?? 0.5,
-                vx,
-                vy,
-                vz: 0,
-                life: ranged.projectileLife[i] ?? 2.0,
-                damage: ranged.damage[i] ?? 1,
-                ownerIndex: i,
-                targetIndex: homing ? targetIdx : -1,
-                size: ranged.projectileSize[i] ?? 5,
-                color: {
-                    r: ranged.r[i] ?? 1,
-                    g: ranged.g[i] ?? 1,
-                    b: ranged.b[i] ?? 1,
-                    a: ranged.a[i] ?? 1,
-                },
-                homing,
-                pierce: false,
-            });
+            // spawnRaw - no per-shot spawn object or nested color alloc.
+            const slot = projectiles.spawnRaw(myX, myY, transforms.z[i] ?? 0.5, vx, vy, 0, ranged.projectileLife[i] ?? 2.0, ranged.damage[i] ?? 1, firer, homing ? target : NULL_ENTITY, ranged.projectileSize[i] ?? 5, ranged.r[i] ?? 1, ranged.g[i] ?? 1, ranged.b[i] ?? 1, ranged.a[i] ?? 1, homing, false);
             if (slot >= 0) {
                 ranged.lastFireMs[i] = now;
             }

@@ -4,4 +4,5 @@ export declare function growI32(src: Int32Array, newCapacity: number): Int32Arra
 export declare function growU32(src: Uint32Array, newCapacity: number): Uint32Array;
 export declare function growU8(src: Uint8Array, newCapacity: number): Uint8Array;
 export declare function fillF32(arr: Float32Array, value: number, start?: number, end?: number): void;
+export declare function tightenHighWaterMark(flags: Uint8Array, highWaterMark: number): number;
 //# sourceMappingURL=typed-arrays.d.ts.map

@@ -5,8 +5,8 @@
 // component handles closing the gap; ranged-only mobs may run
 // without Pursue and stay rooted (e.g. summoners). RangedAttackSystem
 // reads this each tick.
-import { entityIndex } from '../entity.js';
-import { growF32, growI32, growU8, nextPow2 } from '../util/typed-arrays.js';
+import { entityIndex, NULL_ENTITY } from '../entity.js';
+import { growF32, growU8, nextPow2, tightenHighWaterMark } from '../util/typed-arrays.js';
 export const RANGED_FLAG_ACTIVE = 1 << 0;
 export const RANGED_FLAG_HOMING = 1 << 1;
 export class RangedAttackPool {
@@ -24,8 +24,8 @@ export class RangedAttackPool {
     g;
     b;
     a;
-    // Target entity index. -1 = no target.
-    targetIndex;
+    // Full EntityId of target. NULL_ENTITY = no target.
+    targetEntity;
     flags;
     capacity = 0;
     highWaterMark = 0;
@@ -43,7 +43,7 @@ export class RangedAttackPool {
         this.g = new Float32Array(this.capacity);
         this.b = new Float32Array(this.capacity);
         this.a = new Float32Array(this.capacity);
-        this.targetIndex = new Int32Array(this.capacity).fill(-1);
+        this.targetEntity = new Uint32Array(this.capacity);
         this.flags = new Uint8Array(this.capacity);
     }
     ensureCapacity(neededIndex) {
@@ -62,14 +62,11 @@ export class RangedAttackPool {
         this.g = growF32(this.g, next);
         this.b = growF32(this.b, next);
         this.a = growF32(this.a, next);
-        const newTarget = new Int32Array(next).fill(-1);
-        newTarget.set(this.targetIndex);
-        this.targetIndex = newTarget;
+        const newTarget = new Uint32Array(next);
+        newTarget.set(this.targetEntity);
+        this.targetEntity = newTarget;
         this.flags = growU8(this.flags, next);
         this.capacity = next;
-        // Mark unused growF32 import as used (TypeScript noUnusedImports).
-        if (this.range.length === 0)
-            growI32(this.targetIndex, 0);
     }
     attach(e, cfg) {
         const i = entityIndex(e);
@@ -86,7 +83,7 @@ export class RangedAttackPool {
         this.g[i] = cfg.projectileColor.g;
         this.b[i] = cfg.projectileColor.b;
         this.a[i] = cfg.projectileColor.a;
-        this.targetIndex[i] = entityIndex(cfg.target);
+        this.targetEntity[i] = cfg.target;
         let f = RANGED_FLAG_ACTIVE;
         if (cfg.homing)
             f |= RANGED_FLAG_HOMING;
@@ -99,13 +96,13 @@ export class RangedAttackPool {
         if (i >= this.capacity)
             return;
         this.flags[i] = 0;
-        this.targetIndex[i] = -1;
+        this.targetEntity[i] = NULL_ENTITY;
     }
     setTarget(e, target) {
         const i = entityIndex(e);
         if (i >= this.capacity)
             return;
-        this.targetIndex[i] = entityIndex(target);
+        this.targetEntity[i] = target;
     }
     isActive(e) {
         const i = entityIndex(e);
@@ -115,6 +112,51 @@ export class RangedAttackPool {
     }
     getHighWaterMark() { return this.highWaterMark; }
     getCapacity() { return this.capacity; }
+    // Lower highWaterMark past trailing detached slots. RangedAttack-
+    // System and detach both zero the flags byte, so a zero flags byte
+    // marks a slot that no longer fires.
+    tighten() {
+        this.highWaterMark = tightenHighWaterMark(this.flags, this.highWaterMark);
+    }
+    // --- ISnapshotable: canonical SoA columns [0, highWaterMark). ---
+    snapshotKey = 'loom.ranged-attack-pool';
+    snapshotInto(w) {
+        const n = this.highWaterMark;
+        w.writeU32(n);
+        w.writeF32Slice(this.range, n);
+        w.writeF32Slice(this.minRange, n);
+        w.writeF32Slice(this.cooldownMs, n);
+        w.writeF32Slice(this.lastFireMs, n);
+        w.writeF32Slice(this.damage, n);
+        w.writeF32Slice(this.projectileSpeed, n);
+        w.writeF32Slice(this.projectileLife, n);
+        w.writeF32Slice(this.projectileSize, n);
+        w.writeF32Slice(this.r, n);
+        w.writeF32Slice(this.g, n);
+        w.writeF32Slice(this.b, n);
+        w.writeF32Slice(this.a, n);
+        w.writeU32Slice(this.targetEntity, n);
+        w.writeU8Slice(this.flags, n);
+    }
+    restoreFrom(r) {
+        const n = r.readU32();
+        this.range = r.readF32Slice();
+        this.minRange = r.readF32Slice();
+        this.cooldownMs = r.readF32Slice();
+        this.lastFireMs = r.readF32Slice();
+        this.damage = r.readF32Slice();
+        this.projectileSpeed = r.readF32Slice();
+        this.projectileLife = r.readF32Slice();
+        this.projectileSize = r.readF32Slice();
+        this.r = r.readF32Slice();
+        this.g = r.readF32Slice();
+        this.b = r.readF32Slice();
+        this.a = r.readF32Slice();
+        this.targetEntity = r.readU32Slice();
+        this.flags = r.readU8Slice();
+        this.capacity = n;
+        this.highWaterMark = n;
+    }
 }
 export const POOL_RANGED = 'ranged';
 //# sourceMappingURL=ranged-attack.js.map

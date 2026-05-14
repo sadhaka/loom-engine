@@ -47,6 +47,10 @@ export class ComponentSignature {
     // invalidate cheaply. Wraps around naturally at 2^32; consumers
     // compare for equality, not ordering, so wraparound is safe.
     versionValue = 0;
+    // Highest entity index ever touched by setBit, + 1. collectMatching
+    // scans [0, hwm) instead of [0, cap): cap is pow-2-rounded dead
+    // address space, the high-water mark is the real extent.
+    hwm = 0;
     constructor(initialCapacity = 64) {
         this.cap = nextPow2(initialCapacity);
         this.masks = new Uint32Array(this.cap);
@@ -69,6 +73,8 @@ export class ComponentSignature {
             throw new Error('ComponentSignature.setBit: bit ' + bit + ' out of range [0, 31]');
         }
         this.ensureCapacity(entityIdx);
+        if (entityIdx >= this.hwm)
+            this.hwm = entityIdx + 1;
         var prev = this.masks[entityIdx] ?? 0;
         var bitMask = (1 << bit) >>> 0;
         var next = (prev | bitMask) >>> 0;
@@ -138,24 +144,36 @@ export class ComponentSignature {
     collectMatching(mask) {
         if (mask === 0)
             return new Int32Array(0);
-        // Scan; copy matching indices into a growable buffer.
-        var matches = [];
         var m = mask >>> 0;
-        for (var i = 0; i < this.cap; i++) {
-            var v = this.masks[i] ?? 0;
-            if ((v & m) === m) {
-                matches.push(i);
-            }
+        var hwm = this.hwm;
+        var i = 0;
+        // First pass: count matches over the real extent [0, hwm), not
+        // the pow-2-rounded capacity. No intermediate allocation - the
+        // old growable number[] + copy is gone.
+        var count = 0;
+        for (i = 0; i < hwm; i++) {
+            if (((this.masks[i] ?? 0) & m) === m)
+                count++;
         }
-        var out = new Int32Array(matches.length);
-        for (var j = 0; j < matches.length; j++) {
-            out[j] = matches[j] ?? 0;
+        // Second pass: fill the exact-size result. The result Int32Array
+        // is the only allocation, and it is unavoidable - QueryCache
+        // memoizes it by reference.
+        var out = new Int32Array(count);
+        var w = 0;
+        for (i = 0; i < hwm; i++) {
+            if (((this.masks[i] ?? 0) & m) === m)
+                out[w++] = i;
         }
         return out;
     }
     // For tests / introspection.
     capacity() {
         return this.cap;
+    }
+    // Highest entity index ever touched + 1 - the extent collectMatching
+    // actually scans. For tests / introspection.
+    highWaterMark() {
+        return this.hwm;
     }
 }
 // Local pow-2 helper - avoids depending on util/typed-arrays so this

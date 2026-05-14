@@ -8,7 +8,8 @@
 // Projectiles are NOT ECS entities. Same reasoning as ParticlePool
 // (Phase 4): ephemeral, fast-spawning, would burn entity-id space.
 // Free-list slot recycling. Hard cap configurable per scene.
-import { growF32, growU8, nextPow2 } from '../util/typed-arrays.js';
+import { growF32, growU8, nextPow2, tightenHighWaterMark } from '../util/typed-arrays.js';
+import { NULL_ENTITY } from '../entity.js';
 export const PROJECTILE_FLAG_ALIVE = 1 << 0;
 // Homing: each tick, projectile re-aims at target's position.
 // Without this flag, projectile flies a straight line.
@@ -26,8 +27,8 @@ export class ProjectilePool {
     vz;
     life;
     damage;
-    ownerIndex;
-    targetIndex; // -1 if not homing
+    ownerEntity;
+    targetEntity; // NULL_ENTITY if not homing
     size;
     // Color rgba split.
     r;
@@ -51,8 +52,8 @@ export class ProjectilePool {
         this.vz = new Float32Array(this.capacity);
         this.life = new Float32Array(this.capacity);
         this.damage = new Float32Array(this.capacity);
-        this.ownerIndex = new Int32Array(this.capacity).fill(-1);
-        this.targetIndex = new Int32Array(this.capacity).fill(-1);
+        this.ownerEntity = new Uint32Array(this.capacity);
+        this.targetEntity = new Uint32Array(this.capacity);
         this.size = new Float32Array(this.capacity);
         this.r = new Float32Array(this.capacity);
         this.g = new Float32Array(this.capacity);
@@ -81,12 +82,12 @@ export class ProjectilePool {
         this.vz = growF32(this.vz, next);
         this.life = growF32(this.life, next);
         this.damage = growF32(this.damage, next);
-        const newOwner = new Int32Array(next).fill(-1);
-        newOwner.set(this.ownerIndex);
-        this.ownerIndex = newOwner;
-        const newTarget = new Int32Array(next).fill(-1);
-        newTarget.set(this.targetIndex);
-        this.targetIndex = newTarget;
+        const newOwner = new Uint32Array(next);
+        newOwner.set(this.ownerEntity);
+        this.ownerEntity = newOwner;
+        const newTarget = new Uint32Array(next);
+        newTarget.set(this.targetEntity);
+        this.targetEntity = newTarget;
         this.size = growF32(this.size, next);
         this.r = growF32(this.r, next);
         this.g = growF32(this.g, next);
@@ -95,7 +96,11 @@ export class ProjectilePool {
         this.flags = growU8(this.flags, next);
         this.capacity = next;
     }
-    spawn(p) {
+    // Zero-allocation spawn. Writes every column from positional
+    // scalars, so a per-shot caller can spawn without building a
+    // ProjectileSpawn object + nested color object. Returns the slot
+    // index, or -1 if the maxProjectiles budget is exhausted.
+    spawnRaw(x, y, z, vx, vy, vz, life, damage, ownerEntity, targetEntity, size, r, g, b, a, homing, pierce) {
         if (this.liveCount >= this.maxProjectiles)
             return -1;
         let i;
@@ -108,29 +113,35 @@ export class ProjectilePool {
             this.highWaterMark++;
             this.ensureCapacity(i);
         }
-        this.x[i] = p.x;
-        this.y[i] = p.y;
-        this.z[i] = p.z;
-        this.vx[i] = p.vx;
-        this.vy[i] = p.vy;
-        this.vz[i] = p.vz;
-        this.life[i] = p.life;
-        this.damage[i] = p.damage;
-        this.ownerIndex[i] = p.ownerIndex;
-        this.targetIndex[i] = p.targetIndex ?? -1;
-        this.size[i] = p.size;
-        this.r[i] = p.color.r;
-        this.g[i] = p.color.g;
-        this.b[i] = p.color.b;
-        this.a[i] = p.color.a;
+        this.x[i] = x;
+        this.y[i] = y;
+        this.z[i] = z;
+        this.vx[i] = vx;
+        this.vy[i] = vy;
+        this.vz[i] = vz;
+        this.life[i] = life;
+        this.damage[i] = damage;
+        this.ownerEntity[i] = ownerEntity;
+        this.targetEntity[i] = targetEntity;
+        this.size[i] = size;
+        this.r[i] = r;
+        this.g[i] = g;
+        this.b[i] = b;
+        this.a[i] = a;
         let f = PROJECTILE_FLAG_ALIVE;
-        if (p.homing)
+        if (homing)
             f |= PROJECTILE_FLAG_HOMING;
-        if (p.pierce)
+        if (pierce)
             f |= PROJECTILE_FLAG_PIERCE;
         this.flags[i] = f;
         this.liveCount++;
         return i;
+    }
+    // Object-form spawn. Convenience wrapper over spawnRaw; defaults
+    // targetEntity to NULL_ENTITY and homing/pierce to false. Hot
+    // callers should use spawnRaw directly.
+    spawn(p) {
+        return this.spawnRaw(p.x, p.y, p.z, p.vx, p.vy, p.vz, p.life, p.damage, p.ownerEntity, p.targetEntity ?? NULL_ENTITY, p.size, p.color.r, p.color.g, p.color.b, p.color.a, p.homing ?? false, p.pierce ?? false);
     }
     kill(i) {
         if (i < 0 || i >= this.highWaterMark)
@@ -151,6 +162,79 @@ export class ProjectilePool {
         this.freeList.length = 0;
         this.liveCount = 0;
         this.highWaterMark = 0;
+    }
+    // Lower highWaterMark past trailing dead projectiles, and drop
+    // free-list slots that fall above the new mark - those slots no
+    // longer exist in the iteration range, so spawn must not hand them
+    // back. liveCount is unchanged: those slots were already killed.
+    tighten() {
+        this.highWaterMark = tightenHighWaterMark(this.flags, this.highWaterMark);
+        const hwm = this.highWaterMark;
+        let w = 0;
+        for (let r = 0; r < this.freeList.length; r++) {
+            const slot = this.freeList[r] ?? 0;
+            if (slot < hwm)
+                this.freeList[w++] = slot;
+        }
+        this.freeList.length = w;
+    }
+    // --- ISnapshotable: SoA columns [0, highWaterMark) plus the
+    // free-list / live-count bookkeeping. Projectiles are not
+    // entities, so the pool owns its full index-space state. ---
+    snapshotKey = 'loom.projectile-pool';
+    snapshotInto(w) {
+        const n = this.highWaterMark;
+        w.writeU32(n);
+        w.writeU32(this.liveCount);
+        w.writeU32(this.maxProjectiles);
+        w.writeF32Slice(this.x, n);
+        w.writeF32Slice(this.y, n);
+        w.writeF32Slice(this.z, n);
+        w.writeF32Slice(this.vx, n);
+        w.writeF32Slice(this.vy, n);
+        w.writeF32Slice(this.vz, n);
+        w.writeF32Slice(this.life, n);
+        w.writeF32Slice(this.damage, n);
+        w.writeU32Slice(this.ownerEntity, n);
+        w.writeU32Slice(this.targetEntity, n);
+        w.writeF32Slice(this.size, n);
+        w.writeF32Slice(this.r, n);
+        w.writeF32Slice(this.g, n);
+        w.writeF32Slice(this.b, n);
+        w.writeF32Slice(this.a, n);
+        w.writeU8Slice(this.flags, n);
+        w.writeU32(this.freeList.length);
+        for (let i = 0; i < this.freeList.length; i++) {
+            w.writeU32(this.freeList[i] ?? 0);
+        }
+    }
+    restoreFrom(r) {
+        const n = r.readU32();
+        this.liveCount = r.readU32();
+        this.maxProjectiles = r.readU32();
+        this.x = r.readF32Slice();
+        this.y = r.readF32Slice();
+        this.z = r.readF32Slice();
+        this.vx = r.readF32Slice();
+        this.vy = r.readF32Slice();
+        this.vz = r.readF32Slice();
+        this.life = r.readF32Slice();
+        this.damage = r.readF32Slice();
+        this.ownerEntity = r.readU32Slice();
+        this.targetEntity = r.readU32Slice();
+        this.size = r.readF32Slice();
+        this.r = r.readF32Slice();
+        this.g = r.readF32Slice();
+        this.b = r.readF32Slice();
+        this.a = r.readF32Slice();
+        this.flags = r.readU8Slice();
+        this.capacity = n;
+        this.highWaterMark = n;
+        const fc = r.readU32();
+        const free = [];
+        for (let i = 0; i < fc; i++)
+            free.push(r.readU32());
+        this.freeList = free;
     }
 }
 export const POOL_PROJECTILE = 'projectile';

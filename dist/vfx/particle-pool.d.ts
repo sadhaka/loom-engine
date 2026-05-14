@@ -1,4 +1,5 @@
 import type { ColorRGBA } from '../util/color.js';
+import type { ISnapshotable, SnapshotWriter, SnapshotReader } from '../runtime/state-snapshot.js';
 export declare const PARTICLE_FLAG_ALIVE: number;
 export declare const PARTICLE_FLAG_ADDITIVE: number;
 export interface ParticleSpawn {
@@ -18,7 +19,7 @@ export interface ParticleSpawn {
     endColor?: Readonly<ColorRGBA>;
     additive?: boolean;
 }
-export declare class ParticlePool {
+export declare class ParticlePool implements ISnapshotable {
     x: Float32Array;
     y: Float32Array;
     z: Float32Array;
@@ -53,9 +54,14 @@ export declare class ParticlePool {
     getHighWaterMark(): number;
     getCapacity(): number;
     private ensureCapacity;
+    spawnRaw(x: number, y: number, z: number, vx: number, vy: number, vz: number, ax: number, ay: number, az: number, life: number, size: number, endSize: number, r0: number, g0: number, b0: number, a0: number, r1: number, g1: number, b1: number, a1: number, additive: boolean): number;
     spawn(p: ParticleSpawn): number;
     kill(i: number): void;
     isAlive(i: number): boolean;
     clear(): void;
+    tighten(): void;
+    readonly snapshotKey: string;
+    snapshotInto(w: SnapshotWriter): void;
+    restoreFrom(r: SnapshotReader): void;
 }
 //# sourceMappingURL=particle-pool.d.ts.map

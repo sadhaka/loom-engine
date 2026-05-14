@@ -1,4 +1,6 @@
 import type { ColorRGBA } from '../util/color.js';
+import { type EntityId } from '../entity.js';
+import type { ISnapshotable, SnapshotWriter, SnapshotReader } from '../runtime/state-snapshot.js';
 export declare const PROJECTILE_FLAG_ALIVE: number;
 export declare const PROJECTILE_FLAG_HOMING: number;
 export declare const PROJECTILE_FLAG_PIERCE: number;
@@ -11,14 +13,14 @@ export interface ProjectileSpawn {
     vz: number;
     life: number;
     damage: number;
-    ownerIndex: number;
-    targetIndex?: number;
+    ownerEntity: EntityId;
+    targetEntity?: EntityId;
     size: number;
     color: Readonly<ColorRGBA>;
     homing?: boolean;
     pierce?: boolean;
 }
-export declare class ProjectilePool {
+export declare class ProjectilePool implements ISnapshotable {
     x: Float32Array;
     y: Float32Array;
     z: Float32Array;
@@ -27,8 +29,8 @@ export declare class ProjectilePool {
     vz: Float32Array;
     life: Float32Array;
     damage: Float32Array;
-    ownerIndex: Int32Array;
-    targetIndex: Int32Array;
+    ownerEntity: Uint32Array;
+    targetEntity: Uint32Array;
     size: Float32Array;
     r: Float32Array;
     g: Float32Array;
@@ -47,10 +49,15 @@ export declare class ProjectilePool {
     getHighWaterMark(): number;
     getCapacity(): number;
     private ensureCapacity;
+    spawnRaw(x: number, y: number, z: number, vx: number, vy: number, vz: number, life: number, damage: number, ownerEntity: EntityId, targetEntity: EntityId, size: number, r: number, g: number, b: number, a: number, homing: boolean, pierce: boolean): number;
     spawn(p: ProjectileSpawn): number;
     kill(i: number): void;
     isAlive(i: number): boolean;
     clear(): void;
+    tighten(): void;
+    readonly snapshotKey: string;
+    snapshotInto(w: SnapshotWriter): void;
+    restoreFrom(r: SnapshotReader): void;
 }
 export declare const POOL_PROJECTILE = "projectile";
 //# sourceMappingURL=projectile-pool.d.ts.map

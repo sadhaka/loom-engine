@@ -1,7 +1,9 @@
 import { type EntityId } from '../entity.js';
 import type { ColorRGBA } from '../util/color.js';
+import type { ISnapshotable, SnapshotWriter, SnapshotReader } from '../runtime/state-snapshot.js';
 export declare const EMITTER_FLAG_ACTIVE: number;
 export declare const EMITTER_FLAG_ADDITIVE: number;
+export declare const EMITTER_FLAG_ATTACHED: number;
 export interface EmitterConfig {
     rate: number;
     particleLife: number;
@@ -20,7 +22,7 @@ export interface EmitterConfig {
     endColor: Readonly<ColorRGBA>;
     additive: boolean;
 }
-export declare class ParticleEmitterPool {
+export declare class ParticleEmitterPool implements ISnapshotable {
     rate: Float32Array;
     spawnCarry: Float32Array;
     burstRemaining: Int32Array;
@@ -58,5 +60,9 @@ export declare class ParticleEmitterPool {
     isAdditive(e: EntityId): boolean;
     getHighWaterMark(): number;
     getCapacity(): number;
+    tighten(): void;
+    readonly snapshotKey: string;
+    snapshotInto(w: SnapshotWriter): void;
+    restoreFrom(r: SnapshotReader): void;
 }
 //# sourceMappingURL=particle-emitter.d.ts.map

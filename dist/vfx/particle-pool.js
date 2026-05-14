@@ -13,7 +13,7 @@
 // color rgba in four parallel Float32Arrays; size in Float32Array;
 // flags in Uint8Array. Capacity grows by 2x; live count tracked
 // separately so iteration stays O(live) not O(capacity).
-import { growF32, growU8, nextPow2 } from '../util/typed-arrays.js';
+import { growF32, growU8, nextPow2, tightenHighWaterMark } from '../util/typed-arrays.js';
 export const PARTICLE_FLAG_ALIVE = 1 << 0;
 export const PARTICLE_FLAG_ADDITIVE = 1 << 1;
 export class ParticlePool {
@@ -124,10 +124,12 @@ export class ParticlePool {
         this.flags = growU8(this.flags, next);
         this.capacity = next;
     }
-    // Spawn a particle. Returns the slot index, or -1 if the budget
-    // (maxParticles) is exhausted. Callers that emit per-frame should
-    // check the return value to know if their burst was clipped.
-    spawn(p) {
+    // Zero-allocation spawn. Writes every column from positional
+    // scalars, so a hot emitter loop can spawn without building a
+    // ParticleSpawn object + nested color objects per particle.
+    // Returns the slot index, or -1 if the maxParticles budget is
+    // exhausted.
+    spawnRaw(x, y, z, vx, vy, vz, ax, ay, az, life, size, endSize, r0, g0, b0, a0, r1, g1, b1, a1, additive) {
         if (this.liveCount >= this.maxParticles)
             return -1;
         let i;
@@ -140,42 +142,42 @@ export class ParticlePool {
             this.highWaterMark++;
             this.ensureCapacity(i);
         }
-        this.x[i] = p.x;
-        this.y[i] = p.y;
-        this.z[i] = p.z;
-        this.vx[i] = p.vx ?? 0;
-        this.vy[i] = p.vy ?? 0;
-        this.vz[i] = p.vz ?? 0;
-        this.ax[i] = p.ax ?? 0;
-        this.ay[i] = p.ay ?? 0;
-        this.az[i] = p.az ?? 0;
-        this.life[i] = p.life;
-        this.maxLife[i] = p.life;
-        this.size[i] = p.size ?? 4;
-        this.endSize[i] = p.endSize ?? p.size ?? 4;
-        this.r0[i] = p.color.r;
-        this.g0[i] = p.color.g;
-        this.b0[i] = p.color.b;
-        this.a0[i] = p.color.a;
-        if (p.endColor) {
-            this.r1[i] = p.endColor.r;
-            this.g1[i] = p.endColor.g;
-            this.b1[i] = p.endColor.b;
-            this.a1[i] = p.endColor.a;
-        }
-        else {
-            // Default fade to fully transparent, same hue.
-            this.r1[i] = p.color.r;
-            this.g1[i] = p.color.g;
-            this.b1[i] = p.color.b;
-            this.a1[i] = 0;
-        }
-        let f = PARTICLE_FLAG_ALIVE;
-        if (p.additive)
-            f |= PARTICLE_FLAG_ADDITIVE;
-        this.flags[i] = f;
+        this.x[i] = x;
+        this.y[i] = y;
+        this.z[i] = z;
+        this.vx[i] = vx;
+        this.vy[i] = vy;
+        this.vz[i] = vz;
+        this.ax[i] = ax;
+        this.ay[i] = ay;
+        this.az[i] = az;
+        this.life[i] = life;
+        this.maxLife[i] = life;
+        this.size[i] = size;
+        this.endSize[i] = endSize;
+        this.r0[i] = r0;
+        this.g0[i] = g0;
+        this.b0[i] = b0;
+        this.a0[i] = a0;
+        this.r1[i] = r1;
+        this.g1[i] = g1;
+        this.b1[i] = b1;
+        this.a1[i] = a1;
+        this.flags[i] = additive
+            ? PARTICLE_FLAG_ALIVE | PARTICLE_FLAG_ADDITIVE
+            : PARTICLE_FLAG_ALIVE;
         this.liveCount++;
         return i;
+    }
+    // Object-form spawn. Convenience wrapper over spawnRaw for non-hot
+    // call sites; applies the ParticleSpawn defaults (vx/vy/vz/ax/ay/az
+    // default 0, size 4, endSize falls back to size, endColor falls
+    // back to the start color faded to alpha 0). Hot loops should call
+    // spawnRaw directly to avoid the per-spawn object + color allocs.
+    spawn(p) {
+        const size = p.size ?? 4;
+        const ec = p.endColor;
+        return this.spawnRaw(p.x, p.y, p.z, p.vx ?? 0, p.vy ?? 0, p.vz ?? 0, p.ax ?? 0, p.ay ?? 0, p.az ?? 0, p.life, size, p.endSize ?? size, p.color.r, p.color.g, p.color.b, p.color.a, ec ? ec.r : p.color.r, ec ? ec.g : p.color.g, ec ? ec.b : p.color.b, ec ? ec.a : 0, p.additive ?? false);
     }
     // Mark a particle dead and reclaim its slot for reuse.
     kill(i) {
@@ -199,6 +201,91 @@ export class ParticlePool {
         this.freeList.length = 0;
         this.liveCount = 0;
         this.highWaterMark = 0;
+    }
+    // Lower highWaterMark past trailing dead particles, and drop
+    // free-list slots that fall above the new mark - those slots no
+    // longer exist in the iteration range, so spawn must not hand them
+    // back. liveCount is unchanged: those slots were already killed.
+    tighten() {
+        this.highWaterMark = tightenHighWaterMark(this.flags, this.highWaterMark);
+        const hwm = this.highWaterMark;
+        let w = 0;
+        for (let r = 0; r < this.freeList.length; r++) {
+            const slot = this.freeList[r] ?? 0;
+            if (slot < hwm)
+                this.freeList[w++] = slot;
+        }
+        this.freeList.length = w;
+    }
+    // --- ISnapshotable: SoA columns [0, highWaterMark) plus the
+    // free-list / live-count bookkeeping. Particles are not entities,
+    // so the pool owns its full index-space state. ---
+    snapshotKey = 'loom.particle-pool';
+    snapshotInto(w) {
+        const n = this.highWaterMark;
+        w.writeU32(n);
+        w.writeU32(this.liveCount);
+        w.writeU32(this.maxParticles);
+        w.writeF32Slice(this.x, n);
+        w.writeF32Slice(this.y, n);
+        w.writeF32Slice(this.z, n);
+        w.writeF32Slice(this.vx, n);
+        w.writeF32Slice(this.vy, n);
+        w.writeF32Slice(this.vz, n);
+        w.writeF32Slice(this.ax, n);
+        w.writeF32Slice(this.ay, n);
+        w.writeF32Slice(this.az, n);
+        w.writeF32Slice(this.life, n);
+        w.writeF32Slice(this.maxLife, n);
+        w.writeF32Slice(this.size, n);
+        w.writeF32Slice(this.endSize, n);
+        w.writeF32Slice(this.r0, n);
+        w.writeF32Slice(this.g0, n);
+        w.writeF32Slice(this.b0, n);
+        w.writeF32Slice(this.a0, n);
+        w.writeF32Slice(this.r1, n);
+        w.writeF32Slice(this.g1, n);
+        w.writeF32Slice(this.b1, n);
+        w.writeF32Slice(this.a1, n);
+        w.writeU8Slice(this.flags, n);
+        w.writeU32(this.freeList.length);
+        for (let i = 0; i < this.freeList.length; i++) {
+            w.writeU32(this.freeList[i] ?? 0);
+        }
+    }
+    restoreFrom(r) {
+        const n = r.readU32();
+        this.liveCount = r.readU32();
+        this.maxParticles = r.readU32();
+        this.x = r.readF32Slice();
+        this.y = r.readF32Slice();
+        this.z = r.readF32Slice();
+        this.vx = r.readF32Slice();
+        this.vy = r.readF32Slice();
+        this.vz = r.readF32Slice();
+        this.ax = r.readF32Slice();
+        this.ay = r.readF32Slice();
+        this.az = r.readF32Slice();
+        this.life = r.readF32Slice();
+        this.maxLife = r.readF32Slice();
+        this.size = r.readF32Slice();
+        this.endSize = r.readF32Slice();
+        this.r0 = r.readF32Slice();
+        this.g0 = r.readF32Slice();
+        this.b0 = r.readF32Slice();
+        this.a0 = r.readF32Slice();
+        this.r1 = r.readF32Slice();
+        this.g1 = r.readF32Slice();
+        this.b1 = r.readF32Slice();
+        this.a1 = r.readF32Slice();
+        this.flags = r.readU8Slice();
+        this.capacity = n;
+        this.highWaterMark = n;
+        const fc = r.readU32();
+        const free = [];
+        for (let i = 0; i < fc; i++)
+            free.push(r.readU32());
+        this.freeList = free;
     }
 }
 //# sourceMappingURL=particle-pool.js.map

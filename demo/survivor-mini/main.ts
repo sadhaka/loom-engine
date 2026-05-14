@@ -64,7 +64,7 @@ function paintSprite(w: number, h: number, body: string, eye: string): HTMLCanva
 
 // Custom system: each tick, point the player's ranged attack at the
 // nearest live enemy. Without this the RangedAttackSystem's stored
-// targetIndex would never change once the first target dies.
+// targetEntity would never change once the first target dies.
 class AutoTargetSystem implements System {
   readonly name: string = 'auto-target';
   constructor(private player: EntityId) {}
@@ -87,7 +87,7 @@ class AutoTargetSystem implements System {
       const d = dx * dx + dy * dy;
       if (d < bestDist) { bestDist = d; bestIdx = i; }
     }
-    ranged.targetIndex[playerIdx] = bestIdx;
+    ranged.targetEntity[playerIdx] = world.entityAt(bestIdx);
   }
 }
 

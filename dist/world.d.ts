@@ -1,6 +1,7 @@
 import { EntityAllocator, type EntityId } from './entity.js';
 import { ResourceRegistry } from './resources.js';
 import { type System, type SystemPhase } from './system.js';
+import { StateSnapshot } from './runtime/state-snapshot.js';
 export declare class World {
     readonly entities: EntityAllocator;
     readonly resources: ResourceRegistry;
@@ -17,6 +18,9 @@ export declare class World {
     countSystemsInPhase(phase: SystemPhase): number;
     createEntity(): EntityId;
     destroyEntity(e: EntityId): boolean;
+    destroyEntityByLiveIndex(index: number): boolean;
+    entityAt(index: number): EntityId;
+    snapshotState(): StateSnapshot;
     dispose(): void;
 }
 export declare const POOL_TRANSFORM = "transform";

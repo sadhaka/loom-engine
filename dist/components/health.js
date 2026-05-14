@@ -7,7 +7,7 @@
 // Layout: hot data (current HP, max HP, last-damage timestamp) in
 // Float32Arrays; flags in Uint8Array.
 import { entityIndex } from '../entity.js';
-import { growF32, growU8, nextPow2 } from '../util/typed-arrays.js';
+import { growF32, growU8, nextPow2, tightenHighWaterMark } from '../util/typed-arrays.js';
 export const HEALTH_FLAG_ACTIVE = 1 << 0;
 export const HEALTH_FLAG_DEAD = 1 << 1;
 // Entities marked invulnerable take 0 damage. Set / cleared by
@@ -144,6 +144,31 @@ export class HealthPool {
     }
     getCapacity() {
         return this.capacity;
+    }
+    // Lower highWaterMark past trailing detached slots. HEALTH_FLAG_-
+    // ACTIVE is set by attach and cleared only by detach, so a zero
+    // flags byte marks a free slot.
+    tighten() {
+        this.highWaterMark = tightenHighWaterMark(this.flags, this.highWaterMark);
+    }
+    // --- ISnapshotable: canonical SoA columns [0, highWaterMark). ---
+    snapshotKey = 'loom.health-pool';
+    snapshotInto(w) {
+        const n = this.highWaterMark;
+        w.writeU32(n);
+        w.writeF32Slice(this.current, n);
+        w.writeF32Slice(this.max, n);
+        w.writeF32Slice(this.lastDamageMs, n);
+        w.writeU8Slice(this.flags, n);
+    }
+    restoreFrom(r) {
+        const n = r.readU32();
+        this.current = r.readF32Slice();
+        this.max = r.readF32Slice();
+        this.lastDamageMs = r.readF32Slice();
+        this.flags = r.readU8Slice();
+        this.capacity = n;
+        this.highWaterMark = n;
     }
 }
 export const POOL_HEALTH = 'health';

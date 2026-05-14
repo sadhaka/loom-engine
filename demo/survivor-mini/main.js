@@ -30,7 +30,7 @@ function paintSprite(w, h, body, eye) {
 }
 // Custom system: each tick, point the player's ranged attack at the
 // nearest live enemy. Without this the RangedAttackSystem's stored
-// targetIndex would never change once the first target dies.
+// targetEntity would never change once the first target dies.
 class AutoTargetSystem {
     player;
     name = 'auto-target';
@@ -61,7 +61,7 @@ class AutoTargetSystem {
                 bestIdx = i;
             }
         }
-        ranged.targetIndex[playerIdx] = bestIdx;
+        ranged.targetEntity[playerIdx] = world.entityAt(bestIdx);
     }
 }
 // Custom system: every cooldown ms, spawn a skeleton at a random edge

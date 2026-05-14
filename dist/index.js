@@ -28,6 +28,11 @@ export { DebugHUD, RESOURCE_DEBUG_HUD } from './debug/debug-hud.js';
 export { EngineClock, RESOURCE_ENGINE_CLOCK } from './runtime/engine-clock.js';
 // 0.26.0 - world snapshot (save / load via persistable resources).
 export { serializeWorldSnapshot, deserializeWorldSnapshot, SNAPSHOT_SCHEMA_VERSION, RESOURCE_WORLD_SNAPSHOT, } from './runtime/world-snapshot.js';
+// 1.7.6 - deterministic binary state snapshot. Canonical little-endian
+// bytes of allocator + pool + RNG state, FNV-1a hashed for
+// cross-runtime determinism verification and rewind/restore. Distinct
+// from world-snapshot above (that is the JSON save-game serializer).
+export { SnapshotWriter, SnapshotReader, StateSnapshot, fnv1a32, isSnapshotable, STATE_SNAPSHOT_VERSION, } from './runtime/state-snapshot.js';
 // 0.27.0 - camera controller (follow / shake / bounds / fit).
 export { CameraController, RESOURCE_CAMERA_CONTROLLER, } from './renderer/camera-controller.js';
 // 0.28.0 - generic event bus.

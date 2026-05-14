@@ -9,9 +9,10 @@
 // in Float32Arrays; the start/end color tuples are split into
 // parallel arrays so every per-tick read stays in cache.
 import { entityIndex } from '../entity.js';
-import { growF32, growU8, nextPow2 } from '../util/typed-arrays.js';
+import { growF32, growU8, nextPow2, tightenHighWaterMark } from '../util/typed-arrays.js';
 export const EMITTER_FLAG_ACTIVE = 1 << 0;
 export const EMITTER_FLAG_ADDITIVE = 1 << 1;
+export const EMITTER_FLAG_ATTACHED = 1 << 2; // slot is attached: set by attach, cleared by detach
 export class ParticleEmitterPool {
     // Continuous spawn rate (per second).
     rate;
@@ -134,7 +135,7 @@ export class ParticleEmitterPool {
         this.endG[i] = cfg.endColor.g;
         this.endB[i] = cfg.endColor.b;
         this.endA[i] = cfg.endColor.a;
-        let f = EMITTER_FLAG_ACTIVE;
+        let f = EMITTER_FLAG_ATTACHED | EMITTER_FLAG_ACTIVE;
         if (cfg.additive)
             f |= EMITTER_FLAG_ADDITIVE;
         this.flags[i] = f;
@@ -188,6 +189,71 @@ export class ParticleEmitterPool {
     }
     getCapacity() {
         return this.capacity;
+    }
+    // Lower highWaterMark past trailing detached slots. The ATTACHED
+    // flag (not ACTIVE) is the liveness signal - an emitter paused via
+    // setActive(false) is still attached and must survive a tighten.
+    tighten() {
+        this.highWaterMark = tightenHighWaterMark(this.flags, this.highWaterMark);
+    }
+    // --- ISnapshotable: canonical SoA columns [0, highWaterMark). ---
+    snapshotKey = 'loom.particle-emitter-pool';
+    snapshotInto(w) {
+        const n = this.highWaterMark;
+        w.writeU32(n);
+        w.writeF32Slice(this.rate, n);
+        w.writeF32Slice(this.spawnCarry, n);
+        w.writeI32Slice(this.burstRemaining, n);
+        w.writeF32Slice(this.particleLife, n);
+        w.writeF32Slice(this.speedMin, n);
+        w.writeF32Slice(this.speedMax, n);
+        w.writeF32Slice(this.dirX, n);
+        w.writeF32Slice(this.dirY, n);
+        w.writeF32Slice(this.dirZ, n);
+        w.writeF32Slice(this.coneRadians, n);
+        w.writeF32Slice(this.ax, n);
+        w.writeF32Slice(this.ay, n);
+        w.writeF32Slice(this.az, n);
+        w.writeF32Slice(this.startSize, n);
+        w.writeF32Slice(this.endSize, n);
+        w.writeF32Slice(this.startR, n);
+        w.writeF32Slice(this.startG, n);
+        w.writeF32Slice(this.startB, n);
+        w.writeF32Slice(this.startA, n);
+        w.writeF32Slice(this.endR, n);
+        w.writeF32Slice(this.endG, n);
+        w.writeF32Slice(this.endB, n);
+        w.writeF32Slice(this.endA, n);
+        w.writeU8Slice(this.flags, n);
+    }
+    restoreFrom(r) {
+        const n = r.readU32();
+        this.rate = r.readF32Slice();
+        this.spawnCarry = r.readF32Slice();
+        this.burstRemaining = r.readI32Slice();
+        this.particleLife = r.readF32Slice();
+        this.speedMin = r.readF32Slice();
+        this.speedMax = r.readF32Slice();
+        this.dirX = r.readF32Slice();
+        this.dirY = r.readF32Slice();
+        this.dirZ = r.readF32Slice();
+        this.coneRadians = r.readF32Slice();
+        this.ax = r.readF32Slice();
+        this.ay = r.readF32Slice();
+        this.az = r.readF32Slice();
+        this.startSize = r.readF32Slice();
+        this.endSize = r.readF32Slice();
+        this.startR = r.readF32Slice();
+        this.startG = r.readF32Slice();
+        this.startB = r.readF32Slice();
+        this.startA = r.readF32Slice();
+        this.endR = r.readF32Slice();
+        this.endG = r.readF32Slice();
+        this.endB = r.readF32Slice();
+        this.endA = r.readF32Slice();
+        this.flags = r.readU8Slice();
+        this.capacity = n;
+        this.highWaterMark = n;
     }
 }
 //# sourceMappingURL=particle-emitter.js.map

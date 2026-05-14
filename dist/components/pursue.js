@@ -11,14 +11,14 @@
 // behaviour) is post-Phase 7. This is enough to demo a knight
 // being mobbed by 3 enemies that walk at it and start damaging
 // when in range.
-import { entityIndex } from '../entity.js';
-import { growF32, growU8, nextPow2 } from '../util/typed-arrays.js';
+import { entityIndex, NULL_ENTITY } from '../entity.js';
+import { growF32, growU8, nextPow2, tightenHighWaterMark } from '../util/typed-arrays.js';
 export const PURSUE_FLAG_ACTIVE = 1 << 0;
 export class PursuePool {
     // Hot
     speed; // world units per second
     stopDistance; // stop pursuing once within this distance of target
-    targetIndex; // entity index of target; -1 = no target
+    targetEntity; // full EntityId of target; NULL_ENTITY = none
     // Damage applied to target when in range, per tick (not per second
     // - DamageSystem multiplies by dt elsewhere if continuous). This
     // is melee contact damage; ranged is a separate component.
@@ -32,7 +32,7 @@ export class PursuePool {
         this.capacity = nextPow2(initialCapacity);
         this.speed = new Float32Array(this.capacity);
         this.stopDistance = new Float32Array(this.capacity);
-        this.targetIndex = new Int32Array(this.capacity).fill(-1);
+        this.targetEntity = new Uint32Array(this.capacity);
         this.contactDamage = new Float32Array(this.capacity);
         this.contactCooldownMs = new Float32Array(this.capacity);
         this.lastHitMs = new Float32Array(this.capacity);
@@ -44,9 +44,9 @@ export class PursuePool {
         const next = nextPow2(neededIndex + 1);
         this.speed = growF32(this.speed, next);
         this.stopDistance = growF32(this.stopDistance, next);
-        const newTarget = new Int32Array(next).fill(-1);
-        newTarget.set(this.targetIndex);
-        this.targetIndex = newTarget;
+        const newTarget = new Uint32Array(next);
+        newTarget.set(this.targetEntity);
+        this.targetEntity = newTarget;
         this.contactDamage = growF32(this.contactDamage, next);
         this.contactCooldownMs = growF32(this.contactCooldownMs, next);
         this.lastHitMs = growF32(this.lastHitMs, next);
@@ -58,7 +58,7 @@ export class PursuePool {
         this.ensureCapacity(i);
         this.speed[i] = speed;
         this.stopDistance[i] = stopDistance;
-        this.targetIndex[i] = entityIndex(target);
+        this.targetEntity[i] = target;
         this.contactDamage[i] = contactDamage;
         this.contactCooldownMs[i] = contactCooldownMs;
         this.lastHitMs[i] = -1;
@@ -71,13 +71,13 @@ export class PursuePool {
         if (i >= this.capacity)
             return;
         this.flags[i] = 0;
-        this.targetIndex[i] = -1;
+        this.targetEntity[i] = NULL_ENTITY;
     }
     setTarget(e, target) {
         const i = entityIndex(e);
         if (i >= this.capacity)
             return;
-        this.targetIndex[i] = entityIndex(target);
+        this.targetEntity[i] = target;
     }
     isActive(e) {
         const i = entityIndex(e);
@@ -90,6 +90,37 @@ export class PursuePool {
     }
     getCapacity() {
         return this.capacity;
+    }
+    // Lower highWaterMark past trailing detached slots. PursueSystem
+    // and detach both zero the flags byte, so a zero flags byte marks
+    // a slot that is no longer an active pursuer.
+    tighten() {
+        this.highWaterMark = tightenHighWaterMark(this.flags, this.highWaterMark);
+    }
+    // --- ISnapshotable: canonical SoA columns [0, highWaterMark). ---
+    snapshotKey = 'loom.pursue-pool';
+    snapshotInto(w) {
+        const n = this.highWaterMark;
+        w.writeU32(n);
+        w.writeF32Slice(this.speed, n);
+        w.writeF32Slice(this.stopDistance, n);
+        w.writeU32Slice(this.targetEntity, n);
+        w.writeF32Slice(this.contactDamage, n);
+        w.writeF32Slice(this.contactCooldownMs, n);
+        w.writeF32Slice(this.lastHitMs, n);
+        w.writeU8Slice(this.flags, n);
+    }
+    restoreFrom(r) {
+        const n = r.readU32();
+        this.speed = r.readF32Slice();
+        this.stopDistance = r.readF32Slice();
+        this.targetEntity = r.readU32Slice();
+        this.contactDamage = r.readF32Slice();
+        this.contactCooldownMs = r.readF32Slice();
+        this.lastHitMs = r.readF32Slice();
+        this.flags = r.readU8Slice();
+        this.capacity = n;
+        this.highWaterMark = n;
     }
 }
 export const POOL_PURSUE = 'pursue';

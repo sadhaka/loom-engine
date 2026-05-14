@@ -1,9 +1,11 @@
 import { type EntityId } from '../entity.js';
+import type { ISnapshotable, SnapshotWriter, SnapshotReader } from '../runtime/state-snapshot.js';
 export declare const TRANSFORM_FLAG_DIRTY: number;
 export declare const TRANSFORM_FLAG_VISIBLE: number;
 export declare const TRANSFORM_FLAG_STATIC: number;
 export declare const TRANSFORM_FLAG_HAS_PARENT: number;
-export declare class TransformPool {
+export declare const TRANSFORM_FLAG_ATTACHED: number;
+export declare class TransformPool implements ISnapshotable {
     x: Float32Array;
     y: Float32Array;
     z: Float32Array;
@@ -26,5 +28,9 @@ export declare class TransformPool {
     getHighWaterMark(): number;
     getCapacity(): number;
     clearDirtyAt(index: number): void;
+    tighten(): void;
+    readonly snapshotKey: string;
+    snapshotInto(w: SnapshotWriter): void;
+    restoreFrom(r: SnapshotReader): void;
 }
 //# sourceMappingURL=transform.d.ts.map
