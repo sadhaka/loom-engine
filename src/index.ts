@@ -1011,6 +1011,11 @@ export type { LagCompensationWsAdapterOptions, LagCompensationWsHandle } from '.
 // allocation-free line scan, malformed input rejected and counted.
 export { AIActionInterpreter } from './runtime/ai-action-interpreter.js';
 export type { ParseStats } from './runtime/ai-action-interpreter.js';
+// LoomFlux - the Sim-LOD scheduler core: dense per-tier entity
+// buckets, a frame-boundary migration queue, and a wrap-safe tiered
+// tick. Relevance scoring + fast-forward are the deferred
+// integration layer (need Omniveil / nav).
+export { LoomFlux } from './runtime/loom-flux.js';
 // 1.7.5 MILESTONE (Wave 1.7 networking complete) - ChatChannel +
 // ChatChannelRegistry: moderated multi-channel chat with rate
 // limit + filter hooks.
