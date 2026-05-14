@@ -14,7 +14,7 @@
 // flags in Uint8Array. Capacity grows by 2x; live count tracked
 // separately so iteration stays O(live) not O(capacity).
 
-import { growF32, growU8, nextPow2 } from '../util/typed-arrays.js';
+import { growF32, growU8, nextPow2, tightenHighWaterMark } from '../util/typed-arrays.js';
 import type { ColorRGBA } from '../util/color.js';
 import type { ISnapshotable, SnapshotWriter, SnapshotReader } from '../runtime/state-snapshot.js';
 
@@ -254,6 +254,21 @@ export class ParticlePool implements ISnapshotable {
     this.freeList.length = 0;
     this.liveCount = 0;
     this.highWaterMark = 0;
+  }
+
+  // Lower highWaterMark past trailing dead particles, and drop
+  // free-list slots that fall above the new mark - those slots no
+  // longer exist in the iteration range, so spawn must not hand them
+  // back. liveCount is unchanged: those slots were already killed.
+  tighten(): void {
+    this.highWaterMark = tightenHighWaterMark(this.flags, this.highWaterMark);
+    const hwm = this.highWaterMark;
+    let w = 0;
+    for (let r = 0; r < this.freeList.length; r++) {
+      const slot = this.freeList[r] ?? 0;
+      if (slot < hwm) this.freeList[w++] = slot;
+    }
+    this.freeList.length = w;
   }
 
   // --- ISnapshotable: SoA columns [0, highWaterMark) plus the

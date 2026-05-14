@@ -16,7 +16,7 @@
 // in plain arrays.
 
 import { type EntityId, entityIndex } from '../entity.js';
-import { growF32, growU8, nextPow2 } from '../util/typed-arrays.js';
+import { growF32, growU8, nextPow2, tightenHighWaterMark } from '../util/typed-arrays.js';
 import type { SpriteSheetManifest } from '../asset/sprite-sheet-loader.js';
 
 export const ANIMATION_FLAG_ACTIVE = 1 << 0;
@@ -123,5 +123,12 @@ export class AnimationStatePool {
 
   getCapacity(): number {
     return this.capacity;
+  }
+
+  // Lower highWaterMark past trailing stopped slots. play() sets the
+  // ACTIVE flag, stop() zeros the flags byte, so a zero flags byte
+  // marks a slot with no animation.
+  tighten(): void {
+    this.highWaterMark = tightenHighWaterMark(this.flags, this.highWaterMark);
   }
 }

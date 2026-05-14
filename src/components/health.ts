@@ -8,7 +8,7 @@
 // Float32Arrays; flags in Uint8Array.
 
 import { type EntityId, entityIndex } from '../entity.js';
-import { growF32, growU8, nextPow2 } from '../util/typed-arrays.js';
+import { growF32, growU8, nextPow2, tightenHighWaterMark } from '../util/typed-arrays.js';
 import type { ISnapshotable, SnapshotWriter, SnapshotReader } from '../runtime/state-snapshot.js';
 
 export const HEALTH_FLAG_ACTIVE = 1 << 0;
@@ -147,6 +147,13 @@ export class HealthPool implements ISnapshotable {
 
   getCapacity(): number {
     return this.capacity;
+  }
+
+  // Lower highWaterMark past trailing detached slots. HEALTH_FLAG_-
+  // ACTIVE is set by attach and cleared only by detach, so a zero
+  // flags byte marks a free slot.
+  tighten(): void {
+    this.highWaterMark = tightenHighWaterMark(this.flags, this.highWaterMark);
   }
 
   // --- ISnapshotable: canonical SoA columns [0, highWaterMark). ---

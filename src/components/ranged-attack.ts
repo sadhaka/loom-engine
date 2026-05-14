@@ -7,7 +7,7 @@
 // reads this each tick.
 
 import { type EntityId, entityIndex, NULL_ENTITY } from '../entity.js';
-import { growF32, growU8, nextPow2 } from '../util/typed-arrays.js';
+import { growF32, growU8, nextPow2, tightenHighWaterMark } from '../util/typed-arrays.js';
 import type { ColorRGBA } from '../util/color.js';
 import type { ISnapshotable, SnapshotWriter, SnapshotReader } from '../runtime/state-snapshot.js';
 
@@ -144,6 +144,13 @@ export class RangedAttackPool implements ISnapshotable {
 
   getHighWaterMark(): number { return this.highWaterMark; }
   getCapacity(): number { return this.capacity; }
+
+  // Lower highWaterMark past trailing detached slots. RangedAttack-
+  // System and detach both zero the flags byte, so a zero flags byte
+  // marks a slot that no longer fires.
+  tighten(): void {
+    this.highWaterMark = tightenHighWaterMark(this.flags, this.highWaterMark);
+  }
 
   // --- ISnapshotable: canonical SoA columns [0, highWaterMark). ---
 

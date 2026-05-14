@@ -10,12 +10,13 @@
 // parallel arrays so every per-tick read stays in cache.
 
 import { type EntityId, entityIndex } from '../entity.js';
-import { growF32, growU8, nextPow2 } from '../util/typed-arrays.js';
+import { growF32, growU8, nextPow2, tightenHighWaterMark } from '../util/typed-arrays.js';
 import type { ColorRGBA } from '../util/color.js';
 import type { ISnapshotable, SnapshotWriter, SnapshotReader } from '../runtime/state-snapshot.js';
 
 export const EMITTER_FLAG_ACTIVE = 1 << 0;
 export const EMITTER_FLAG_ADDITIVE = 1 << 1;
+export const EMITTER_FLAG_ATTACHED = 1 << 2;   // slot is attached: set by attach, cleared by detach
 
 // Configuration passed to attach. Fields not specified take the
 // pool's default values.
@@ -182,7 +183,7 @@ export class ParticleEmitterPool implements ISnapshotable {
     this.endG[i] = cfg.endColor.g;
     this.endB[i] = cfg.endColor.b;
     this.endA[i] = cfg.endColor.a;
-    let f = EMITTER_FLAG_ACTIVE;
+    let f = EMITTER_FLAG_ATTACHED | EMITTER_FLAG_ACTIVE;
     if (cfg.additive) f |= EMITTER_FLAG_ADDITIVE;
     this.flags[i] = f;
     if (i >= this.highWaterMark) this.highWaterMark = i + 1;
@@ -236,6 +237,13 @@ export class ParticleEmitterPool implements ISnapshotable {
 
   getCapacity(): number {
     return this.capacity;
+  }
+
+  // Lower highWaterMark past trailing detached slots. The ATTACHED
+  // flag (not ACTIVE) is the liveness signal - an emitter paused via
+  // setActive(false) is still attached and must survive a tighten.
+  tighten(): void {
+    this.highWaterMark = tightenHighWaterMark(this.flags, this.highWaterMark);
   }
 
   // --- ISnapshotable: canonical SoA columns [0, highWaterMark). ---

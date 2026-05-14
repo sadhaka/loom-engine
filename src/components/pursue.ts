@@ -13,7 +13,7 @@
 // when in range.
 
 import { type EntityId, entityIndex, NULL_ENTITY } from '../entity.js';
-import { growF32, growU8, nextPow2 } from '../util/typed-arrays.js';
+import { growF32, growU8, nextPow2, tightenHighWaterMark } from '../util/typed-arrays.js';
 import type { ISnapshotable, SnapshotWriter, SnapshotReader } from '../runtime/state-snapshot.js';
 
 export const PURSUE_FLAG_ACTIVE = 1 << 0;
@@ -106,6 +106,13 @@ export class PursuePool implements ISnapshotable {
 
   getCapacity(): number {
     return this.capacity;
+  }
+
+  // Lower highWaterMark past trailing detached slots. PursueSystem
+  // and detach both zero the flags byte, so a zero flags byte marks
+  // a slot that is no longer an active pursuer.
+  tighten(): void {
+    this.highWaterMark = tightenHighWaterMark(this.flags, this.highWaterMark);
   }
 
   // --- ISnapshotable: canonical SoA columns [0, highWaterMark). ---

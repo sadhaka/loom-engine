@@ -11,7 +11,7 @@
 // switches on; future versions may extend to action functions.
 
 import { type EntityId, entityIndex } from '../entity.js';
-import { growF32, growU8, nextPow2 } from '../util/typed-arrays.js';
+import { growF32, growU8, nextPow2, tightenHighWaterMark } from '../util/typed-arrays.js';
 
 export const INTERACTABLE_FLAG_ACTIVE = 1 << 0;
 
@@ -113,6 +113,12 @@ export class InteractablePool {
 
   getHighWaterMark(): number { return this.highWaterMark; }
   getCapacity(): number { return this.capacity; }
+
+  // Lower highWaterMark past trailing detached slots. INTERACTABLE_-
+  // FLAG_ACTIVE is set by attach and cleared only by detach.
+  tighten(): void {
+    this.highWaterMark = tightenHighWaterMark(this.flags, this.highWaterMark);
+  }
 }
 
 export const POOL_INTERACTABLE = 'interactable';

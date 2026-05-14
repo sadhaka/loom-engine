@@ -9,7 +9,7 @@
 // tightly packed. Tint is split into rgba arrays so iteration
 // stays cache-friendly.
 
-import { growF32, growI32, growU8, nextPow2 } from '../util/typed-arrays.js';
+import { growF32, growI32, growU8, nextPow2, tightenHighWaterMark } from '../util/typed-arrays.js';
 import { type EntityId, entityIndex } from '../entity.js';
 import type { AtlasHandle } from '../renderer/graphics-device.js';
 import type { ColorRGBA } from '../util/color.js';
@@ -132,6 +132,13 @@ export class SpritePool implements ISnapshotable {
 
   getCapacity(): number {
     return this.capacity;
+  }
+
+  // Lower highWaterMark past trailing detached slots. SPRITE_FLAG_-
+  // ACTIVE is set by attach and cleared only by detach, so a zero
+  // flags byte marks a free slot.
+  tighten(): void {
+    this.highWaterMark = tightenHighWaterMark(this.flags, this.highWaterMark);
   }
 
   // --- ISnapshotable: canonical SoA columns [0, highWaterMark). ---

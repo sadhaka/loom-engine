@@ -13,7 +13,7 @@
 // keep startup cost tiny; first scene with > 64 entities pays for
 // one grow, after that pow-2 sizing absorbs further growth cheaply.
 
-import { growF32, growI32, growU8, nextPow2 } from '../util/typed-arrays.js';
+import { growF32, growI32, growU8, nextPow2, tightenHighWaterMark } from '../util/typed-arrays.js';
 import { type EntityId, entityIndex } from '../entity.js';
 import type { ISnapshotable, SnapshotWriter, SnapshotReader } from '../runtime/state-snapshot.js';
 
@@ -22,6 +22,7 @@ export const TRANSFORM_FLAG_DIRTY = 1 << 0;       // world matrix needs recomput
 export const TRANSFORM_FLAG_VISIBLE = 1 << 1;     // skip render if cleared
 export const TRANSFORM_FLAG_STATIC = 1 << 2;      // never moves; cache aggressively
 export const TRANSFORM_FLAG_HAS_PARENT = 1 << 3;  // parent slot is meaningful
+export const TRANSFORM_FLAG_ATTACHED = 1 << 4;    // slot is attached: set by attach, cleared by detach
 
 export class TransformPool implements ISnapshotable {
   // Hot data - touched every frame by render + sort systems.
@@ -86,7 +87,7 @@ export class TransformPool implements ISnapshotable {
     this.scaleX[i] = 1;
     this.scaleY[i] = 1;
     this.parent[i] = -1;
-    this.flags[i] = TRANSFORM_FLAG_DIRTY | TRANSFORM_FLAG_VISIBLE;
+    this.flags[i] = TRANSFORM_FLAG_ATTACHED | TRANSFORM_FLAG_DIRTY | TRANSFORM_FLAG_VISIBLE;
     if (i >= this.highWaterMark) this.highWaterMark = i + 1;
   }
 
@@ -154,6 +155,14 @@ export class TransformPool implements ISnapshotable {
     if (index >= this.capacity) return;
     const f = this.flags[index] ?? 0;
     this.flags[index] = f & ~TRANSFORM_FLAG_DIRTY;
+  }
+
+  // Lower highWaterMark past trailing detached slots so iteration
+  // stops paying for dead address space after a create/destroy
+  // spike. The ATTACHED flag (not VISIBLE) is the liveness signal -
+  // a hidden-but-attached entity must survive a tighten.
+  tighten(): void {
+    this.highWaterMark = tightenHighWaterMark(this.flags, this.highWaterMark);
   }
 
   // --- ISnapshotable: canonical SoA columns [0, highWaterMark). ---
