@@ -24,7 +24,6 @@ import {
 } from '../components/ranged-attack.js';
 import { ProjectilePool, POOL_PROJECTILE } from '../vfx/projectile-pool.js';
 import { HealthPool, POOL_HEALTH } from '../components/health.js';
-import { makeEntity } from '../entity.js';
 import { RESOURCE_TIME, type TimeResource } from '../resources.js';
 
 export class RangedAttackSystem implements System {
@@ -48,8 +47,10 @@ export class RangedAttackSystem implements System {
       const f = ranged.flags[i] ?? 0;
       if ((f & RANGED_FLAG_ACTIVE) === 0) continue;
 
-      // Skip dead firers.
-      const firer = makeEntity(i, 0);
+      // Skip dead firers. entityAt(i) is the canonical handle for
+      // the slot - makeEntity(i, 0) would go stale once the slot is
+      // recycled.
+      const firer = world.entityAt(i);
       if (!health.isAlive(firer)) {
         ranged.flags[i] = 0;
         continue;
@@ -57,7 +58,7 @@ export class RangedAttackSystem implements System {
 
       const targetIdx = ranged.targetIndex[i] ?? -1;
       if (targetIdx < 0) continue;
-      const target = makeEntity(targetIdx, 0);
+      const target = world.entityAt(targetIdx);
       if (!health.isAlive(target)) continue;
 
       // Cooldown gate.

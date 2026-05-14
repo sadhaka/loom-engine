@@ -5,6 +5,24 @@
 // an entity is destroyed and its index is recycled, the generation
 // bumps so old handles fail validation.
 //
+// Two destroy paths exist by design:
+//   - destroy(EntityId): for callers holding a stored handle. The
+//     handle generation is validated against the slot's live
+//     generation, so a stale handle from a previous tenant of the
+//     slot is rejected.
+//   - destroyByLiveIndex(index): for systems sweeping a component
+//     pool by dense index that have already proven the slot live
+//     via that pool's own ACTIVE flag. There is no handle to
+//     generation-check, so the per-slot `alive` bitmap is the guard
+//     against a double-destroy corrupting the free list.
+//
+// Systems that need a real EntityId for a pool index they are
+// iterating must call entityAt(index) - never makeEntity(index, 0).
+// A literal 0 generation only matches a slot on its first
+// allocation; once the slot recycles, makeEntity(i, 0) silently
+// fails every generation check. entityAt reads the slot's live
+// generation, so the handle it returns always validates.
+//
 // Inspired by the standard ECS sparse-set pattern (see PRIOR-ART.md
 // EnTT entry). Re-implemented from scratch.
 
@@ -31,6 +49,13 @@ export class EntityAllocator {
   // Generation array indexed by entity index. Index 0 is reserved
   // for NULL_ENTITY so live indices start at 1.
   private generations: Uint8Array = new Uint8Array(64);
+  // Per-slot alive bitmap, parallel to `generations`. 1 = the slot
+  // is currently allocated; 0 = free (never used, or destroyed and
+  // waiting on the free list). destroyByLiveIndex has no handle to
+  // generation-check, so this bit is the only guard that stops a
+  // double-destroy from pushing the same index onto the free list
+  // twice.
+  private alive: Uint8Array = new Uint8Array(64);
   private freeList: number[] = [];
   // Next never-used index. Always >= 1.
   private nextFresh: number = 1;
@@ -44,11 +69,16 @@ export class EntityAllocator {
     } else {
       index = this.nextFresh++;
       if (index >= this.generations.length) {
-        const next = new Uint8Array(index * 2);
-        next.set(this.generations);
-        this.generations = next;
+        const nextLen = index * 2;
+        const nextGen = new Uint8Array(nextLen);
+        nextGen.set(this.generations);
+        this.generations = nextGen;
+        const nextAlive = new Uint8Array(nextLen);
+        nextAlive.set(this.alive);
+        this.alive = nextAlive;
       }
     }
+    this.alive[index] = 1;
     this.liveCount++;
     const gen = this.generations[index] ?? 0;
     return makeEntity(index, gen);
@@ -58,8 +88,31 @@ export class EntityAllocator {
     const index = entityIndex(e);
     const gen = entityGeneration(e);
     if (index === 0 || index >= this.nextFresh) return false;
+    if ((this.alive[index] ?? 0) === 0) return false;   // already destroyed
     const currentGen = this.generations[index] ?? 0;
     if (currentGen !== gen) return false;          // stale handle
+    this.alive[index] = 0;
+    this.generations[index] = (currentGen + 1) & GENERATION_MASK;
+    this.freeList.push(index);
+    this.liveCount--;
+    return true;
+  }
+
+  // Destroy a slot by raw pool index. For systems that sweep a
+  // component pool by dense index and have already confirmed the
+  // slot is live via that pool's ACTIVE flag (DamageSystem clearing
+  // dead entities, etc). There is no handle to generation-check, so
+  // the `alive` bitmap is the guard: a second call on the same index
+  // returns false instead of corrupting the free list.
+  //
+  // Use this instead of destroy(makeEntity(i, 0)) - a 0-generation
+  // handle only matches a slot on its first life and silently fails
+  // to destroy a recycled slot, leaking it permanently.
+  destroyByLiveIndex(index: number): boolean {
+    if (index === 0 || index >= this.nextFresh) return false;
+    if ((this.alive[index] ?? 0) === 0) return false;
+    this.alive[index] = 0;
+    const currentGen = this.generations[index] ?? 0;
     this.generations[index] = (currentGen + 1) & GENERATION_MASK;
     this.freeList.push(index);
     this.liveCount--;
@@ -69,7 +122,20 @@ export class EntityAllocator {
   isAlive(e: EntityId): boolean {
     const index = entityIndex(e);
     if (index === 0 || index >= this.nextFresh) return false;
+    if ((this.alive[index] ?? 0) === 0) return false;
     return (this.generations[index] ?? 0) === entityGeneration(e);
+  }
+
+  // The canonical live EntityId for a pool index. Safe replacement
+  // for makeEntity(index, 0): it reads the slot's live generation so
+  // the returned handle always validates against the allocator.
+  // Returns NULL_ENTITY for an out-of-range or dead slot, so a
+  // caller that forwards the result to a generation-checked API
+  // fails closed instead of acting on a stale slot.
+  entityAt(index: number): EntityId {
+    if (index === 0 || index >= this.nextFresh) return NULL_ENTITY;
+    if ((this.alive[index] ?? 0) === 0) return NULL_ENTITY;
+    return makeEntity(index, this.generations[index] ?? 0);
   }
 
   count(): number {

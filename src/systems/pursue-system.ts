@@ -16,7 +16,6 @@ import { POOL_TRANSFORM } from '../world.js';
 import { TransformPool } from '../components/transform.js';
 import { PursuePool, POOL_PURSUE, PURSUE_FLAG_ACTIVE } from '../components/pursue.js';
 import { HealthPool, POOL_HEALTH } from '../components/health.js';
-import { makeEntity } from '../entity.js';
 import { RESOURCE_TIME, type TimeResource } from '../resources.js';
 
 export class PursueSystem implements System {
@@ -40,7 +39,7 @@ export class PursueSystem implements System {
 
       // Skip dead pursuers.
       if (health) {
-        const e = makeEntity(i, 0);
+        const e = world.entityAt(i);
         if (health.isDead(e)) {
           pursuit.flags[i] = 0;
           continue;
@@ -50,7 +49,7 @@ export class PursueSystem implements System {
       const targetIdx = pursuit.targetIndex[i] ?? -1;
       if (targetIdx < 0) continue;
       // If the target is dead, stop pursuing.
-      if (health && health.isDead(makeEntity(targetIdx, 0))) {
+      if (health && health.isDead(world.entityAt(targetIdx))) {
         continue;
       }
 
@@ -73,7 +72,7 @@ export class PursueSystem implements System {
         // Don't overshoot.
         const moveX = step >= dist ? dx : nx * step;
         const moveY = step >= dist ? dy : ny * step;
-        const e = makeEntity(i, 0);
+        const e = world.entityAt(i);
         transforms.setPosition(e, myX + moveX, myY + moveY, transforms.z[i] ?? 0);
       } else {
         // In contact range. Apply contact damage if cooldown elapsed.
@@ -82,7 +81,7 @@ export class PursueSystem implements System {
           const lastHit = pursuit.lastHitMs[i] ?? -1;
           const cooldown = pursuit.contactCooldownMs[i] ?? 1000;
           if (lastHit < 0 || now - lastHit >= cooldown) {
-            const target = makeEntity(targetIdx, 0);
+            const target = world.entityAt(targetIdx);
             const applied = health.applyDamage(target, damage, now);
             if (applied > 0) {
               pursuit.lastHitMs[i] = now;

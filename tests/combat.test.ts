@@ -285,6 +285,37 @@ test('damage system: ignores live entities', async () => {
   assert.ok(health.isAlive(e));
 });
 
+test('damage system: destroys a dead entity whose slot was recycled (P1 generational-handle fix)', async () => {
+  const { World } = await import('../src/world.js');
+  const w = new World();
+  const health = new HealthPool();
+  w.registerPool(POOL_HEALTH, health);
+  w.addSystem(new DamageSystem(), SYSTEM_PHASE_LOGIC);
+
+  // First life of the slot: create, kill, sweep. Destroying the
+  // entity bumps the slot's generation when it returns to the free
+  // list.
+  const first = w.createEntity();
+  health.attach(first, 10);
+  health.applyDamage(first, 100, 0);
+  w.update(0.016);
+  assert.ok(!w.entities.isAlive(first), 'first tenant destroyed');
+
+  // Second life: the allocator recycles the same index, now with a
+  // non-zero generation. The old makeEntity(i, 0) bypass built a
+  // 0-generation handle that failed the allocator's generation
+  // check here - world.destroyEntity returned false and the slot
+  // leaked. destroyByLiveIndex has no such failure mode.
+  const second = w.createEntity();
+  assert.equal(entityIndex(second), entityIndex(first), 'slot recycled');
+  health.attach(second, 10);
+  health.applyDamage(second, 100, 0);
+  w.update(0.016);
+
+  assert.ok(!w.entities.isAlive(second), 'recycled tenant also destroyed');
+  assert.equal(w.countEntities(), 0, 'no slot leaked');
+});
+
 // ---------- AttackSystem ----------
 
 test('attack system: damages nearest enemy on click', async () => {

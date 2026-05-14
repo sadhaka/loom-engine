@@ -22,7 +22,6 @@ import { ProjectilePool, POOL_PROJECTILE, PROJECTILE_FLAG_ALIVE, PROJECTILE_FLAG
 import { TransformPool } from '../components/transform.js';
 import { HealthPool, POOL_HEALTH } from '../components/health.js';
 import { POOL_TRANSFORM } from '../world.js';
-import { makeEntity } from '../entity.js';
 import { RESOURCE_TIME, type TimeResource } from '../resources.js';
 
 export class ProjectileSystem implements System {
@@ -58,7 +57,7 @@ export class ProjectileSystem implements System {
       if ((f & PROJECTILE_FLAG_HOMING) !== 0) {
         const targetIdx = pool.targetIndex[i] ?? -1;
         if (targetIdx >= 0) {
-          const target = makeEntity(targetIdx, 0);
+          const target = world.entityAt(targetIdx);
           if (health.isAlive(target)) {
             const tx = transforms.x[targetIdx] ?? 0;
             const ty = transforms.y[targetIdx] ?? 0;
@@ -97,7 +96,7 @@ export class ProjectileSystem implements System {
       let hitIdx = -1;
       for (let j = 1; j < targetHwm; j++) {
         if (j === owner) continue;
-        const target = makeEntity(j, 0);
+        const target = world.entityAt(j);
         if (!health.isAlive(target)) continue;
         const tx = transforms.x[j] ?? 0;
         const ty = transforms.y[j] ?? 0;
@@ -115,7 +114,7 @@ export class ProjectileSystem implements System {
       }
 
       if (hitIdx >= 0) {
-        const target = makeEntity(hitIdx, 0);
+        const target = world.entityAt(hitIdx);
         health.applyDamage(target, pool.damage[i] ?? 0, now);
         if ((f & PROJECTILE_FLAG_PIERCE) === 0) {
           pool.kill(i);

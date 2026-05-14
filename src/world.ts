@@ -115,6 +115,24 @@ export class World {
     return this.entities.destroy(e);
   }
 
+  // Destroy an entity by raw pool index. Companion to destroyEntity
+  // for the common case of a system sweeping a component pool by
+  // dense index (DamageSystem clearing dead entities). The pool's
+  // ACTIVE flag has already proven the slot live; the allocator's
+  // alive bitmap guards the double-destroy case. Use this instead of
+  // destroyEntity(makeEntity(i, 0)) - a 0-generation handle silently
+  // fails to destroy a slot that has been recycled at least once.
+  destroyEntityByLiveIndex(index: number): boolean {
+    return this.entities.destroyByLiveIndex(index);
+  }
+
+  // The canonical live EntityId for a pool index. Safe replacement
+  // for makeEntity(index, 0) when a system needs a real handle for
+  // an index it is iterating. Returns NULL_ENTITY for a dead slot.
+  entityAt(index: number): EntityId {
+    return this.entities.entityAt(index);
+  }
+
   // 0.21.0 - graceful shutdown. Disposes every IManagedResource
   // (calling onDetach + dispose in registration order), then clears
   // the system phase map and the entity allocator. Idempotent: a

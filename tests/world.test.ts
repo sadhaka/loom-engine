@@ -32,6 +32,7 @@ import {
   SpriteRenderSystem,
   // Misc
   entityIndex,
+  NULL_ENTITY,
   COLOR_KNOT_INT,
   type System,
   type EntityId,
@@ -136,6 +137,48 @@ test('world: createEntity / destroyEntity through facade', () => {
   assert.equal(w.countEntities(), 1);
   assert.ok(w.destroyEntity(e));
   assert.equal(w.countEntities(), 0);
+});
+
+test('world: destroyEntityByLiveIndex destroys a recycled slot', () => {
+  const w = new World();
+  const a = w.createEntity();
+  const ai = entityIndex(a);
+  // First life: destroy through the index path.
+  assert.ok(w.destroyEntityByLiveIndex(ai));
+  assert.ok(!w.entities.isAlive(a));
+  // Recycle the same slot. The generation has bumped, so a stale
+  // makeEntity(ai, 0) handle would no longer validate - but the
+  // index path destroys the live slot regardless of generation.
+  const b = w.createEntity();
+  assert.equal(entityIndex(b), ai, 'slot recycled');
+  assert.notEqual(b, a, 'generation bumped so the handle differs');
+  assert.ok(w.destroyEntityByLiveIndex(ai), 'recycled slot destroys cleanly');
+  assert.ok(!w.entities.isAlive(b));
+  assert.equal(w.countEntities(), 0);
+});
+
+test('world: destroyEntityByLiveIndex rejects a double destroy', () => {
+  const w = new World();
+  const e = w.createEntity();
+  const i = entityIndex(e);
+  assert.ok(w.destroyEntityByLiveIndex(i));
+  // Second call must be a no-op - the slot is already on the free
+  // list; pushing it again would hand the same index out twice.
+  assert.equal(w.destroyEntityByLiveIndex(i), false);
+  assert.equal(w.countEntities(), 0);
+});
+
+test('world: entityAt returns the live handle, NULL for dead slots', () => {
+  const w = new World();
+  const e = w.createEntity();
+  const i = entityIndex(e);
+  assert.equal(w.entityAt(i), e, 'live slot returns its canonical handle');
+  w.destroyEntityByLiveIndex(i);
+  assert.equal(w.entityAt(i), NULL_ENTITY, 'dead slot returns NULL_ENTITY');
+  // Recycle: entityAt reflects the new generation, not the old one.
+  const e2 = w.createEntity();
+  assert.equal(w.entityAt(i), e2);
+  assert.notEqual(w.entityAt(i), e);
 });
 
 test('world: countSystems totals across phases', () => {
