@@ -103,6 +103,29 @@ test('component-signature: COMPONENT_SIGNATURE_MAX_BIT exported correctly', func
   assert.equal(COMPONENT_SIGNATURE_MAX_BIT, 31);
 });
 
+test('component-signature: collectMatching scans the high-water mark, not full capacity', function () {
+  var sig = new ComponentSignature(64);
+  // Capacity is 64 pow-2-rounded, but only indices 1 and 3 are touched.
+  sig.setBit(1, 0);
+  sig.setBit(3, 0);
+  assert.equal(sig.capacity(), 64);
+  assert.equal(sig.highWaterMark(), 4, 'extent is highest touched index + 1');
+  var matches = sig.collectMatching(componentMask(0));
+  assert.deepEqual(Array.from(matches), [1, 3]);
+});
+
+test('component-signature: high-water mark grows with setBit, survives clear', function () {
+  var sig = new ComponentSignature();
+  sig.setBit(10, 0);
+  assert.equal(sig.highWaterMark(), 11);
+  // clearBit / clearEntity do not lower the mark - it is a scan
+  // bound, not a live count.
+  sig.clearEntity(10);
+  assert.equal(sig.highWaterMark(), 11);
+  var matches = sig.collectMatching(componentMask(0));
+  assert.deepEqual(Array.from(matches), [], 'cleared entity no longer matches');
+});
+
 
 // ----- QueryCache -----
 
