@@ -26,6 +26,12 @@
 // Inspired by the standard ECS sparse-set pattern (see PRIOR-ART.md
 // EnTT entry). Re-implemented from scratch.
 
+import type {
+  ISnapshotable,
+  SnapshotWriter,
+  SnapshotReader,
+} from './runtime/state-snapshot.js';
+
 export type EntityId = number;
 
 export const NULL_ENTITY: EntityId = 0;
@@ -45,7 +51,7 @@ export function makeEntity(index: number, generation: number): EntityId {
   return ((generation & GENERATION_MASK) << GENERATION_SHIFT) | (index & INDEX_MASK);
 }
 
-export class EntityAllocator {
+export class EntityAllocator implements ISnapshotable {
   // Generation array indexed by entity index. Index 0 is reserved
   // for NULL_ENTITY so live indices start at 1.
   private generations: Uint8Array = new Uint8Array(64);
@@ -146,5 +152,47 @@ export class EntityAllocator {
   // their backing arrays.
   capacity(): number {
     return this.nextFresh;
+  }
+
+  // --- ISnapshotable: canonical binary state for determinism
+  // hashing and rewind/restore. ---
+
+  readonly snapshotKey: string = 'loom.entity-allocator';
+
+  snapshotInto(w: SnapshotWriter): void {
+    w.writeU32(this.nextFresh);
+    w.writeU32(this.liveCount);
+    // Only the meaningful prefix [0, nextFresh) of each parallel
+    // array - indices >= nextFresh have never been allocated.
+    w.writeU8Slice(this.generations, this.nextFresh);
+    w.writeU8Slice(this.alive, this.nextFresh);
+    // The free list is the recycle stack: its order decides which
+    // index the next create() hands out, so it is deterministic
+    // state, not a cache.
+    w.writeU32(this.freeList.length);
+    for (let i = 0; i < this.freeList.length; i++) {
+      w.writeU32(this.freeList[i] ?? 0);
+    }
+  }
+
+  restoreFrom(r: SnapshotReader): void {
+    this.nextFresh = r.readU32();
+    this.liveCount = r.readU32();
+    const gens = r.readU8Slice();
+    const alive = r.readU8Slice();
+    // Size the backing arrays to at least the constructor's initial
+    // capacity so a restored-then-grown allocator does not reallocate
+    // on its first fresh create().
+    const cap = this.nextFresh > 64 ? this.nextFresh : 64;
+    this.generations = new Uint8Array(cap);
+    this.generations.set(gens);
+    this.alive = new Uint8Array(cap);
+    this.alive.set(alive);
+    const freeCount = r.readU32();
+    const free: number[] = [];
+    for (let i = 0; i < freeCount; i++) {
+      free.push(r.readU32());
+    }
+    this.freeList = free;
   }
 }

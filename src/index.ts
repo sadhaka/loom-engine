@@ -118,6 +118,18 @@ export type {
   IPersistableResource,
   WorldSnapshot,
 } from './runtime/world-snapshot.js';
+// 1.7.6 - deterministic binary state snapshot. Canonical little-endian
+// bytes of allocator + pool + RNG state, FNV-1a hashed for
+// cross-runtime determinism verification and rewind/restore. Distinct
+// from world-snapshot above (that is the JSON save-game serializer).
+export {
+  SnapshotWriter,
+  SnapshotReader,
+  StateSnapshot,
+  fnv1a32,
+  STATE_SNAPSHOT_VERSION,
+} from './runtime/state-snapshot.js';
+export type { ISnapshotable } from './runtime/state-snapshot.js';
 // 0.27.0 - camera controller (follow / shake / bounds / fit).
 export {
   CameraController,
