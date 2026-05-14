@@ -151,6 +151,16 @@ export class SnapshotWriter {
     }
   }
 
+  writeI32Slice(arr: Int32Array, count: number): void {
+    const n = count < 0 ? 0 : (count > arr.length ? arr.length : count);
+    this.writeU32(n);
+    this.ensure(n * 4);
+    for (let i = 0; i < n; i++) {
+      this.view.setInt32(this.len, (arr[i] ?? 0) | 0, true);
+      this.len += 4;
+    }
+  }
+
   writeF32Slice(arr: Float32Array, count: number): void {
     const n = count < 0 ? 0 : (count > arr.length ? arr.length : count);
     this.writeU32(n);
@@ -280,6 +290,17 @@ export class SnapshotReader {
     const out = new Uint32Array(n);
     for (let i = 0; i < n; i++) {
       out[i] = this.view.getUint32(this.off, true);
+      this.off += 4;
+    }
+    return out;
+  }
+
+  readI32Slice(): Int32Array {
+    const n = this.readU32();
+    this.need(n * 4);
+    const out = new Int32Array(n);
+    for (let i = 0; i < n; i++) {
+      out[i] = this.view.getInt32(this.off, true);
       this.off += 4;
     }
     return out;

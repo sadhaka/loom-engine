@@ -16,6 +16,7 @@
 
 import { growF32, growU8, nextPow2 } from '../util/typed-arrays.js';
 import type { ColorRGBA } from '../util/color.js';
+import type { ISnapshotable, SnapshotWriter, SnapshotReader } from '../runtime/state-snapshot.js';
 
 export const PARTICLE_FLAG_ALIVE = 1 << 0;
 export const PARTICLE_FLAG_ADDITIVE = 1 << 1;
@@ -40,7 +41,7 @@ export interface ParticleSpawn {
   additive?: boolean;
 }
 
-export class ParticlePool {
+export class ParticlePool implements ISnapshotable {
   // Hot per-particle data
   x: Float32Array;
   y: Float32Array;
@@ -229,5 +230,78 @@ export class ParticlePool {
     this.freeList.length = 0;
     this.liveCount = 0;
     this.highWaterMark = 0;
+  }
+
+  // --- ISnapshotable: SoA columns [0, highWaterMark) plus the
+  // free-list / live-count bookkeeping. Particles are not entities,
+  // so the pool owns its full index-space state. ---
+
+  readonly snapshotKey: string = 'loom.particle-pool';
+
+  snapshotInto(w: SnapshotWriter): void {
+    const n = this.highWaterMark;
+    w.writeU32(n);
+    w.writeU32(this.liveCount);
+    w.writeU32(this.maxParticles);
+    w.writeF32Slice(this.x, n);
+    w.writeF32Slice(this.y, n);
+    w.writeF32Slice(this.z, n);
+    w.writeF32Slice(this.vx, n);
+    w.writeF32Slice(this.vy, n);
+    w.writeF32Slice(this.vz, n);
+    w.writeF32Slice(this.ax, n);
+    w.writeF32Slice(this.ay, n);
+    w.writeF32Slice(this.az, n);
+    w.writeF32Slice(this.life, n);
+    w.writeF32Slice(this.maxLife, n);
+    w.writeF32Slice(this.size, n);
+    w.writeF32Slice(this.endSize, n);
+    w.writeF32Slice(this.r0, n);
+    w.writeF32Slice(this.g0, n);
+    w.writeF32Slice(this.b0, n);
+    w.writeF32Slice(this.a0, n);
+    w.writeF32Slice(this.r1, n);
+    w.writeF32Slice(this.g1, n);
+    w.writeF32Slice(this.b1, n);
+    w.writeF32Slice(this.a1, n);
+    w.writeU8Slice(this.flags, n);
+    w.writeU32(this.freeList.length);
+    for (let i = 0; i < this.freeList.length; i++) {
+      w.writeU32(this.freeList[i] ?? 0);
+    }
+  }
+
+  restoreFrom(r: SnapshotReader): void {
+    const n = r.readU32();
+    this.liveCount = r.readU32();
+    this.maxParticles = r.readU32();
+    this.x = r.readF32Slice();
+    this.y = r.readF32Slice();
+    this.z = r.readF32Slice();
+    this.vx = r.readF32Slice();
+    this.vy = r.readF32Slice();
+    this.vz = r.readF32Slice();
+    this.ax = r.readF32Slice();
+    this.ay = r.readF32Slice();
+    this.az = r.readF32Slice();
+    this.life = r.readF32Slice();
+    this.maxLife = r.readF32Slice();
+    this.size = r.readF32Slice();
+    this.endSize = r.readF32Slice();
+    this.r0 = r.readF32Slice();
+    this.g0 = r.readF32Slice();
+    this.b0 = r.readF32Slice();
+    this.a0 = r.readF32Slice();
+    this.r1 = r.readF32Slice();
+    this.g1 = r.readF32Slice();
+    this.b1 = r.readF32Slice();
+    this.a1 = r.readF32Slice();
+    this.flags = r.readU8Slice();
+    this.capacity = n;
+    this.highWaterMark = n;
+    const fc = r.readU32();
+    const free: number[] = [];
+    for (let i = 0; i < fc; i++) free.push(r.readU32());
+    this.freeList = free;
   }
 }

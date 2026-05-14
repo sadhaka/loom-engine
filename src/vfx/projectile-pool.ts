@@ -12,6 +12,7 @@
 import { growF32, growI32, growU8, nextPow2 } from '../util/typed-arrays.js';
 import type { ColorRGBA } from '../util/color.js';
 import { type EntityId, NULL_ENTITY } from '../entity.js';
+import type { ISnapshotable, SnapshotWriter, SnapshotReader } from '../runtime/state-snapshot.js';
 
 export const PROJECTILE_FLAG_ALIVE = 1 << 0;
 // Homing: each tick, projectile re-aims at target's position.
@@ -45,7 +46,7 @@ export interface ProjectileSpawn {
   pierce?: boolean;
 }
 
-export class ProjectilePool {
+export class ProjectilePool implements ISnapshotable {
   // Hot
   x: Float32Array;
   y: Float32Array;
@@ -175,6 +176,67 @@ export class ProjectilePool {
     this.freeList.length = 0;
     this.liveCount = 0;
     this.highWaterMark = 0;
+  }
+
+  // --- ISnapshotable: SoA columns [0, highWaterMark) plus the
+  // free-list / live-count bookkeeping. Projectiles are not
+  // entities, so the pool owns its full index-space state. ---
+
+  readonly snapshotKey: string = 'loom.projectile-pool';
+
+  snapshotInto(w: SnapshotWriter): void {
+    const n = this.highWaterMark;
+    w.writeU32(n);
+    w.writeU32(this.liveCount);
+    w.writeU32(this.maxProjectiles);
+    w.writeF32Slice(this.x, n);
+    w.writeF32Slice(this.y, n);
+    w.writeF32Slice(this.z, n);
+    w.writeF32Slice(this.vx, n);
+    w.writeF32Slice(this.vy, n);
+    w.writeF32Slice(this.vz, n);
+    w.writeF32Slice(this.life, n);
+    w.writeF32Slice(this.damage, n);
+    w.writeU32Slice(this.ownerEntity, n);
+    w.writeU32Slice(this.targetEntity, n);
+    w.writeF32Slice(this.size, n);
+    w.writeF32Slice(this.r, n);
+    w.writeF32Slice(this.g, n);
+    w.writeF32Slice(this.b, n);
+    w.writeF32Slice(this.a, n);
+    w.writeU8Slice(this.flags, n);
+    w.writeU32(this.freeList.length);
+    for (let i = 0; i < this.freeList.length; i++) {
+      w.writeU32(this.freeList[i] ?? 0);
+    }
+  }
+
+  restoreFrom(r: SnapshotReader): void {
+    const n = r.readU32();
+    this.liveCount = r.readU32();
+    this.maxProjectiles = r.readU32();
+    this.x = r.readF32Slice();
+    this.y = r.readF32Slice();
+    this.z = r.readF32Slice();
+    this.vx = r.readF32Slice();
+    this.vy = r.readF32Slice();
+    this.vz = r.readF32Slice();
+    this.life = r.readF32Slice();
+    this.damage = r.readF32Slice();
+    this.ownerEntity = r.readU32Slice();
+    this.targetEntity = r.readU32Slice();
+    this.size = r.readF32Slice();
+    this.r = r.readF32Slice();
+    this.g = r.readF32Slice();
+    this.b = r.readF32Slice();
+    this.a = r.readF32Slice();
+    this.flags = r.readU8Slice();
+    this.capacity = n;
+    this.highWaterMark = n;
+    const fc = r.readU32();
+    const free: number[] = [];
+    for (let i = 0; i < fc; i++) free.push(r.readU32());
+    this.freeList = free;
   }
 }
 

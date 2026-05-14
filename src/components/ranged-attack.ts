@@ -9,6 +9,7 @@
 import { type EntityId, entityIndex, NULL_ENTITY } from '../entity.js';
 import { growF32, growU8, nextPow2 } from '../util/typed-arrays.js';
 import type { ColorRGBA } from '../util/color.js';
+import type { ISnapshotable, SnapshotWriter, SnapshotReader } from '../runtime/state-snapshot.js';
 
 export const RANGED_FLAG_ACTIVE = 1 << 0;
 export const RANGED_FLAG_HOMING = 1 << 1;
@@ -38,7 +39,7 @@ export interface RangedAttackConfig {
   homing: boolean;
 }
 
-export class RangedAttackPool {
+export class RangedAttackPool implements ISnapshotable {
   // Hot
   range: Float32Array;
   minRange: Float32Array;
@@ -143,6 +144,49 @@ export class RangedAttackPool {
 
   getHighWaterMark(): number { return this.highWaterMark; }
   getCapacity(): number { return this.capacity; }
+
+  // --- ISnapshotable: canonical SoA columns [0, highWaterMark). ---
+
+  readonly snapshotKey: string = 'loom.ranged-attack-pool';
+
+  snapshotInto(w: SnapshotWriter): void {
+    const n = this.highWaterMark;
+    w.writeU32(n);
+    w.writeF32Slice(this.range, n);
+    w.writeF32Slice(this.minRange, n);
+    w.writeF32Slice(this.cooldownMs, n);
+    w.writeF32Slice(this.lastFireMs, n);
+    w.writeF32Slice(this.damage, n);
+    w.writeF32Slice(this.projectileSpeed, n);
+    w.writeF32Slice(this.projectileLife, n);
+    w.writeF32Slice(this.projectileSize, n);
+    w.writeF32Slice(this.r, n);
+    w.writeF32Slice(this.g, n);
+    w.writeF32Slice(this.b, n);
+    w.writeF32Slice(this.a, n);
+    w.writeU32Slice(this.targetEntity, n);
+    w.writeU8Slice(this.flags, n);
+  }
+
+  restoreFrom(r: SnapshotReader): void {
+    const n = r.readU32();
+    this.range = r.readF32Slice();
+    this.minRange = r.readF32Slice();
+    this.cooldownMs = r.readF32Slice();
+    this.lastFireMs = r.readF32Slice();
+    this.damage = r.readF32Slice();
+    this.projectileSpeed = r.readF32Slice();
+    this.projectileLife = r.readF32Slice();
+    this.projectileSize = r.readF32Slice();
+    this.r = r.readF32Slice();
+    this.g = r.readF32Slice();
+    this.b = r.readF32Slice();
+    this.a = r.readF32Slice();
+    this.targetEntity = r.readU32Slice();
+    this.flags = r.readU8Slice();
+    this.capacity = n;
+    this.highWaterMark = n;
+  }
 }
 
 export const POOL_RANGED = 'ranged';

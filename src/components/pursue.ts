@@ -14,10 +14,11 @@
 
 import { type EntityId, entityIndex, NULL_ENTITY } from '../entity.js';
 import { growF32, growU8, nextPow2 } from '../util/typed-arrays.js';
+import type { ISnapshotable, SnapshotWriter, SnapshotReader } from '../runtime/state-snapshot.js';
 
 export const PURSUE_FLAG_ACTIVE = 1 << 0;
 
-export class PursuePool {
+export class PursuePool implements ISnapshotable {
   // Hot
   speed: Float32Array;          // world units per second
   stopDistance: Float32Array;   // stop pursuing once within this distance of target
@@ -105,6 +106,35 @@ export class PursuePool {
 
   getCapacity(): number {
     return this.capacity;
+  }
+
+  // --- ISnapshotable: canonical SoA columns [0, highWaterMark). ---
+
+  readonly snapshotKey: string = 'loom.pursue-pool';
+
+  snapshotInto(w: SnapshotWriter): void {
+    const n = this.highWaterMark;
+    w.writeU32(n);
+    w.writeF32Slice(this.speed, n);
+    w.writeF32Slice(this.stopDistance, n);
+    w.writeU32Slice(this.targetEntity, n);
+    w.writeF32Slice(this.contactDamage, n);
+    w.writeF32Slice(this.contactCooldownMs, n);
+    w.writeF32Slice(this.lastHitMs, n);
+    w.writeU8Slice(this.flags, n);
+  }
+
+  restoreFrom(r: SnapshotReader): void {
+    const n = r.readU32();
+    this.speed = r.readF32Slice();
+    this.stopDistance = r.readF32Slice();
+    this.targetEntity = r.readU32Slice();
+    this.contactDamage = r.readF32Slice();
+    this.contactCooldownMs = r.readF32Slice();
+    this.lastHitMs = r.readF32Slice();
+    this.flags = r.readU8Slice();
+    this.capacity = n;
+    this.highWaterMark = n;
   }
 }
 

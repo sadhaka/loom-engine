@@ -19,6 +19,15 @@ import {
   EntityAllocator,
   entityIndex,
   createEntropy,
+  NULL_ENTITY,
+  TransformPool,
+  SpritePool,
+  HealthPool,
+  PursuePool,
+  RangedAttackPool,
+  ParticleEmitterPool,
+  ParticlePool,
+  ProjectilePool,
 } from '../src/index.js';
 
 // A stand-in component pool: exactly the shape the dossier names -
@@ -325,4 +334,188 @@ test('state snapshot: restore rejects a part that under-reads its blob', () => {
   snap.register(lazy);
   const bytes = snap.serialize().slice();
   assert.throws(() => snap.restore(bytes), /left 4 of 8 bytes unconsumed/);
+});
+
+// ----- Component pools as ISnapshotable -----
+
+// Build one of every snapshotable pool, populated with non-trivial
+// state (varied columns, set flags, recycled free-list slots), plus
+// the allocator + entropy - all registered into a StateSnapshot in a
+// fixed order.
+function buildPopulated() {
+  const alloc = new EntityAllocator();
+  const entropy = createEntropy(0x5151);
+  const transform = new TransformPool();
+  const sprite = new SpritePool();
+  const health = new HealthPool();
+  const pursue = new PursuePool();
+  const ranged = new RangedAttackPool();
+  const emitter = new ParticleEmitterPool();
+  const particles = new ParticlePool();
+  const projectiles = new ProjectilePool();
+
+  // Entities with a recycle history.
+  const e: number[] = [];
+  for (let i = 0; i < 6; i++) e.push(alloc.create());
+  alloc.destroy(e[1]!);
+  alloc.destroyByLiveIndex(entityIndex(e[3]!));
+  const e6 = alloc.create();   // recycles a freed slot
+  for (let i = 0; i < 20; i++) entropy.random();
+
+  const color = { r: 0.8, g: 0.4, b: 0.2, a: 1 };
+  const color2 = { r: 0.1, g: 0.2, b: 0.3, a: 0 };
+
+  transform.attach(e[0]!, 1.5, -2.25, 0.5);
+  transform.attach(e[2]!, 10, 20, 30);
+  transform.attach(e6, -5, -5, 0);
+  transform.setRotation(e[2]!, 1.5707);
+  transform.setScale(e[0]!, 2, 3);
+
+  sprite.attach(e[0]!, 7, 2, color);
+  sprite.attach(e[2]!, 3, 0);
+  sprite.setFrame(e[2]!, 5);
+
+  health.attach(e[0]!, 100);
+  health.attach(e[2]!, 50);
+  health.attach(e6, 30);
+  health.applyDamage(e[2]!, 17, 1234);
+
+  pursue.attach(e[2]!, e[0]!, 1.5, 0.5, 4, 1000);
+  pursue.attach(e6, e[0]!, 2, 0.25);
+
+  ranged.attach(e[0]!, {
+    target: e[2]!, range: 6, minRange: 1, cooldownMs: 800, damage: 12,
+    projectileSpeed: 7, projectileLife: 2, projectileSize: 4,
+    projectileColor: color, homing: true,
+  });
+
+  emitter.attach(e[0]!, {
+    rate: 30, particleLife: 1.5, speedMin: 1, speedMax: 4,
+    dirX: 0, dirY: -1, dirZ: 0, coneRadians: 0.3,
+    ax: 0, ay: 9.8, az: 0, startSize: 4, endSize: 1,
+    startColor: color, endColor: color2, additive: true,
+  });
+  emitter.burst(e[0]!, 12);
+
+  // Free-list history in the vfx pools: spawn, kill some, spawn again.
+  for (let i = 0; i < 5; i++) {
+    particles.spawn({ x: i, y: i * 2, z: 0, life: 1 + i, color });
+  }
+  particles.kill(1);
+  particles.kill(3);
+  particles.spawn({ x: 99, y: 99, z: 0, life: 0.5, color: color2, additive: true });
+
+  for (let i = 0; i < 4; i++) {
+    projectiles.spawn({
+      x: i, y: 0, z: 0, vx: 1, vy: 0, vz: 0, life: 3, damage: 5 + i,
+      ownerEntity: e[0]!, targetEntity: i % 2 === 0 ? e[2]! : NULL_ENTITY,
+      size: 5, color, homing: i % 2 === 0,
+    });
+  }
+  projectiles.kill(2);
+
+  const snap = new StateSnapshot();
+  snap.register(alloc);
+  snap.register(entropy);
+  snap.register(transform);
+  snap.register(sprite);
+  snap.register(health);
+  snap.register(pursue);
+  snap.register(ranged);
+  snap.register(emitter);
+  snap.register(particles);
+  snap.register(projectiles);
+
+  return { alloc, entropy, transform, sprite, health, pursue, ranged, emitter, particles, projectiles, snap };
+}
+
+function buildEmpty(): StateSnapshot {
+  const snap = new StateSnapshot();
+  snap.register(new EntityAllocator());
+  snap.register(createEntropy(0));
+  snap.register(new TransformPool());
+  snap.register(new SpritePool());
+  snap.register(new HealthPool());
+  snap.register(new PursuePool());
+  snap.register(new RangedAttackPool());
+  snap.register(new ParticleEmitterPool());
+  snap.register(new ParticlePool());
+  snap.register(new ProjectilePool());
+  return snap;
+}
+
+test('component pools: every pool round-trips through StateSnapshot byte-identically', () => {
+  const a = buildPopulated();
+  const bytesA = a.snap.serialize().slice();
+
+  const empty = buildEmpty();
+  empty.restore(bytesA);
+  const bytesB = empty.serialize().slice();
+
+  assert.equal(empty.partCount, 10, 'allocator + entropy + 8 pools registered');
+  assert.deepEqual(Array.from(bytesB), Array.from(bytesA),
+    'restore -> re-serialize must reproduce the exact frame for all 10 parts');
+});
+
+test('component pools: hash diverges when any pool column is mutated', () => {
+  const a = buildPopulated();
+  const b = buildPopulated();
+  assert.equal(a.snap.hash(), b.snap.hash(), 'identical builds hash identically');
+
+  // Nudge a single Float32 in a single pool of world B.
+  b.transform.x[0] = (b.transform.x[0] ?? 0) + 0.0001;
+  assert.notEqual(a.snap.hash(), b.snap.hash(),
+    'a one-field change in one pool must change the world hash');
+});
+
+test('component pools: Int32 sentinel columns round-trip (-1 stays -1)', () => {
+  // TransformPool.parent and SpritePool.atlas hold -1 sentinels; the
+  // I32 slice path must preserve the sign, not wrap it to 0xffffffff.
+  const alloc = new EntityAllocator();
+  const e0 = alloc.create();
+  const e1 = alloc.create();
+
+  const t = new TransformPool();
+  t.attach(e0, 0, 0, 0);
+  t.attach(e1, 0, 0, 0);   // parent defaults to -1
+  const tw = new SnapshotWriter();
+  t.snapshotInto(tw);
+  const t2 = new TransformPool();
+  t2.restoreFrom(new SnapshotReader(tw.bytes().slice()));
+  assert.equal(t2.parent[entityIndex(e0)], -1);
+  assert.equal(t2.parent[entityIndex(e1)], -1);
+
+  const s = new SpritePool();
+  s.attach(e0, 4, 1);
+  s.attach(e1, 9, 2);
+  s.detach(e0);            // atlas[e0] -> -1, still within highWaterMark
+  const sw = new SnapshotWriter();
+  s.snapshotInto(sw);
+  const s2 = new SpritePool();
+  s2.restoreFrom(new SnapshotReader(sw.bytes().slice()));
+  assert.equal(s2.atlas[entityIndex(e0)], -1, 'detached atlas -1 survives');
+  assert.equal(s2.atlas[entityIndex(e1)], 9);
+});
+
+test('component pools: ParticlePool free-list + live count survive a round-trip', () => {
+  const p = new ParticlePool();
+  const color = { r: 1, g: 1, b: 1, a: 1 };
+  for (let i = 0; i < 6; i++) p.spawn({ x: i, y: 0, z: 0, life: 1, color });
+  p.kill(2);
+  p.kill(4);
+  assert.equal(p.getLiveCount(), 4);
+
+  const w = new SnapshotWriter();
+  p.snapshotInto(w);
+  const q = new ParticlePool();
+  q.restoreFrom(new SnapshotReader(w.bytes().slice()));
+
+  assert.equal(q.getLiveCount(), 4);
+  assert.equal(q.getHighWaterMark(), p.getHighWaterMark());
+  assert.equal(q.isAlive(2), false, 'killed slot stays killed');
+  assert.equal(q.isAlive(4), false);
+  assert.equal(q.isAlive(0), true, 'live slot stays live');
+  // The restored free list must hand recycled slots back on spawn.
+  const slot = q.spawn({ x: 0, y: 0, z: 0, life: 1, color });
+  assert.ok(slot === 2 || slot === 4, 'spawn recycles a freed slot, got ' + slot);
 });

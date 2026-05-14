@@ -15,6 +15,7 @@
 
 import { growF32, growI32, growU8, nextPow2 } from '../util/typed-arrays.js';
 import { type EntityId, entityIndex } from '../entity.js';
+import type { ISnapshotable, SnapshotWriter, SnapshotReader } from '../runtime/state-snapshot.js';
 
 // Bitflags packed into the cold flags array.
 export const TRANSFORM_FLAG_DIRTY = 1 << 0;       // world matrix needs recompute
@@ -22,7 +23,7 @@ export const TRANSFORM_FLAG_VISIBLE = 1 << 1;     // skip render if cleared
 export const TRANSFORM_FLAG_STATIC = 1 << 2;      // never moves; cache aggressively
 export const TRANSFORM_FLAG_HAS_PARENT = 1 << 3;  // parent slot is meaningful
 
-export class TransformPool {
+export class TransformPool implements ISnapshotable {
   // Hot data - touched every frame by render + sort systems.
   x: Float32Array;
   y: Float32Array;
@@ -153,5 +154,36 @@ export class TransformPool {
     if (index >= this.capacity) return;
     const f = this.flags[index] ?? 0;
     this.flags[index] = f & ~TRANSFORM_FLAG_DIRTY;
+  }
+
+  // --- ISnapshotable: canonical SoA columns [0, highWaterMark). ---
+
+  readonly snapshotKey: string = 'loom.transform-pool';
+
+  snapshotInto(w: SnapshotWriter): void {
+    const n = this.highWaterMark;
+    w.writeU32(n);
+    w.writeF32Slice(this.x, n);
+    w.writeF32Slice(this.y, n);
+    w.writeF32Slice(this.z, n);
+    w.writeF32Slice(this.rotation, n);
+    w.writeF32Slice(this.scaleX, n);
+    w.writeF32Slice(this.scaleY, n);
+    w.writeI32Slice(this.parent, n);
+    w.writeU8Slice(this.flags, n);
+  }
+
+  restoreFrom(r: SnapshotReader): void {
+    const n = r.readU32();
+    this.x = r.readF32Slice();
+    this.y = r.readF32Slice();
+    this.z = r.readF32Slice();
+    this.rotation = r.readF32Slice();
+    this.scaleX = r.readF32Slice();
+    this.scaleY = r.readF32Slice();
+    this.parent = r.readI32Slice();
+    this.flags = r.readU8Slice();
+    this.capacity = n;
+    this.highWaterMark = n;
   }
 }

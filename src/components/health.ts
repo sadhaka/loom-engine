@@ -9,6 +9,7 @@
 
 import { type EntityId, entityIndex } from '../entity.js';
 import { growF32, growU8, nextPow2 } from '../util/typed-arrays.js';
+import type { ISnapshotable, SnapshotWriter, SnapshotReader } from '../runtime/state-snapshot.js';
 
 export const HEALTH_FLAG_ACTIVE = 1 << 0;
 export const HEALTH_FLAG_DEAD = 1 << 1;
@@ -16,7 +17,7 @@ export const HEALTH_FLAG_DEAD = 1 << 1;
 // gameplay logic for i-frames after a hit, boss intro phases, etc.
 export const HEALTH_FLAG_INVULNERABLE = 1 << 2;
 
-export class HealthPool {
+export class HealthPool implements ISnapshotable {
   // Hot data
   current: Float32Array;
   max: Float32Array;
@@ -146,6 +147,29 @@ export class HealthPool {
 
   getCapacity(): number {
     return this.capacity;
+  }
+
+  // --- ISnapshotable: canonical SoA columns [0, highWaterMark). ---
+
+  readonly snapshotKey: string = 'loom.health-pool';
+
+  snapshotInto(w: SnapshotWriter): void {
+    const n = this.highWaterMark;
+    w.writeU32(n);
+    w.writeF32Slice(this.current, n);
+    w.writeF32Slice(this.max, n);
+    w.writeF32Slice(this.lastDamageMs, n);
+    w.writeU8Slice(this.flags, n);
+  }
+
+  restoreFrom(r: SnapshotReader): void {
+    const n = r.readU32();
+    this.current = r.readF32Slice();
+    this.max = r.readF32Slice();
+    this.lastDamageMs = r.readF32Slice();
+    this.flags = r.readU8Slice();
+    this.capacity = n;
+    this.highWaterMark = n;
   }
 }
 
