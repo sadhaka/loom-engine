@@ -1021,6 +1021,11 @@ export { LoomFlux } from './runtime/loom-flux.js';
 // and recycling, via a generation-validated phase-change command buffer.
 export { LoomDecay, makeMaterialHandle, materialSlot, materialGeneration } from './runtime/loom-decay.js';
 export type { MaterialHandle, TransitionRule, DecayStats, CommitStats } from './runtime/loom-decay.js';
+// OmniveilSKB - a semantic knowledge base: source-attributed truth
+// claims as (subject, predicate, object) triples with a distinct-
+// source consensus count, open-addressed storage, identity-verified
+// consensus, and contradiction / per-source poisoning rules.
+export { OmniveilSKB, CLAIM_QUAD_STRIDE } from './runtime/omniveil-skb.js';
 // 1.7.5 MILESTONE (Wave 1.7 networking complete) - ChatChannel +
 // ChatChannelRegistry: moderated multi-channel chat with rate
 // limit + filter hooks.
