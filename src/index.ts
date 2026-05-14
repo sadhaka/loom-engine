@@ -1021,6 +1021,28 @@ export { LoomFlux } from './runtime/loom-flux.js';
 // and recycling, via a generation-validated phase-change command buffer.
 export { LoomDecay, makeMaterialHandle, materialSlot, materialGeneration } from './runtime/loom-decay.js';
 export type { MaterialHandle, TransitionRule, DecayStats, CommitStats } from './runtime/loom-decay.js';
+// BlackSwan - the chaos engine: a windowed entropy monitor plus a
+// governed event-proposal pipeline. Untrusted proposals move through
+// a PROPOSED -> APPROVED -> CANARY/ACTIVE -> EXPIRED state machine
+// under Mainframe approval; every transition is audit-logged. It never
+// mutates the world directly.
+export {
+  BlackSwan,
+  makeEventHandle,
+  eventSlot,
+  eventGeneration,
+  EVENT_STATE_NONE,
+  EVENT_STATE_PROPOSED,
+  EVENT_STATE_APPROVED,
+  EVENT_STATE_CANARY,
+  EVENT_STATE_ACTIVE,
+  EVENT_STATE_EXPIRED,
+  EVENT_STATE_REJECTED,
+  EVENT_STATE_REVOKED,
+  EVENT_HANDLE_INVALID,
+  AUDIT_RECORD_STRIDE,
+} from './runtime/black-swan.js';
+export type { EventHandle, BlackSwanConfig } from './runtime/black-swan.js';
 // 1.7.5 MILESTONE (Wave 1.7 networking complete) - ChatChannel +
 // ChatChannelRegistry: moderated multi-channel chat with rate
 // limit + filter hooks.
