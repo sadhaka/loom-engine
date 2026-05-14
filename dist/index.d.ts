@@ -257,6 +257,7 @@ export { attachLagCompensationToWs } from './runtime/ws-adapters/lag-compensatio
 export type { LagCompensationWsAdapterOptions, LagCompensationWsHandle } from './runtime/ws-adapters/lag-compensation-ws.js';
 export { AIActionInterpreter } from './runtime/ai-action-interpreter.js';
 export type { ParseStats } from './runtime/ai-action-interpreter.js';
+export { LoomFlux } from './runtime/loom-flux.js';
 export { ChatChannel, ChatChannelRegistry, RESOURCE_CHAT_CHANNEL, RESOURCE_CHAT_CHANNEL_REGISTRY } from './runtime/chat-channel.js';
 export type { ChatMessage, ChatMember, SendResult, ChatFilter, ChatChannelOptions } from './runtime/chat-channel.js';
 export { attachChatChannelToWs } from './runtime/ws-adapters/chat-channel-ws.js';
