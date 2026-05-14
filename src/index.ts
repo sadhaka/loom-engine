@@ -147,6 +147,8 @@ export { Tween, Easings, cubicBezier, RESOURCE_TWEEN } from './runtime/tween.js'
 export type { TweenHandle, TweenOptions, EasingFn, EasingName } from './runtime/tween.js';
 // 0.30.0 - spatial hash for nearby-entity queries.
 export { SpatialHash, RESOURCE_SPATIAL_HASH } from './runtime/spatial-hash.js';
+// 1.7.7 - dense bounded uniform grid; zero-allocation fixed-arena counterpart to SpatialHash.
+export { SpatialGrid } from './runtime/spatial-grid.js';
 // 0.31.0 - declarative input actions.
 export { InputActions, RESOURCE_INPUT_ACTIONS } from './input/input-actions.js';
 // 0.32.0 - generic object pool for short-lived reusable objects.
@@ -1560,6 +1562,33 @@ export {
   PeerPresenceSystem,
   PeerRenderSystem,
 } from './systems/peer-presence-system.js';
+
+// DeltaCompressor (Loom-Wire): per-record binary delta - a one-u32
+// change mask plus only the changed columns, built on the canonical
+// SnapshotWriter / SnapshotReader byte format. deltaFrameTo/FromBase64
+// wrap a frame for the SSE text channel.
+export type { DeltaFrameInfo } from './network/delta-compressor.js';
+export {
+  DeltaCompressor,
+  DELTA_WIRE_MAGIC,
+  DELTA_WIRE_VERSION,
+  DELTA_MAX_COLUMNS,
+  deltaFrameToBase64,
+  deltaFrameFromBase64,
+} from './network/delta-compressor.js';
+// InputReconciliation: fixed-point Int32 client-side prediction ring.
+// reconcile() applies an authoritative server position; the static
+// smoothVisual() eases the rendered position toward it without
+// touching gameplay state. The fixed-point counterpart to the generic
+// LagCompensation rewind buffer.
+export type { ReconcileResult } from './network/input-reconciliation.js';
+export {
+  InputReconciliation,
+  FIXED_POINT_SHIFT,
+  FIXED_POINT_ONE,
+  floatToFixed,
+  fixedToFloat,
+} from './network/input-reconciliation.js';
 
 // ===== Phase 0.19 client-side plugin SDK =====
 //
