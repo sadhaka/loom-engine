@@ -123,9 +123,9 @@ test('pursue pool: attach + setTarget + isActive', () => {
   const target: EntityId = 1;
   p.attach(enemy, target, 1.5, 0.5, 5, 1000);
   assert.ok(p.isActive(enemy));
-  assert.equal(p.targetIndex[entityIndex(enemy)], 1);
+  assert.equal(p.targetEntity[entityIndex(enemy)], 1);
   p.setTarget(enemy, 5);
-  assert.equal(p.targetIndex[entityIndex(enemy)], 5);
+  assert.equal(p.targetEntity[entityIndex(enemy)], 5);
 });
 
 // ---------- PursueSystem ----------
@@ -229,6 +229,42 @@ test('pursue system: stops pursuing dead target', async () => {
   // Enemy did not move (target dead).
   const i = entityIndex(enemy);
   assert.equal(transforms.x[i], 5);
+});
+
+test('pursue system: drops a target whose slot was recycled into a new entity (P1 cross-reference fix)', async () => {
+  const { World } = await import('../src/world.js');
+  const w = new World();
+  const transforms = new TransformPool();
+  const pursuit = new PursuePool();
+  const health = new HealthPool();
+  w.registerPool(POOL_TRANSFORM, transforms);
+  w.registerPool(POOL_PURSUE, pursuit);
+  w.registerPool(POOL_HEALTH, health);
+
+  // Enemy locks onto the original target.
+  const target = w.createEntity();
+  const enemy = w.createEntity();
+  transforms.attach(target, 10, 0, 0);
+  transforms.attach(enemy, 0, 0, 0);
+  health.attach(target, 50);
+  pursuit.attach(enemy, target, 1.0, 0.1, 0, 1000);
+
+  // Destroy the target and recycle its slot into a brand-new entity
+  // sitting elsewhere. The stored targetEntity handle now carries a
+  // stale generation.
+  assert.ok(w.destroyEntity(target));
+  const newTenant = w.createEntity();
+  assert.equal(entityIndex(newTenant), entityIndex(target), 'slot recycled');
+  transforms.attach(newTenant, -10, 0, 0);
+
+  w.addSystem(new PursueSystem(), SYSTEM_PHASE_LOGIC);
+  w.update(1.0);
+
+  // A raw-index targetIndex would have followed the slot and walked
+  // the enemy toward the new tenant at (-10, 0). The generation
+  // check on the stored handle stops that.
+  const ei = entityIndex(enemy);
+  assert.equal(transforms.x[ei], 0, 'enemy did not chase the recycled-slot tenant');
 });
 
 // ---------- DamageSystem ----------

@@ -6,15 +6,15 @@
 // without Pursue and stay rooted (e.g. summoners). RangedAttackSystem
 // reads this each tick.
 
-import { type EntityId, entityIndex } from '../entity.js';
-import { growF32, growI32, growU8, nextPow2 } from '../util/typed-arrays.js';
+import { type EntityId, entityIndex, NULL_ENTITY } from '../entity.js';
+import { growF32, growU8, nextPow2 } from '../util/typed-arrays.js';
 import type { ColorRGBA } from '../util/color.js';
 
 export const RANGED_FLAG_ACTIVE = 1 << 0;
 export const RANGED_FLAG_HOMING = 1 << 1;
 
 export interface RangedAttackConfig {
-  // Entity index of the target (typically the player).
+  // Target entity handle (typically the player).
   target: EntityId;
   // Range in world tile units. If target is farther, no fire.
   range: number;
@@ -53,8 +53,8 @@ export class RangedAttackPool {
   g: Float32Array;
   b: Float32Array;
   a: Float32Array;
-  // Target entity index. -1 = no target.
-  targetIndex: Int32Array;
+  // Full EntityId of target. NULL_ENTITY = no target.
+  targetEntity: Uint32Array;
   flags: Uint8Array;
 
   private capacity: number = 0;
@@ -74,7 +74,7 @@ export class RangedAttackPool {
     this.g = new Float32Array(this.capacity);
     this.b = new Float32Array(this.capacity);
     this.a = new Float32Array(this.capacity);
-    this.targetIndex = new Int32Array(this.capacity).fill(-1);
+    this.targetEntity = new Uint32Array(this.capacity);
     this.flags = new Uint8Array(this.capacity);
   }
 
@@ -93,13 +93,11 @@ export class RangedAttackPool {
     this.g = growF32(this.g, next);
     this.b = growF32(this.b, next);
     this.a = growF32(this.a, next);
-    const newTarget = new Int32Array(next).fill(-1);
-    newTarget.set(this.targetIndex);
-    this.targetIndex = newTarget;
+    const newTarget = new Uint32Array(next);
+    newTarget.set(this.targetEntity);
+    this.targetEntity = newTarget;
     this.flags = growU8(this.flags, next);
     this.capacity = next;
-    // Mark unused growF32 import as used (TypeScript noUnusedImports).
-    if (this.range.length === 0) growI32(this.targetIndex, 0);
   }
 
   attach(e: EntityId, cfg: RangedAttackConfig): void {
@@ -117,7 +115,7 @@ export class RangedAttackPool {
     this.g[i] = cfg.projectileColor.g;
     this.b[i] = cfg.projectileColor.b;
     this.a[i] = cfg.projectileColor.a;
-    this.targetIndex[i] = entityIndex(cfg.target);
+    this.targetEntity[i] = cfg.target;
     let f = RANGED_FLAG_ACTIVE;
     if (cfg.homing) f |= RANGED_FLAG_HOMING;
     this.flags[i] = f;
@@ -128,13 +126,13 @@ export class RangedAttackPool {
     const i = entityIndex(e);
     if (i >= this.capacity) return;
     this.flags[i] = 0;
-    this.targetIndex[i] = -1;
+    this.targetEntity[i] = NULL_ENTITY;
   }
 
   setTarget(e: EntityId, target: EntityId): void {
     const i = entityIndex(e);
     if (i >= this.capacity) return;
-    this.targetIndex[i] = entityIndex(target);
+    this.targetEntity[i] = target;
   }
 
   isActive(e: EntityId): boolean {

@@ -25,6 +25,7 @@ import {
 import { ProjectilePool, POOL_PROJECTILE } from '../vfx/projectile-pool.js';
 import { HealthPool, POOL_HEALTH } from '../components/health.js';
 import { RESOURCE_TIME, type TimeResource } from '../resources.js';
+import { entityIndex, NULL_ENTITY } from '../entity.js';
 
 export class RangedAttackSystem implements System {
   readonly name: string = 'ranged-attack';
@@ -56,9 +57,12 @@ export class RangedAttackSystem implements System {
         continue;
       }
 
-      const targetIdx = ranged.targetIndex[i] ?? -1;
-      if (targetIdx < 0) continue;
-      const target = world.entityAt(targetIdx);
+      const target = ranged.targetEntity[i] ?? NULL_ENTITY;
+      if (target === NULL_ENTITY) continue;
+      // Validate the stored handle's generation - if the target
+      // died and its slot was recycled, skip rather than fire at
+      // whatever new entity now holds the slot.
+      if (!world.entities.isAlive(target)) continue;
       if (!health.isAlive(target)) continue;
 
       // Cooldown gate.
@@ -67,10 +71,11 @@ export class RangedAttackSystem implements System {
       if (lastFire >= 0 && now - lastFire < cooldown) continue;
 
       // Range check.
+      const ti = entityIndex(target);
       const myX = transforms.x[i] ?? 0;
       const myY = transforms.y[i] ?? 0;
-      const tx = transforms.x[targetIdx] ?? 0;
-      const ty = transforms.y[targetIdx] ?? 0;
+      const tx = transforms.x[ti] ?? 0;
+      const ty = transforms.y[ti] ?? 0;
       const dx = tx - myX;
       const dy = ty - myY;
       const dist = Math.sqrt(dx * dx + dy * dy);
@@ -94,8 +99,8 @@ export class RangedAttackSystem implements System {
         vz: 0,
         life: ranged.projectileLife[i] ?? 2.0,
         damage: ranged.damage[i] ?? 1,
-        ownerIndex: i,
-        targetIndex: homing ? targetIdx : -1,
+        ownerEntity: firer,
+        targetEntity: homing ? target : NULL_ENTITY,
         size: ranged.projectileSize[i] ?? 5,
         color: {
           r: ranged.r[i] ?? 1,

@@ -11,6 +11,7 @@
 
 import { growF32, growI32, growU8, nextPow2 } from '../util/typed-arrays.js';
 import type { ColorRGBA } from '../util/color.js';
+import { type EntityId, NULL_ENTITY } from '../entity.js';
 
 export const PROJECTILE_FLAG_ALIVE = 1 << 0;
 // Homing: each tick, projectile re-aims at target's position.
@@ -32,11 +33,11 @@ export interface ProjectileSpawn {
   vz: number;
   life: number;             // seconds before auto-despawn
   damage: number;           // applied to a HealthPool entity on contact
-  // Owner entity index. The projectile never damages its owner.
-  // -1 = no owner (environmental).
-  ownerIndex: number;
-  // Optional homing target entity index. -1 = no target.
-  targetIndex?: number;
+  // Owner entity handle. The projectile never damages its owner.
+  // NULL_ENTITY = no owner (environmental).
+  ownerEntity: EntityId;
+  // Optional homing target entity handle. NULL_ENTITY = no target.
+  targetEntity?: EntityId;
   // Visual params.
   size: number;             // pixel size for render
   color: Readonly<ColorRGBA>;
@@ -54,8 +55,8 @@ export class ProjectilePool {
   vz: Float32Array;
   life: Float32Array;
   damage: Float32Array;
-  ownerIndex: Int32Array;
-  targetIndex: Int32Array;     // -1 if not homing
+  ownerEntity: Uint32Array;
+  targetEntity: Uint32Array;   // NULL_ENTITY if not homing
   size: Float32Array;
   // Color rgba split.
   r: Float32Array;
@@ -81,8 +82,8 @@ export class ProjectilePool {
     this.vz = new Float32Array(this.capacity);
     this.life = new Float32Array(this.capacity);
     this.damage = new Float32Array(this.capacity);
-    this.ownerIndex = new Int32Array(this.capacity).fill(-1);
-    this.targetIndex = new Int32Array(this.capacity).fill(-1);
+    this.ownerEntity = new Uint32Array(this.capacity);
+    this.targetEntity = new Uint32Array(this.capacity);
     this.size = new Float32Array(this.capacity);
     this.r = new Float32Array(this.capacity);
     this.g = new Float32Array(this.capacity);
@@ -111,12 +112,12 @@ export class ProjectilePool {
     this.vz = growF32(this.vz, next);
     this.life = growF32(this.life, next);
     this.damage = growF32(this.damage, next);
-    const newOwner = new Int32Array(next).fill(-1);
-    newOwner.set(this.ownerIndex);
-    this.ownerIndex = newOwner;
-    const newTarget = new Int32Array(next).fill(-1);
-    newTarget.set(this.targetIndex);
-    this.targetIndex = newTarget;
+    const newOwner = new Uint32Array(next);
+    newOwner.set(this.ownerEntity);
+    this.ownerEntity = newOwner;
+    const newTarget = new Uint32Array(next);
+    newTarget.set(this.targetEntity);
+    this.targetEntity = newTarget;
     this.size = growF32(this.size, next);
     this.r = growF32(this.r, next);
     this.g = growF32(this.g, next);
@@ -141,8 +142,8 @@ export class ProjectilePool {
     this.vx[i] = p.vx; this.vy[i] = p.vy; this.vz[i] = p.vz;
     this.life[i] = p.life;
     this.damage[i] = p.damage;
-    this.ownerIndex[i] = p.ownerIndex;
-    this.targetIndex[i] = p.targetIndex ?? -1;
+    this.ownerEntity[i] = p.ownerEntity;
+    this.targetEntity[i] = p.targetEntity ?? NULL_ENTITY;
     this.size[i] = p.size;
     this.r[i] = p.color.r;
     this.g[i] = p.color.g;

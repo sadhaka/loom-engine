@@ -12,7 +12,7 @@
 // being mobbed by 3 enemies that walk at it and start damaging
 // when in range.
 
-import { type EntityId, entityIndex } from '../entity.js';
+import { type EntityId, entityIndex, NULL_ENTITY } from '../entity.js';
 import { growF32, growU8, nextPow2 } from '../util/typed-arrays.js';
 
 export const PURSUE_FLAG_ACTIVE = 1 << 0;
@@ -21,7 +21,7 @@ export class PursuePool {
   // Hot
   speed: Float32Array;          // world units per second
   stopDistance: Float32Array;   // stop pursuing once within this distance of target
-  targetIndex: Int32Array;      // entity index of target; -1 = no target
+  targetEntity: Uint32Array;    // full EntityId of target; NULL_ENTITY = none
   // Damage applied to target when in range, per tick (not per second
   // - DamageSystem multiplies by dt elsewhere if continuous). This
   // is melee contact damage; ranged is a separate component.
@@ -38,7 +38,7 @@ export class PursuePool {
     this.capacity = nextPow2(initialCapacity);
     this.speed = new Float32Array(this.capacity);
     this.stopDistance = new Float32Array(this.capacity);
-    this.targetIndex = new Int32Array(this.capacity).fill(-1);
+    this.targetEntity = new Uint32Array(this.capacity);
     this.contactDamage = new Float32Array(this.capacity);
     this.contactCooldownMs = new Float32Array(this.capacity);
     this.lastHitMs = new Float32Array(this.capacity);
@@ -50,9 +50,9 @@ export class PursuePool {
     const next = nextPow2(neededIndex + 1);
     this.speed = growF32(this.speed, next);
     this.stopDistance = growF32(this.stopDistance, next);
-    const newTarget = new Int32Array(next).fill(-1);
-    newTarget.set(this.targetIndex);
-    this.targetIndex = newTarget;
+    const newTarget = new Uint32Array(next);
+    newTarget.set(this.targetEntity);
+    this.targetEntity = newTarget;
     this.contactDamage = growF32(this.contactDamage, next);
     this.contactCooldownMs = growF32(this.contactCooldownMs, next);
     this.lastHitMs = growF32(this.lastHitMs, next);
@@ -72,7 +72,7 @@ export class PursuePool {
     this.ensureCapacity(i);
     this.speed[i] = speed;
     this.stopDistance[i] = stopDistance;
-    this.targetIndex[i] = entityIndex(target);
+    this.targetEntity[i] = target;
     this.contactDamage[i] = contactDamage;
     this.contactCooldownMs[i] = contactCooldownMs;
     this.lastHitMs[i] = -1;
@@ -84,13 +84,13 @@ export class PursuePool {
     const i = entityIndex(e);
     if (i >= this.capacity) return;
     this.flags[i] = 0;
-    this.targetIndex[i] = -1;
+    this.targetEntity[i] = NULL_ENTITY;
   }
 
   setTarget(e: EntityId, target: EntityId): void {
     const i = entityIndex(e);
     if (i >= this.capacity) return;
-    this.targetIndex[i] = entityIndex(target);
+    this.targetEntity[i] = target;
   }
 
   isActive(e: EntityId): boolean {
