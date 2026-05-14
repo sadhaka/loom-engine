@@ -1021,6 +1021,20 @@ export { LoomFlux } from './runtime/loom-flux.js';
 // and recycling, via a generation-validated phase-change command buffer.
 export { LoomDecay, makeMaterialHandle, materialSlot, materialGeneration } from './runtime/loom-decay.js';
 export type { MaterialHandle, TransitionRule, DecayStats, CommitStats } from './runtime/loom-decay.js';
+// MarketSimulation - a deterministic batch-auction order book: Int32
+// wealth + inventory ledgers, escrowed conservation-safe settlement,
+// maker-price matching, generation-validated order handles. SAB
+// multi-producer ingestion is the deferred layer.
+export { MarketSimulation } from './runtime/market-simulation.js';
+export type {
+  OrderSide,
+  MarketSimulationOptions,
+  PlaceOrderSpec,
+  PlaceOrderResult,
+  OrderView,
+  Trade,
+  BatchResult,
+} from './runtime/market-simulation.js';
 // 1.7.5 MILESTONE (Wave 1.7 networking complete) - ChatChannel +
 // ChatChannelRegistry: moderated multi-channel chat with rate
 // limit + filter hooks.
