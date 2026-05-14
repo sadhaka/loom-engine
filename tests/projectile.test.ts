@@ -27,9 +27,12 @@ import {
   hexToRgba,
   approxEq,
   entityIndex,
+  NULL_ENTITY,
   SYSTEM_PHASE_PHYSICS,
   SYSTEM_PHASE_LOGIC,
   COLOR_KNOT_INT,
+  ParticlePool,
+  SnapshotWriter,
 } from '../src/index.js';
 
 // ---------- ProjectilePool ----------
@@ -40,41 +43,41 @@ test('projectile pool: spawn writes hot data + ALIVE flag', () => {
     x: 0, y: 0, z: 0, vx: 1, vy: 0, vz: 0,
     life: 2,
     damage: 10,
-    ownerIndex: 1,
+    ownerEntity: 1,
     size: 5,
     color: COLOR_KNOT_INT,
   });
   assert.ok(slot >= 0);
   assert.ok(pool.isAlive(slot));
   assert.equal(pool.damage[slot], 10);
-  assert.equal(pool.ownerIndex[slot], 1);
-  assert.equal(pool.targetIndex[slot], -1);
+  assert.equal(pool.ownerEntity[slot], 1);
+  assert.equal(pool.targetEntity[slot], NULL_ENTITY);
 });
 
 test('projectile pool: homing flag sets HOMING bit', () => {
   const pool = new ProjectilePool();
   const slot = pool.spawn({
     x: 0, y: 0, z: 0, vx: 1, vy: 0, vz: 0,
-    life: 1, damage: 5, ownerIndex: -1, size: 5,
-    color: COLOR_KNOT_INT, homing: true, targetIndex: 5,
+    life: 1, damage: 5, ownerEntity: NULL_ENTITY, size: 5,
+    color: COLOR_KNOT_INT, homing: true, targetEntity: 5,
   });
   assert.equal((pool.flags[slot] ?? 0) & PROJECTILE_FLAG_HOMING, PROJECTILE_FLAG_HOMING);
-  assert.equal(pool.targetIndex[slot], 5);
+  assert.equal(pool.targetEntity[slot], 5);
 });
 
 test('projectile pool: maxProjectiles cap returns -1', () => {
   const pool = new ProjectilePool(8, 2);
-  pool.spawn({ x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, life: 1, damage: 1, ownerIndex: -1, size: 1, color: COLOR_KNOT_INT });
-  pool.spawn({ x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, life: 1, damage: 1, ownerIndex: -1, size: 1, color: COLOR_KNOT_INT });
-  const overflow = pool.spawn({ x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, life: 1, damage: 1, ownerIndex: -1, size: 1, color: COLOR_KNOT_INT });
+  pool.spawn({ x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, life: 1, damage: 1, ownerEntity: NULL_ENTITY, size: 1, color: COLOR_KNOT_INT });
+  pool.spawn({ x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, life: 1, damage: 1, ownerEntity: NULL_ENTITY, size: 1, color: COLOR_KNOT_INT });
+  const overflow = pool.spawn({ x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, life: 1, damage: 1, ownerEntity: NULL_ENTITY, size: 1, color: COLOR_KNOT_INT });
   assert.equal(overflow, -1);
 });
 
 test('projectile pool: kill recycles slot', () => {
   const pool = new ProjectilePool();
-  const a = pool.spawn({ x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, life: 1, damage: 1, ownerIndex: -1, size: 1, color: COLOR_KNOT_INT });
+  const a = pool.spawn({ x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, life: 1, damage: 1, ownerEntity: NULL_ENTITY, size: 1, color: COLOR_KNOT_INT });
   pool.kill(a);
-  const b = pool.spawn({ x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, life: 1, damage: 1, ownerIndex: -1, size: 1, color: COLOR_KNOT_INT });
+  const b = pool.spawn({ x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, life: 1, damage: 1, ownerEntity: NULL_ENTITY, size: 1, color: COLOR_KNOT_INT });
   assert.equal(b, a);
 });
 
@@ -92,7 +95,7 @@ test('projectile system: integrates position, decreases life, kills on expire', 
 
   const slot = projectiles.spawn({
     x: 0, y: 0, z: 0, vx: 5, vy: 0, vz: 0,
-    life: 0.5, damage: 10, ownerIndex: -1, size: 3,
+    life: 0.5, damage: 10, ownerEntity: NULL_ENTITY, size: 3,
     color: COLOR_KNOT_INT,
   });
 
@@ -122,7 +125,7 @@ test('projectile system: damages a HealthPool entity on contact + kills projecti
 
   const slot = projectiles.spawn({
     x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0,
-    life: 5, damage: 30, ownerIndex: -1, size: 5,
+    life: 5, damage: 30, ownerEntity: NULL_ENTITY, size: 5,
     color: COLOR_KNOT_INT,
   });
 
@@ -147,11 +150,10 @@ test('projectile system: never damages owner', async () => {
   const owner = w.createEntity();
   transforms.attach(owner, 0, 0, 0);
   health.attach(owner, 100);
-  const ownerIdx = entityIndex(owner);
 
   projectiles.spawn({
     x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0,
-    life: 5, damage: 50, ownerIndex: ownerIdx, size: 5,
+    life: 5, damage: 50, ownerEntity: owner, size: 5,
     color: COLOR_KNOT_INT,
   });
 
@@ -180,7 +182,7 @@ test('ranged attack pool: attach + setTarget + isActive', () => {
   assert.ok(pool.isActive(e));
   assert.equal((pool.flags[entityIndex(e)] ?? 0) & RANGED_FLAG_ACTIVE, RANGED_FLAG_ACTIVE);
   pool.setTarget(e, 42);
-  assert.equal(pool.targetIndex[entityIndex(e)], 42);
+  assert.equal(pool.targetEntity[entityIndex(e)], 42);
 });
 
 test('ranged attack system: fires projectile when target in range + cooldown elapsed', async () => {
@@ -355,4 +357,62 @@ test('spawnMob: caster gets HOMING projectile config', async () => {
   const i = entityIndex(caster);
   assert.equal((ranged.flags[i] ?? 0) & 2, 2);   // HOMING flag set (RANGED_FLAG_HOMING = 1<<1 = 2)
   assert.equal(ranged.damage[i], 12);
+});
+
+// ---------- spawnRaw (zero-allocation spawn path) ----------
+
+// Snapshot a pool's columns to canonical bytes - a compact way to
+// assert two pools hold byte-identical state across every column.
+function poolBytes(pool: { snapshotInto(w: SnapshotWriter): void }): number[] {
+  const w = new SnapshotWriter();
+  pool.snapshotInto(w);
+  return Array.from(w.bytes().slice());
+}
+
+test('particle pool: spawnRaw writes the same columns as spawn(obj)', () => {
+  const a = new ParticlePool();
+  const b = new ParticlePool();
+  const color = { r: 0.8, g: 0.4, b: 0.2, a: 1 };
+  const endColor = { r: 0.1, g: 0.2, b: 0.3, a: 0 };
+
+  const ia = a.spawnRaw(
+    1, 2, 3, 4, 5, 6, 7, 8, 9,
+    2.5, 4, 1.5,
+    0.8, 0.4, 0.2, 1,
+    0.1, 0.2, 0.3, 0,
+    true,
+  );
+  const ib = b.spawn({
+    x: 1, y: 2, z: 3, vx: 4, vy: 5, vz: 6, ax: 7, ay: 8, az: 9,
+    life: 2.5, size: 4, endSize: 1.5, color, endColor, additive: true,
+  });
+
+  assert.equal(ia, ib, 'both spawn into slot 0');
+  assert.deepEqual(poolBytes(a), poolBytes(b),
+    'spawnRaw and spawn(obj) must write byte-identical pool state');
+});
+
+test('projectile pool: spawnRaw writes the same columns as spawn(obj)', () => {
+  const a = new ProjectilePool();
+  const b = new ProjectilePool();
+  const color = { r: 0.3, g: 0.6, b: 0.9, a: 1 };
+
+  const ia = a.spawnRaw(
+    1, 2, 3, 4, 5, 6,
+    2.0, 15,
+    7, 9,
+    5,
+    0.3, 0.6, 0.9, 1,
+    true, false,
+  );
+  const ib = b.spawn({
+    x: 1, y: 2, z: 3, vx: 4, vy: 5, vz: 6,
+    life: 2.0, damage: 15,
+    ownerEntity: 7, targetEntity: 9,
+    size: 5, color, homing: true, pierce: false,
+  });
+
+  assert.equal(ia, ib, 'both spawn into slot 0');
+  assert.deepEqual(poolBytes(a), poolBytes(b),
+    'spawnRaw and spawn(obj) must write byte-identical pool state');
 });

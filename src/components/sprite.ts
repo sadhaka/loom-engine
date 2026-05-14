@@ -9,15 +9,16 @@
 // tightly packed. Tint is split into rgba arrays so iteration
 // stays cache-friendly.
 
-import { growF32, growI32, growU8, nextPow2 } from '../util/typed-arrays.js';
+import { growF32, growI32, growU8, nextPow2, tightenHighWaterMark } from '../util/typed-arrays.js';
 import { type EntityId, entityIndex } from '../entity.js';
 import type { AtlasHandle } from '../renderer/graphics-device.js';
 import type { ColorRGBA } from '../util/color.js';
+import type { ISnapshotable, SnapshotWriter, SnapshotReader } from '../runtime/state-snapshot.js';
 
 export const SPRITE_FLAG_ACTIVE = 1 << 0;
 export const SPRITE_FLAG_TINTED = 1 << 1;
 
-export class SpritePool {
+export class SpritePool implements ISnapshotable {
   // Hot data
   atlas: Int32Array;        // -1 = no sprite assigned (pair with flags ACTIVE bit)
   frame: Int32Array;
@@ -131,5 +132,41 @@ export class SpritePool {
 
   getCapacity(): number {
     return this.capacity;
+  }
+
+  // Lower highWaterMark past trailing detached slots. SPRITE_FLAG_-
+  // ACTIVE is set by attach and cleared only by detach, so a zero
+  // flags byte marks a free slot.
+  tighten(): void {
+    this.highWaterMark = tightenHighWaterMark(this.flags, this.highWaterMark);
+  }
+
+  // --- ISnapshotable: canonical SoA columns [0, highWaterMark). ---
+
+  readonly snapshotKey: string = 'loom.sprite-pool';
+
+  snapshotInto(w: SnapshotWriter): void {
+    const n = this.highWaterMark;
+    w.writeU32(n);
+    w.writeI32Slice(this.atlas, n);
+    w.writeI32Slice(this.frame, n);
+    w.writeF32Slice(this.tintR, n);
+    w.writeF32Slice(this.tintG, n);
+    w.writeF32Slice(this.tintB, n);
+    w.writeF32Slice(this.tintA, n);
+    w.writeU8Slice(this.flags, n);
+  }
+
+  restoreFrom(r: SnapshotReader): void {
+    const n = r.readU32();
+    this.atlas = r.readI32Slice();
+    this.frame = r.readI32Slice();
+    this.tintR = r.readF32Slice();
+    this.tintG = r.readF32Slice();
+    this.tintB = r.readF32Slice();
+    this.tintA = r.readF32Slice();
+    this.flags = r.readU8Slice();
+    this.capacity = n;
+    this.highWaterMark = n;
   }
 }

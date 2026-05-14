@@ -6,7 +6,6 @@
     "declaration": false,
     "declarationMap": false,
     "noEmit": false,
-    "baseUrl": ".",
     "paths": {
       "@sadhaka/loom-engine": ["./dist/index.d.ts"]
     }

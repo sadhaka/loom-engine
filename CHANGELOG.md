@@ -7,6 +7,50 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 1.7.6 - 2026-05-14 (Generational-handle hardening + determinism verification harness)
+
+**Hardens the ECS core against use-after-free, adds a deterministic
+binary snapshot + per-tick hash for cross-runtime verification, and
+cuts hot-loop allocation across the pools.**
+
+Generational handles. EntityAllocator gains a per-slot alive bitmap
+plus `destroyByLiveIndex(index)` and `entityAt(index)`: systems that
+sweep a component pool by dense index no longer fabricate a
+0-generation handle, which silently failed to destroy any recycled
+slot and leaked it. Pool cross-reference fields - PursuePool /
+RangedAttackPool / ProjectilePool target + owner - now store full
+EntityId handles in Uint32Array instead of raw indices, so a target
+whose slot was recycled into a fresh tenant fails the generation
+check instead of being silently followed onto the wrong entity.
+
+Determinism verification harness. New `runtime/state-snapshot.ts`:
+SnapshotWriter / SnapshotReader (canonical little-endian byte
+buffer), an ISnapshotable interface, StateSnapshot (frames the
+registered parts and FNV-1a hashes them), and fnv1a32. EntityAllocator,
+Entropy and all eight SoA component / vfx pools implement
+ISnapshotable. `World.snapshotState()` builds a StateSnapshot of the
+whole simulation - allocator + pools + RNG - in a fixed
+cross-runtime-stable order; build it once, call `.hash()` per tick
+as the determinism fingerprint. A model-based EntityAllocator
+fuzzer checks random create / destroy / destroyByLiveIndex
+sequences against a reference model.
+
+Hot-loop allocation. ParticlePool / ProjectilePool gain `spawnRaw()`:
+the spawn implementation as positional scalars, so
+ParticleEmitterSystem and RangedAttackSystem no longer build a
+spawn object + nested color objects per particle / shot. Every pool
+gains `tighten()`, which lowers highWaterMark past trailing dead
+slots so a create/destroy spike stops costing every future scan
+(TransformPool and ParticleEmitterPool gain an explicit ATTACHED
+flag for this). ComponentSignature.collectMatching scans the
+high-water mark instead of the pow-2-rounded capacity and is
+two-pass count-then-fill, dropping the intermediate growable array.
+
+Hygiene. 108 stale generated .js / .js.map files removed from src/
+(tsc emits to dist/; the src copies had drifted from the .ts
+sources and are now gitignored). tsconfig.demo.json drops the
+deprecated baseUrl option.
+
 ## 1.7.5 MILESTONE - 2026-05-10 (Wave 1.7 networking COMPLETE)
 
 **ChatChannel + ChatChannelRegistry — moderated multi-channel chat

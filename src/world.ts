@@ -24,6 +24,7 @@ import {
   SYSTEM_PHASE_LOGIC,
   SYSTEM_PHASES_IN_ORDER,
 } from './system.js';
+import { StateSnapshot, isSnapshotable } from './runtime/state-snapshot.js';
 
 export class World {
   readonly entities: EntityAllocator;
@@ -113,6 +114,48 @@ export class World {
 
   destroyEntity(e: EntityId): boolean {
     return this.entities.destroy(e);
+  }
+
+  // Destroy an entity by raw pool index. Companion to destroyEntity
+  // for the common case of a system sweeping a component pool by
+  // dense index (DamageSystem clearing dead entities). The pool's
+  // ACTIVE flag has already proven the slot live; the allocator's
+  // alive bitmap guards the double-destroy case. Use this instead of
+  // destroyEntity(makeEntity(i, 0)) - a 0-generation handle silently
+  // fails to destroy a slot that has been recycled at least once.
+  destroyEntityByLiveIndex(index: number): boolean {
+    return this.entities.destroyByLiveIndex(index);
+  }
+
+  // The canonical live EntityId for a pool index. Safe replacement
+  // for makeEntity(index, 0) when a system needs a real handle for
+  // an index it is iterating. Returns NULL_ENTITY for a dead slot.
+  entityAt(index: number): EntityId {
+    return this.entities.entityAt(index);
+  }
+
+  // Build a deterministic binary snapshot of this world's simulation
+  // state: the entity allocator, every registered pool that
+  // implements ISnapshotable, and every resource that does (the RNG).
+  // Parts are registered allocator-first, then pools in registration
+  // order, then resources in registration order - the same order on
+  // every runtime, so two runs from the same seed + trace produce the
+  // same per-tick hash.
+  //
+  // Build this once after setup and call .hash() per tick: the
+  // returned StateSnapshot reuses its writer buffer, so steady-state
+  // hashing is allocation-free.
+  snapshotState(): StateSnapshot {
+    const snap = new StateSnapshot();
+    snap.register(this.entities);
+    for (const pool of this.pools.values()) {
+      if (isSnapshotable(pool)) snap.register(pool);
+    }
+    for (const key of this.resources.keys()) {
+      const res = this.resources.get(key);
+      if (isSnapshotable(res)) snap.register(res);
+    }
+    return snap;
   }
 
   // 0.21.0 - graceful shutdown. Disposes every IManagedResource

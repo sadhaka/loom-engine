@@ -156,33 +156,31 @@ export class ParticleEmitterSystem implements System {
       const life = emitters.particleLife[i] ?? 1;
       const startSize = emitters.startSize[i] ?? 4;
       const endSize = emitters.endSize[i] ?? startSize;
+      // Color is constant per emitter - read once here, not per
+      // particle inside the spawn loop.
+      const sr = emitters.startR[i] ?? 1;
+      const sg = emitters.startG[i] ?? 1;
+      const sb = emitters.startB[i] ?? 1;
+      const sa = emitters.startA[i] ?? 1;
+      const er = emitters.endR[i] ?? 1;
+      const eg = emitters.endG[i] ?? 1;
+      const eb = emitters.endB[i] ?? 1;
+      const ea = emitters.endA[i] ?? 0;
 
       for (let k = 0; k < total; k++) {
         sampleConeDirection(dirX, dirY, dirZ, coneHalf, SCRATCH_DIR, entropy);
         const speed = speedMin + entropy.random() * (speedMax - speedMin);
-        const slot = particles.spawn({
+        // spawnRaw - no per-particle spawn object or color allocation.
+        const slot = particles.spawnRaw(
           x, y, z,
-          vx: SCRATCH_DIR.x * speed,
-          vy: SCRATCH_DIR.y * speed,
-          vz: SCRATCH_DIR.z * speed,
+          SCRATCH_DIR.x * speed, SCRATCH_DIR.y * speed, SCRATCH_DIR.z * speed,
           ax, ay, az,
           life,
-          size: startSize,
-          endSize,
-          color: {
-            r: emitters.startR[i] ?? 1,
-            g: emitters.startG[i] ?? 1,
-            b: emitters.startB[i] ?? 1,
-            a: emitters.startA[i] ?? 1,
-          },
-          endColor: {
-            r: emitters.endR[i] ?? 1,
-            g: emitters.endG[i] ?? 1,
-            b: emitters.endB[i] ?? 1,
-            a: emitters.endA[i] ?? 0,
-          },
+          startSize, endSize,
+          sr, sg, sb, sa,
+          er, eg, eb, ea,
           additive,
-        });
+        );
         if (slot < 0) break;   // budget hit
         if (k < burstCount) spawnedFromBurst++;
       }

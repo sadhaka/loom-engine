@@ -46,6 +46,12 @@
 // to engine source breaks the seeded-replay contract; the existence
 // of this comment is a tripwire that should make a reviewer pause.
 
+import type {
+  ISnapshotable,
+  SnapshotWriter,
+  SnapshotReader,
+} from './state-snapshot.js';
+
 // Resource registry key for the engine-level entropy source. Use this
 // when registering or fetching the entropy resource. The string value
 // is intentionally namespaced to avoid collisions with consumer-side
@@ -104,7 +110,7 @@ function mulberry32Step(state: number): Step {
 
 // Concrete deterministic Entropy. Single class so both the test
 // double and the production implementation share one shape.
-export class Entropy implements IEntropy {
+export class Entropy implements IEntropy, ISnapshotable {
   private state: number;
 
   constructor(seed: number = DEFAULT_ENTROPY_SEED) {
@@ -146,6 +152,19 @@ export class Entropy implements IEntropy {
 
   reseed(seed: number): void {
     this.state = mulberry32Seed(seed);
+  }
+
+  // --- ISnapshotable: the RNG state is a single u32 and it is the
+  // whole story - same state + same call sequence => same stream. ---
+
+  readonly snapshotKey: string = 'loom.entropy';
+
+  snapshotInto(w: SnapshotWriter): void {
+    w.writeU32(this.getState());
+  }
+
+  restoreFrom(r: SnapshotReader): void {
+    this.setState(r.readU32());
   }
 }
 

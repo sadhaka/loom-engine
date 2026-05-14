@@ -35,7 +35,7 @@ import {
 } from '../resources.js';
 import { isoToTile } from '../renderer/iso-projection.js';
 import { vec2 } from '../util/math.js';
-import { type EntityId, makeEntity } from '../entity.js';
+import { type EntityId } from '../entity.js';
 
 const SCRATCH_TILE = vec2(0, 0);
 
@@ -87,8 +87,10 @@ export class AttackSystem implements System {
       if (i === playerIdx) continue;   // never damage the player via this attack
       const f = pursuit.flags[i] ?? 0;
       if ((f & 1) === 0) continue;     // PURSUE_FLAG_ACTIVE
-      // Only attack live entities.
-      if (health.isDead(makeEntity(i, 0))) continue;
+      // Only attack live entities. entityAt(i) is the canonical
+      // handle for the slot - never makeEntity(i, 0), which goes
+      // stale the moment the slot is recycled.
+      if (health.isDead(world.entityAt(i))) continue;
       const tx = transforms.x[i] ?? 0;
       const ty = transforms.y[i] ?? 0;
       const dx = tx - clickTileX;
@@ -101,7 +103,7 @@ export class AttackSystem implements System {
     }
 
     if (bestIdx < 0) return;
-    const target = makeEntity(bestIdx, 0);
+    const target = world.entityAt(bestIdx);
     // Deterministic clock - TimeResource (engine-driven) instead of
     // performance.now(). Same seed + same tick stream => same `now`,
     // so trace replays observe identical applyDamage timestamps.
