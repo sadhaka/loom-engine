@@ -377,6 +377,8 @@ export { SSEMultiplayerBridge } from './network/sse-multiplayer-bridge.js';
 export type { PeerSpriteEntry, PeerSpritePoolOptions } from './components/peer-sprite.js';
 export { PeerSpritePool, POOL_PEER_SPRITE } from './components/peer-sprite.js';
 export { PeerPresenceSystem, PeerRenderSystem, } from './systems/peer-presence-system.js';
+export type { DeltaFrameInfo } from './network/delta-compressor.js';
+export { DeltaCompressor, DELTA_WIRE_MAGIC, DELTA_WIRE_VERSION, DELTA_MAX_COLUMNS, deltaFrameToBase64, deltaFrameFromBase64, } from './network/delta-compressor.js';
 export type { IClientPlugin, PluginContext as ClientPluginContext, PluginStorage as ClientPluginStorage, PluginLogger as ClientPluginLogger, PluginOpsStats, PluginDescribeRow, PluginScope, IPluginEntropy, EmittedEvents as ClientEmittedEvents, PeerInfo as ClientPeerInfo, ClientPluginRegistryOptions, } from './plugins/index.js';
 export { ClientPluginRegistry, MapPluginStorage as ClientMapPluginStorage, ConsolePluginLogger as ClientConsolePluginLogger, PluginEntropy, PluginError, ALL_SCOPES as CLIENT_PLUGIN_SCOPES, DEFAULT_PLUGIN_STORAGE_MAX_BYTES as CLIENT_PLUGIN_DEFAULT_STORAGE_MAX_BYTES, DEFAULT_PLUGIN_TICK_BUDGET_MS as CLIENT_PLUGIN_DEFAULT_TICK_BUDGET_MS, setWithTtl as clientPluginSetWithTtl, getWithTtlCheck as clientPluginGetWithTtlCheck, } from './plugins/index.js';
 //# sourceMappingURL=index.d.ts.map
