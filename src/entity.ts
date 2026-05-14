@@ -154,6 +154,44 @@ export class EntityAllocator implements ISnapshotable {
     return this.nextFresh;
   }
 
+  // Lower nextFresh past trailing free slots so capacity() stops
+  // reporting dead address space after a create/destroy spike:
+  // component pools size their backing arrays to capacity() and
+  // index-sweeping systems iterate [0, capacity()). This is the
+  // dossier's P2 "high-water marks never shrink" finding applied to
+  // the allocator's own high-water mark.
+  //
+  // Every slot walked past is reset to generation 0 - its
+  // never-allocated state. snapshotInto serializes only
+  // [0, nextFresh) on the invariant that slots above it look
+  // pristine, and the destroy-bumped generation is not needed for
+  // stale-handle safety once a slot is past nextFresh: isAlive's
+  // index >= nextFresh bounds check already rejects every handle to
+  // it. Zeroing keeps that invariant true, so a tightened allocator
+  // round-trips through a snapshot unchanged.
+  //
+  // Free-list entries at or above the new nextFresh are dropped -
+  // those indices no longer exist in the live range, so create()
+  // must not recycle them. liveCount is untouched; the reclaimed
+  // slots were already destroyed. O(trailing free slots): a
+  // maintenance pass, not a per-tick call.
+  tighten(): void {
+    let h = this.nextFresh;
+    // Index 0 is reserved for NULL_ENTITY, so nextFresh never drops
+    // below 1 even when every live entity has been destroyed.
+    while (h > 1 && (this.alive[h - 1] ?? 0) === 0) {
+      h--;
+      this.generations[h] = 0;
+    }
+    this.nextFresh = h;
+    let w = 0;
+    for (let r = 0; r < this.freeList.length; r++) {
+      const slot = this.freeList[r] ?? 0;
+      if (slot < h) this.freeList[w++] = slot;
+    }
+    this.freeList.length = w;
+  }
+
   // --- ISnapshotable: canonical binary state for determinism
   // hashing and rewind/restore. ---
 

@@ -31,7 +31,9 @@ import {
   // Systems
   SpriteRenderSystem,
   // Misc
+  EntityAllocator,
   entityIndex,
+  entityGeneration,
   NULL_ENTITY,
   COLOR_KNOT_INT,
   type System,
@@ -179,6 +181,129 @@ test('world: entityAt returns the live handle, NULL for dead slots', () => {
   const e2 = w.createEntity();
   assert.equal(w.entityAt(i), e2);
   assert.notEqual(w.entityAt(i), e);
+});
+
+// ----- EntityAllocator.tighten() -----
+
+test('entity allocator: tighten lowers capacity past trailing dead slots', () => {
+  const alloc = new EntityAllocator();
+  const a = alloc.create();   // index 1
+  const b = alloc.create();   // index 2
+  const c = alloc.create();   // index 3
+  const d = alloc.create();   // index 4
+  assert.equal(alloc.capacity(), 5);
+  // Destroy the top two. nextFresh does not shrink on its own.
+  assert.ok(alloc.destroy(d));
+  assert.ok(alloc.destroy(c));
+  assert.equal(alloc.capacity(), 5, 'nextFresh does not shrink on destroy');
+  alloc.tighten();
+  assert.equal(alloc.capacity(), 3, 'tighten dropped the two trailing dead slots');
+  assert.ok(alloc.isAlive(a));
+  assert.ok(alloc.isAlive(b));
+});
+
+test('entity allocator: tighten is a no-op when the top slot is live', () => {
+  const alloc = new EntityAllocator();
+  alloc.create();             // index 1
+  const b = alloc.create();   // index 2
+  alloc.create();             // index 3 - stays live, pins nextFresh
+  assert.equal(alloc.capacity(), 4);
+  assert.ok(alloc.destroy(b)); // free a middle slot, not the top
+  alloc.tighten();
+  assert.equal(alloc.capacity(), 4, 'a live top slot pins nextFresh');
+});
+
+test('entity allocator: tighten drops free-list entries above the new mark, keeps those below', () => {
+  const alloc = new EntityAllocator();
+  alloc.create();             // index 1 - live, pins the floor
+  const b = alloc.create();   // index 2
+  alloc.create();             // index 3 - live
+  const d = alloc.create();   // index 4
+  assert.equal(alloc.capacity(), 5);
+  // Free a middle slot (2) and a trailing slot (4).
+  assert.ok(alloc.destroy(b));
+  assert.ok(alloc.destroy(d));
+  alloc.tighten();
+  // Slot 4 was trailing dead -> reclaimed; slot 2 sits below the live
+  // slot 3, so it stays on the free list.
+  assert.equal(alloc.capacity(), 4);
+  // Next create recycles slot 2 (still on the free list)...
+  assert.equal(entityIndex(alloc.create()), 2);
+  // ...and the one after is a fresh index 4, not a stale free-list hit.
+  assert.equal(entityIndex(alloc.create()), 4);
+  assert.equal(alloc.capacity(), 5);
+});
+
+test('entity allocator: tighten resets reclaimed slots to generation 0', () => {
+  const alloc = new EntityAllocator();
+  alloc.create();             // index 1 - keeps the floor live
+  const b = alloc.create();   // index 2
+  assert.equal(entityGeneration(b), 0);
+  assert.ok(alloc.destroy(b)); // slot 2's generation bumps to 1
+  alloc.tighten();             // slot 2 is trailing dead -> reclaimed
+  assert.equal(alloc.capacity(), 2);
+  // Re-grow into slot 2. Without the generation reset it would come
+  // back at generation 1; tighten returns the slot to pristine state
+  // so snapshotInto's "slots >= nextFresh look never-allocated"
+  // invariant still holds.
+  const b2 = alloc.create();
+  assert.equal(entityIndex(b2), 2);
+  assert.equal(entityGeneration(b2), 0, 'reclaimed slot is pristine, not generation 1');
+});
+
+test('entity allocator: tighten never lowers capacity below 1', () => {
+  const alloc = new EntityAllocator();
+  const a = alloc.create();   // index 1
+  assert.equal(alloc.capacity(), 2);
+  assert.ok(alloc.destroy(a));
+  alloc.tighten();            // every live slot is gone
+  assert.equal(alloc.capacity(), 1, 'index 0 is reserved; nextFresh floors at 1');
+  // The allocator is fully usable again - next create is a clean index 1.
+  const a2 = alloc.create();
+  assert.equal(entityIndex(a2), 1);
+  assert.equal(entityGeneration(a2), 0);
+  assert.equal(alloc.capacity(), 2);
+});
+
+test('entity allocator: tighten preserves live handles below the mark', () => {
+  const alloc = new EntityAllocator();
+  const a = alloc.create();   // index 1
+  const b = alloc.create();   // index 2
+  const c = alloc.create();   // index 3
+  const d = alloc.create();   // index 4
+  assert.ok(alloc.destroy(c));
+  assert.ok(alloc.destroy(d));
+  alloc.tighten();
+  assert.equal(alloc.capacity(), 3);
+  // Survivors still validate and round-trip through entityAt.
+  assert.ok(alloc.isAlive(a));
+  assert.ok(alloc.isAlive(b));
+  assert.equal(alloc.entityAt(entityIndex(a)), a);
+  assert.equal(alloc.entityAt(entityIndex(b)), b);
+  // Reclaimed slots are dead and out of range.
+  assert.equal(alloc.isAlive(c), false);
+  assert.equal(alloc.isAlive(d), false);
+  assert.equal(alloc.entityAt(entityIndex(c)), NULL_ENTITY);
+  assert.equal(alloc.entityAt(entityIndex(d)), NULL_ENTITY);
+  assert.equal(alloc.count(), 2, 'liveCount untouched - reclaimed slots were already dead');
+});
+
+test('entity allocator: tighten on a fresh allocator is a no-op and is idempotent', () => {
+  const fresh = new EntityAllocator();
+  fresh.tighten();
+  assert.equal(fresh.capacity(), 1);
+
+  const alloc = new EntityAllocator();
+  alloc.create();             // index 1 - live
+  const b = alloc.create();   // index 2
+  const c = alloc.create();   // index 3
+  assert.ok(alloc.destroy(b));
+  assert.ok(alloc.destroy(c));
+  alloc.tighten();
+  const afterFirst = alloc.capacity();
+  alloc.tighten();
+  assert.equal(alloc.capacity(), afterFirst, 'second tighten changes nothing');
+  assert.equal(afterFirst, 2);
 });
 
 test('world: countSystems totals across phases', () => {
