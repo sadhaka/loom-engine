@@ -1004,6 +1004,11 @@ export { LagCompensation, RESOURCE_LAG_COMPENSATION } from './runtime/lag-compen
 export type { SnapshotEntry, InputEntry, RewindResult, LagCompensationOptions } from './runtime/lag-compensation.js';
 export { attachLagCompensationToWs } from './runtime/ws-adapters/lag-compensation-ws.js';
 export type { LagCompensationWsAdapterOptions, LagCompensationWsHandle } from './runtime/ws-adapters/lag-compensation-ws.js';
+// LoomFlux - the Sim-LOD scheduler core: dense per-tier entity
+// buckets, a frame-boundary migration queue, and a wrap-safe tiered
+// tick. Relevance scoring + fast-forward are the deferred
+// integration layer (need Omniveil / nav).
+export { LoomFlux } from './runtime/loom-flux.js';
 // 1.7.5 MILESTONE (Wave 1.7 networking complete) - ChatChannel +
 // ChatChannelRegistry: moderated multi-channel chat with rate
 // limit + filter hooks.
