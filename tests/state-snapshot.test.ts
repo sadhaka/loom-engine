@@ -28,6 +28,7 @@ import {
   ParticleEmitterPool,
   ParticlePool,
   ProjectilePool,
+  InteractablePool,
   World,
   RESOURCE_ENTROPY,
   isSnapshotable,
@@ -131,6 +132,39 @@ test('snapshot reader: an over-read throws instead of returning garbage', () => 
   const r = new SnapshotReader(new Uint8Array(2));
   r.readU8();
   assert.throws(() => r.readU32(), /over-read/);
+});
+
+test('snapshot writer/reader: UTF-8 strings round-trip, including non-ASCII', () => {
+  const w = new SnapshotWriter();
+  // Thai + Russian: the non-Latin scripts the engine actually ships
+  // copy in, so the snapshot must survive multi-byte UTF-8.
+  const thai = 'สวัสดี';
+  const russian = 'Привет';
+  const astral = 'a\u{1F9F5}b';   // a 4-byte UTF-8 codepoint
+  w.writeString('');                  // empty string
+  w.writeString('Talk to Misha Dev'); // pure ASCII
+  w.writeString(thai);
+  w.writeString(russian);
+  w.writeString(astral);
+  w.writeString('npc');               // a kind tag
+
+  const r = new SnapshotReader(w.bytes().slice());
+  assert.equal(r.readString(), '');
+  assert.equal(r.readString(), 'Talk to Misha Dev');
+  assert.equal(r.readString(), thai);
+  assert.equal(r.readString(), russian);
+  assert.equal(r.readString(), astral);
+  assert.equal(r.readString(), 'npc');
+  assert.equal(r.remaining, 0, 'byte-length prefix accounting is exact');
+});
+
+test('snapshot reader: readString rejects malformed UTF-8 instead of decoding garbage', () => {
+  const w = new SnapshotWriter();
+  w.writeU32(2);     // claims a 2-byte string...
+  w.writeU8(0xff);   // ...but 0xff 0xfe is not a valid UTF-8 sequence
+  w.writeU8(0xfe);
+  const r = new SnapshotReader(w.bytes().slice());
+  assert.throws(() => r.readString());
 });
 
 // ----- FNV-1a -----
@@ -356,6 +390,7 @@ function buildPopulated() {
   const emitter = new ParticleEmitterPool();
   const particles = new ParticlePool();
   const projectiles = new ProjectilePool();
+  const interactable = new InteractablePool();
 
   // Entities with a recycle history.
   const e: number[] = [];
@@ -417,6 +452,11 @@ function buildPopulated() {
   }
   projectiles.kill(2);
 
+  interactable.attach(e[0]!, { kind: 'npc', prompt: 'Greet the Architect', payload: 'dlg.architect', radius: 1.5 });
+  interactable.attach(e[4]!, { kind: 'portal', prompt: 'เข้าสู่ Iron Reach', payload: 'zone.iron-reach', radius: 0.5 });
+  interactable.attach(e[5]!, { kind: 'lore', prompt: 'Читать', payload: 'lore.01', radius: 2 });
+  interactable.detach(e[4]!);   // flags-cleared slot inside the high-water mark
+
   const snap = new StateSnapshot();
   snap.register(alloc);
   snap.register(entropy);
@@ -428,8 +468,9 @@ function buildPopulated() {
   snap.register(emitter);
   snap.register(particles);
   snap.register(projectiles);
+  snap.register(interactable);
 
-  return { alloc, entropy, transform, sprite, health, pursue, ranged, emitter, particles, projectiles, snap };
+  return { alloc, entropy, transform, sprite, health, pursue, ranged, emitter, particles, projectiles, interactable, snap };
 }
 
 function buildEmpty(): StateSnapshot {
@@ -444,6 +485,7 @@ function buildEmpty(): StateSnapshot {
   snap.register(new ParticleEmitterPool());
   snap.register(new ParticlePool());
   snap.register(new ProjectilePool());
+  snap.register(new InteractablePool());
   return snap;
 }
 
@@ -455,9 +497,9 @@ test('component pools: every pool round-trips through StateSnapshot byte-identic
   empty.restore(bytesA);
   const bytesB = empty.serialize().slice();
 
-  assert.equal(empty.partCount, 10, 'allocator + entropy + 8 pools registered');
+  assert.equal(empty.partCount, 11, 'allocator + entropy + 9 pools registered');
   assert.deepEqual(Array.from(bytesB), Array.from(bytesA),
-    'restore -> re-serialize must reproduce the exact frame for all 10 parts');
+    'restore -> re-serialize must reproduce the exact frame for all 11 parts');
 });
 
 test('component pools: hash diverges when any pool column is mutated', () => {
@@ -521,6 +563,43 @@ test('component pools: ParticlePool free-list + live count survive a round-trip'
   // The restored free list must hand recycled slots back on spawn.
   const slot = q.spawn({ x: 0, y: 0, z: 0, life: 1, color });
   assert.ok(slot === 2 || slot === 4, 'spawn recycles a freed slot, got ' + slot);
+});
+
+test('component pools: InteractablePool round-trips kind/prompt/payload + radius + flags', () => {
+  const alloc = new EntityAllocator();
+  const e0 = alloc.create();
+  const e1 = alloc.create();
+  const e2 = alloc.create();
+  const e3 = alloc.create();
+
+  const p = new InteractablePool();
+  p.attach(e0, { kind: 'npc', prompt: 'Talk to Misha Dev', payload: 'dlg.misha.intro', radius: 1.5 });
+  // Non-ASCII prompts: the string columns must survive UTF-8, not the
+  // ASCII-truncating writeKey path.
+  p.attach(e1, { kind: 'portal', prompt: 'เข้าสู่ Iron Reach', payload: 'zone.iron-reach', radius: 0.75 });
+  p.attach(e2, { kind: 'lore', prompt: 'Читать камень', payload: 'lore.stone.01', radius: 2 });
+  p.attach(e3, { kind: 'item', prompt: 'Pick up', payload: 'item.shard', radius: 0.5 });
+  p.detach(e2);   // a flags-cleared slot inside the high-water mark
+
+  const w = new SnapshotWriter();
+  p.snapshotInto(w);
+  const q = new InteractablePool();
+  q.restoreFrom(new SnapshotReader(w.bytes().slice()));
+
+  assert.equal(q.getHighWaterMark(), p.getHighWaterMark());
+  for (const e of [e0, e1, e2, e3]) {
+    const i = entityIndex(e);
+    assert.equal(q.getKind(e), p.getKind(e), 'kind at ' + i);
+    assert.equal(q.getPrompt(e), p.getPrompt(e), 'prompt at ' + i);
+    assert.equal(q.getPayload(e), p.getPayload(e), 'payload at ' + i);
+    assert.equal(q.radius[i], p.radius[i], 'radius at ' + i);
+    assert.equal(q.isActive(e), p.isActive(e), 'active flag at ' + i);
+  }
+  // detach() clears the flag but leaves the cold string columns - the
+  // round-trip must preserve exactly that.
+  assert.equal(q.isActive(e2), false, 'detached slot stays detached');
+  assert.equal(q.getPayload(e2), 'lore.stone.01', 'detached slot keeps its cold columns');
+  assert.equal(q.isActive(e0), true, 'attached slot stays active');
 });
 
 // ----- isSnapshotable + World.snapshotState -----

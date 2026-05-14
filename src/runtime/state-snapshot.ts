@@ -56,6 +56,14 @@ export function fnv1a32(
   return h >>> 0;
 }
 
+// Shared UTF-8 codec for writeString / readString. Module-level so
+// per-tick string serialization does not allocate a fresh codec on
+// every call. The decoder is fatal: malformed bytes throw rather
+// than decoding to U+FFFD, matching SnapshotReader's "throw, never
+// return silent garbage" contract.
+const STRING_ENCODER = new TextEncoder();
+const STRING_DECODER = new TextDecoder('utf-8', { fatal: true });
+
 // Growable canonical-little-endian byte writer. Reusable: reset()
 // keeps the backing buffer so steady-state per-tick serialization
 // allocates nothing.
@@ -178,6 +186,21 @@ export class SnapshotWriter {
     for (let i = 0; i < s.length; i++) {
       this.writeU8(s.charCodeAt(i) & 0xff);
     }
+  }
+
+  // Length-prefixed UTF-8 string: a u32 byte count, then the UTF-8
+  // bytes. Distinct from writeKey, which is ASCII-only for short
+  // engine identifiers - writeString carries arbitrary user-facing
+  // text (interactable prompts, animation clip names) and must
+  // survive non-ASCII, since the engine ships Thai and Russian copy.
+  // TextEncoder is WHATWG-standard UTF-8 on every target runtime, so
+  // the bytes are byte-identical for cross-runtime determinism.
+  writeString(s: string): void {
+    const bytes = STRING_ENCODER.encode(s);
+    this.writeU32(bytes.length);
+    this.ensure(bytes.length);
+    this.u8.set(bytes, this.len);
+    this.len += bytes.length;
   }
 
   // Reserve a u32 slot and return its offset; patchU32 backfills it
@@ -325,6 +348,18 @@ export class SnapshotReader {
       s += String.fromCharCode(this.view.getUint8(this.off + i));
     }
     this.off += len;
+    return s;
+  }
+
+  // Symmetric to SnapshotWriter.writeString: a u32 byte count, then
+  // that many UTF-8 bytes. The decoder is fatal - malformed bytes
+  // throw rather than decoding to U+FFFD, the same fail-loud contract
+  // as an over-read.
+  readString(): string {
+    const n = this.readU32();
+    this.need(n);
+    const s = STRING_DECODER.decode(this.u8.subarray(this.off, this.off + n));
+    this.off += n;
     return s;
   }
 

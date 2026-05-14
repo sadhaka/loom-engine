@@ -12,6 +12,7 @@
 
 import { type EntityId, entityIndex } from '../entity.js';
 import { growF32, growU8, nextPow2, tightenHighWaterMark } from '../util/typed-arrays.js';
+import type { ISnapshotable, SnapshotWriter, SnapshotReader } from '../runtime/state-snapshot.js';
 
 export const INTERACTABLE_FLAG_ACTIVE = 1 << 0;
 
@@ -31,7 +32,7 @@ export interface InteractableConfig {
   radius: number;
 }
 
-export class InteractablePool {
+export class InteractablePool implements ISnapshotable {
   // Hot
   radius: Float32Array;
 
@@ -118,6 +119,42 @@ export class InteractablePool {
   // FLAG_ACTIVE is set by attach and cleared only by detach.
   tighten(): void {
     this.highWaterMark = tightenHighWaterMark(this.flags, this.highWaterMark);
+  }
+
+  // --- ISnapshotable: the radius column, the three string columns,
+  // and flags - all [0, highWaterMark). ---
+
+  readonly snapshotKey: string = 'loom.interactable-pool';
+
+  snapshotInto(w: SnapshotWriter): void {
+    const n = this.highWaterMark;
+    w.writeU32(n);
+    w.writeF32Slice(this.radius, n);
+    // The string columns are plain arrays with no self-describing
+    // slice writer, so n (written above) is the count for all three.
+    for (let i = 0; i < n; i++) w.writeString(this.kind[i] ?? 'npc');
+    for (let i = 0; i < n; i++) w.writeString(this.prompt[i] ?? '');
+    for (let i = 0; i < n; i++) w.writeString(this.payload[i] ?? '');
+    w.writeU8Slice(this.flags, n);
+  }
+
+  restoreFrom(r: SnapshotReader): void {
+    const n = r.readU32();
+    this.radius = r.readF32Slice();
+    // Read order mirrors snapshotInto's write order exactly.
+    this.kind = new Array<InteractableKind>(n);
+    // Our own format: readString returns string; the kind column is
+    // the narrower InteractableKind union.
+    for (let i = 0; i < n; i++) this.kind[i] = r.readString() as InteractableKind;
+    this.prompt = new Array<string>(n);
+    for (let i = 0; i < n; i++) this.prompt[i] = r.readString();
+    this.payload = new Array<string>(n);
+    for (let i = 0; i < n; i++) this.payload[i] = r.readString();
+    this.flags = r.readU8Slice();
+    // Match TransformPool: a restored pool is exactly-sized, capacity
+    // == highWaterMark, and grows via nextPow2 on the next attach.
+    this.capacity = n;
+    this.highWaterMark = n;
   }
 }
 
