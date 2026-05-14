@@ -1021,6 +1021,24 @@ export { LoomFlux } from './runtime/loom-flux.js';
 // and recycling, via a generation-validated phase-change command buffer.
 export { LoomDecay, makeMaterialHandle, materialSlot, materialGeneration } from './runtime/loom-decay.js';
 export type { MaterialHandle, TransitionRule, DecayStats, CommitStats } from './runtime/loom-decay.js';
+// InfiniteHorizonStreamer - a Morton-coded chunk streaming manager:
+// discovers the chunks around a moving viewpoint, queues the missing
+// ones, evicts the ones that fall out of range. Signed-coordinate
+// Morton encoding (no BigInt), open-addressed registry, load + eviction
+// queues, payload-before-state publish ordering.
+export {
+  InfiniteHorizonStreamer,
+  makeChunkHandle,
+  chunkSlot,
+  chunkGeneration,
+  CHUNK_STATE_NONE,
+  CHUNK_STATE_QUEUED,
+  CHUNK_STATE_LOADING,
+  CHUNK_STATE_READY,
+  CHUNK_HANDLE_INVALID,
+  EVICTION_RECORD_STRIDE,
+} from './runtime/infinite-horizon-streamer.js';
+export type { ChunkHandle, InfiniteHorizonStreamerConfig } from './runtime/infinite-horizon-streamer.js';
 // 1.7.5 MILESTONE (Wave 1.7 networking complete) - ChatChannel +
 // ChatChannelRegistry: moderated multi-channel chat with rate
 // limit + filter hooks.
