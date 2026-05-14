@@ -1,15 +1,17 @@
-// Loom Engine - SSEZoneBridge protocol fuzzer test.
+// Loom Engine - fuzzer tests.
 //
-// Runs 1000 fuzz iterations against the bridge using a deterministic
-// seeded entropy stream. Asserts:
-//   - The bridge never throws (zero exceptions caught).
-//   - Some valid frames slipped through (the patternValidMixed slot
-//     produces well-formed envelopes; we expect at least a handful in
-//     1000 iterations).
-//   - The internal queue is bounded - even if no consumer drains, the
-//     queue depth should reflect only the valid-shape frames, not
-//     the parser rejects.
-//   - Out-of-order events tracked in stats.outOfOrderEvents.
+// Houses the engine's model-based / property fuzzers. Each runs a long
+// random sequence from a deterministic seeded entropy stream, so any
+// failure reproduces from the seed alone.
+//
+// Targets:
+//   - SSEZoneBridge protocol fuzzer: malformed / out-of-order /
+//     oversized envelopes; the bridge must never throw and its queue
+//     must stay bounded.
+//   - EntityAllocator model-based fuzzer: random create / destroy /
+//     destroyByLiveIndex sequences checked in lockstep against a
+//     reference model - no double-free, no stale-handle validation,
+//     count / capacity always agree.
 
 import { test } from 'node:test';
 import { strict as assert } from 'node:assert';
@@ -20,6 +22,7 @@ import {
   fuzzZoneBridgeNoDrain,
   FakeEventSource,
 } from './fuzz-zone-bridge.js';
+import { fuzzEntityAllocator } from './fuzz-entity-allocator.js';
 import { SSEZoneBridge } from '../../src/index.js';
 
 test('fuzzer: 1000 iterations - bridge survives without throwing', () => {
@@ -170,4 +173,42 @@ test('fuzzer: fuzz harness is deterministic across two seeds', () => {
   // assert: same seed -> same outcome (covered by the seed-stability
   // test above) and zero crashes.
   assert.equal(r.exceptionsCaught, 0);
+});
+
+// ---------- EntityAllocator model-based fuzzer ----------
+
+test('fuzzer: entity allocator - 6000 random ops stay consistent with the reference model', () => {
+  // fuzzEntityAllocator asserts model agreement on every operation and
+  // every per-iteration invariant internally; a buggy allocator throws
+  // here with the failing iteration + handle. These assertions just
+  // confirm the run actually exercised every op kind, so a green test
+  // is not vacuous.
+  const r = fuzzEntityAllocator(6000, createEntropy(0xA110CA7E));
+  assert.equal(r.iterations, 6000);
+  assert.ok(r.creates > 0, 'fuzz run produced no creates');
+  assert.ok(r.destroys > 0, 'fuzz run produced no destroy-by-handle ops');
+  assert.ok(r.destroyByIndex > 0, 'fuzz run produced no destroyByLiveIndex ops');
+  assert.ok(r.staleProbes > 0, 'fuzz run never probed a stale handle for rejection');
+  assert.ok(r.staleSweepChecks > 0, 'fuzz run never swept a stale handle');
+  // The free list actually recycled: capacity (distinct fresh indices)
+  // stays far below the total create count. If recycling were broken
+  // every create would be a fresh index and capacity would track
+  // creates.
+  assert.ok(r.finalCapacity < r.creates,
+    'capacity ' + r.finalCapacity + ' not below creates ' + r.creates
+    + ' - free list never recycled');
+});
+
+test('fuzzer: entity allocator - a second seed exercises a different walk', () => {
+  const r = fuzzEntityAllocator(4000, createEntropy(0xBADF00D));
+  assert.equal(r.iterations, 4000);
+  assert.ok(r.creates > 0 && r.destroys > 0 && r.destroyByIndex > 0);
+  assert.ok(r.staleProbes > 0);
+  assert.ok(r.finalCapacity < r.creates);
+});
+
+test('fuzzer: entity allocator fuzz is deterministic for a given seed', () => {
+  const a = fuzzEntityAllocator(2000, createEntropy(0x5EED));
+  const b = fuzzEntityAllocator(2000, createEntropy(0x5EED));
+  assert.deepEqual(a, b, 'same seed must produce an identical fuzz outcome');
 });
