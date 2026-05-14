@@ -31,6 +31,8 @@ import {
   SYSTEM_PHASE_PHYSICS,
   SYSTEM_PHASE_LOGIC,
   COLOR_KNOT_INT,
+  ParticlePool,
+  SnapshotWriter,
 } from '../src/index.js';
 
 // ---------- ProjectilePool ----------
@@ -355,4 +357,62 @@ test('spawnMob: caster gets HOMING projectile config', async () => {
   const i = entityIndex(caster);
   assert.equal((ranged.flags[i] ?? 0) & 2, 2);   // HOMING flag set (RANGED_FLAG_HOMING = 1<<1 = 2)
   assert.equal(ranged.damage[i], 12);
+});
+
+// ---------- spawnRaw (zero-allocation spawn path) ----------
+
+// Snapshot a pool's columns to canonical bytes - a compact way to
+// assert two pools hold byte-identical state across every column.
+function poolBytes(pool: { snapshotInto(w: SnapshotWriter): void }): number[] {
+  const w = new SnapshotWriter();
+  pool.snapshotInto(w);
+  return Array.from(w.bytes().slice());
+}
+
+test('particle pool: spawnRaw writes the same columns as spawn(obj)', () => {
+  const a = new ParticlePool();
+  const b = new ParticlePool();
+  const color = { r: 0.8, g: 0.4, b: 0.2, a: 1 };
+  const endColor = { r: 0.1, g: 0.2, b: 0.3, a: 0 };
+
+  const ia = a.spawnRaw(
+    1, 2, 3, 4, 5, 6, 7, 8, 9,
+    2.5, 4, 1.5,
+    0.8, 0.4, 0.2, 1,
+    0.1, 0.2, 0.3, 0,
+    true,
+  );
+  const ib = b.spawn({
+    x: 1, y: 2, z: 3, vx: 4, vy: 5, vz: 6, ax: 7, ay: 8, az: 9,
+    life: 2.5, size: 4, endSize: 1.5, color, endColor, additive: true,
+  });
+
+  assert.equal(ia, ib, 'both spawn into slot 0');
+  assert.deepEqual(poolBytes(a), poolBytes(b),
+    'spawnRaw and spawn(obj) must write byte-identical pool state');
+});
+
+test('projectile pool: spawnRaw writes the same columns as spawn(obj)', () => {
+  const a = new ProjectilePool();
+  const b = new ProjectilePool();
+  const color = { r: 0.3, g: 0.6, b: 0.9, a: 1 };
+
+  const ia = a.spawnRaw(
+    1, 2, 3, 4, 5, 6,
+    2.0, 15,
+    7, 9,
+    5,
+    0.3, 0.6, 0.9, 1,
+    true, false,
+  );
+  const ib = b.spawn({
+    x: 1, y: 2, z: 3, vx: 4, vy: 5, vz: 6,
+    life: 2.0, damage: 15,
+    ownerEntity: 7, targetEntity: 9,
+    size: 5, color, homing: true, pierce: false,
+  });
+
+  assert.equal(ia, ib, 'both spawn into slot 0');
+  assert.deepEqual(poolBytes(a), poolBytes(b),
+    'spawnRaw and spawn(obj) must write byte-identical pool state');
 });

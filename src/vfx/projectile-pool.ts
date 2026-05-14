@@ -128,7 +128,19 @@ export class ProjectilePool implements ISnapshotable {
     this.capacity = next;
   }
 
-  spawn(p: ProjectileSpawn): number {
+  // Zero-allocation spawn. Writes every column from positional
+  // scalars, so a per-shot caller can spawn without building a
+  // ProjectileSpawn object + nested color object. Returns the slot
+  // index, or -1 if the maxProjectiles budget is exhausted.
+  spawnRaw(
+    x: number, y: number, z: number,
+    vx: number, vy: number, vz: number,
+    life: number, damage: number,
+    ownerEntity: EntityId, targetEntity: EntityId,
+    size: number,
+    r: number, g: number, b: number, a: number,
+    homing: boolean, pierce: boolean,
+  ): number {
     if (this.liveCount >= this.maxProjectiles) return -1;
     let i: number;
     const recycled = this.freeList.pop();
@@ -139,23 +151,38 @@ export class ProjectilePool implements ISnapshotable {
       this.highWaterMark++;
       this.ensureCapacity(i);
     }
-    this.x[i] = p.x; this.y[i] = p.y; this.z[i] = p.z;
-    this.vx[i] = p.vx; this.vy[i] = p.vy; this.vz[i] = p.vz;
-    this.life[i] = p.life;
-    this.damage[i] = p.damage;
-    this.ownerEntity[i] = p.ownerEntity;
-    this.targetEntity[i] = p.targetEntity ?? NULL_ENTITY;
-    this.size[i] = p.size;
-    this.r[i] = p.color.r;
-    this.g[i] = p.color.g;
-    this.b[i] = p.color.b;
-    this.a[i] = p.color.a;
+    this.x[i] = x; this.y[i] = y; this.z[i] = z;
+    this.vx[i] = vx; this.vy[i] = vy; this.vz[i] = vz;
+    this.life[i] = life;
+    this.damage[i] = damage;
+    this.ownerEntity[i] = ownerEntity;
+    this.targetEntity[i] = targetEntity;
+    this.size[i] = size;
+    this.r[i] = r;
+    this.g[i] = g;
+    this.b[i] = b;
+    this.a[i] = a;
     let f = PROJECTILE_FLAG_ALIVE;
-    if (p.homing) f |= PROJECTILE_FLAG_HOMING;
-    if (p.pierce) f |= PROJECTILE_FLAG_PIERCE;
+    if (homing) f |= PROJECTILE_FLAG_HOMING;
+    if (pierce) f |= PROJECTILE_FLAG_PIERCE;
     this.flags[i] = f;
     this.liveCount++;
     return i;
+  }
+
+  // Object-form spawn. Convenience wrapper over spawnRaw; defaults
+  // targetEntity to NULL_ENTITY and homing/pierce to false. Hot
+  // callers should use spawnRaw directly.
+  spawn(p: ProjectileSpawn): number {
+    return this.spawnRaw(
+      p.x, p.y, p.z,
+      p.vx, p.vy, p.vz,
+      p.life, p.damage,
+      p.ownerEntity, p.targetEntity ?? NULL_ENTITY,
+      p.size,
+      p.color.r, p.color.g, p.color.b, p.color.a,
+      p.homing ?? false, p.pierce ?? false,
+    );
   }
 
   kill(i: number): void {

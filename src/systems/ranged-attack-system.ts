@@ -90,27 +90,19 @@ export class RangedAttackSystem implements System {
       const vy = dy * norm * speed;
       const homing = (f & RANGED_FLAG_HOMING) !== 0;
 
-      const slot = projectiles.spawn({
-        x: myX,
-        y: myY,
-        z: transforms.z[i] ?? 0.5,
-        vx,
-        vy,
-        vz: 0,
-        life: ranged.projectileLife[i] ?? 2.0,
-        damage: ranged.damage[i] ?? 1,
-        ownerEntity: firer,
-        targetEntity: homing ? target : NULL_ENTITY,
-        size: ranged.projectileSize[i] ?? 5,
-        color: {
-          r: ranged.r[i] ?? 1,
-          g: ranged.g[i] ?? 1,
-          b: ranged.b[i] ?? 1,
-          a: ranged.a[i] ?? 1,
-        },
+      // spawnRaw - no per-shot spawn object or nested color alloc.
+      const slot = projectiles.spawnRaw(
+        myX, myY, transforms.z[i] ?? 0.5,
+        vx, vy, 0,
+        ranged.projectileLife[i] ?? 2.0,
+        ranged.damage[i] ?? 1,
+        firer,
+        homing ? target : NULL_ENTITY,
+        ranged.projectileSize[i] ?? 5,
+        ranged.r[i] ?? 1, ranged.g[i] ?? 1, ranged.b[i] ?? 1, ranged.a[i] ?? 1,
         homing,
-        pierce: false,
-      });
+        false,
+      );
       if (slot >= 0) {
         ranged.lastFireMs[i] = now;
       }
