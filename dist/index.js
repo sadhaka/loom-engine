@@ -278,6 +278,10 @@ export { attachAuthorityHandoffToWs } from './runtime/ws-adapters/authority-hand
 // netcode primitive (snapshot + input ring buffer).
 export { LagCompensation, RESOURCE_LAG_COMPENSATION } from './runtime/lag-compensation.js';
 export { attachLagCompensationToWs } from './runtime/ws-adapters/lag-compensation-ws.js';
+// AIActionInterpreter - parse untrusted LLM action output into a
+// validated ring buffer of (npcId, actionId, targetId) records;
+// allocation-free line scan, malformed input rejected and counted.
+export { AIActionInterpreter } from './runtime/ai-action-interpreter.js';
 // 1.7.5 MILESTONE (Wave 1.7 networking complete) - ChatChannel +
 // ChatChannelRegistry: moderated multi-channel chat with rate
 // limit + filter hooks.
