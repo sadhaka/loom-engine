@@ -7,6 +7,40 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 2.1.0 - 2026-05-16 (Bestiary - Trinity Wave 2.1 universal creature lifecycle kernel)
+
+**One new pure-logic kernel.** `BestiaryKernel` is the universal NPC
+creature lifecycle primitive: SoA storage at <100 bytes per creature,
+generational 32-bit handles, per-slot pre-allocated BehaviorTree
+instances, double-buffered death FX event ring, and zero-allocation
+hot-loop ticks. Integrates the existing Trinity kernels through one
+facade so consumers stop writing their own ad-hoc AI / spawn / death
+pipelines:
+
+- `SonicSync` perception drained into per-slot blackboards
+- `LoomPulse` mood values pulled into BT context each tick
+- `InferenceOrchestrator` cloud-lane requests submitted for T3+ only
+- `NarrativeMemory` prior-death recall biases initial mood
+- `BehaviorTree` instances drive intent (action, velocity, facing)
+  per tick; the kernel reads intent and writes SoA
+
+Ships with `CREATURE_CATALOG`: 6 skeleton variants for Wave 2.1 -
+warrior, archer, caster (T1 fodder), bone reaver, choir skeleton
+(T2 elite), and First Standing (T3 mini-boss with cloud inference).
+Each variant declares spec data (sizeScale, palette key, BT id,
+mood channel, audible signature, perception radius, inference lane,
+death FX taxonomy, signature behaviors) so adding a new family
+requires zero kernel code changes.
+
+`defaultBehaviorTreeFactory` ships authored fallback BTs for all 6
+variants - pursue / kite / channel / charge / wail / fallback-selector
+patterns matching the signatureBehaviors field. Consumers can swap
+the factory wholesale via `setBehaviorTreeFactory` for richer per-
+variant authoring.
+
+All 48 tests pass; 30 concurrent creatures × 60 ticks completes in
+under 4ms on a desktop V8.
+
 ## 2.0.1 - 2026-05-15 (Description refresh - npm card + landing + README)
 
 **No code changes.** Refreshes the engine description copy across
