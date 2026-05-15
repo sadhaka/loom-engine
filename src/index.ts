@@ -1337,6 +1337,24 @@ export {
   FLOW_PACKET_STRIDE,
 } from './runtime/loom-flow.js';
 export type { LoomFlowConfig } from './runtime/loom-flow.js';
+// NeuralAnimationSystem - the motion-matching + inertialization
+// kernel: Q16.16 fp feature DB + pose DB, brute-force best-match
+// search, real per-bone pose-delta extraction at the transition,
+// exponential per-bone inertial decay (precomputed exp() LUT),
+// foot-locking mask. The WGSL compute-offload of the search and
+// the bone-matrix render upload are the deferred integration layer.
+export {
+  NeuralAnimationSystem,
+  ANIM_FP_SHIFT,
+  ANIM_FP_ONE,
+  BONE_SLOT_STRIDE,
+  FOOT_LEFT,
+  FOOT_RIGHT,
+  ANIM_CLIP_INVALID,
+  ANIM_FRAME_INVALID,
+  ANIM_ENTITY_INVALID,
+} from './runtime/neural-animation.js';
+export type { NeuralAnimationConfig } from './runtime/neural-animation.js';
 // 1.7.5 MILESTONE (Wave 1.7 networking complete) - ChatChannel +
 // ChatChannelRegistry: moderated multi-channel chat with rate
 // limit + filter hooks.
