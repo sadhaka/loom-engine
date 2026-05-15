@@ -1143,6 +1143,22 @@ export type { ChunkHandle, InfiniteHorizonStreamerConfig } from './runtime/infin
 // source consensus count, open-addressed storage, identity-verified
 // consensus, and contradiction / per-source poisoning rules.
 export { OmniveilSKB, CLAIM_QUAD_STRIDE } from './runtime/omniveil-skb.js';
+// WebGPURenderer - the safe pure-logic core of the WebGPU SoA bridge:
+// a double-buffered staging ring, upload validation against the
+// device storage-buffer limit, an explicit bind-group-layout
+// descriptor, and device-lost state. The actual GPU API calls are the
+// deferred integration layer.
+export {
+  WebGPURenderer,
+  SHADER_STAGE_VERTEX,
+  SHADER_STAGE_FRAGMENT,
+  SHADER_STAGE_COMPUTE,
+  BUFFER_TYPE_UNIFORM,
+  BUFFER_TYPE_STORAGE,
+  BUFFER_TYPE_READ_ONLY_STORAGE,
+  UPLOAD_NONE,
+} from './runtime/webgpu-renderer.js';
+export type { BufferBindingDescriptor, WebGPURendererConfig } from './runtime/webgpu-renderer.js';
 // 1.7.5 MILESTONE (Wave 1.7 networking complete) - ChatChannel +
 // ChatChannelRegistry: moderated multi-channel chat with rate
 // limit + filter hooks.
