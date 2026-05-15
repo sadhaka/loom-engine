@@ -1533,6 +1533,52 @@ export {
   COMPACTION_ENTRY_STRIDE,
 } from './runtime/global-state-ledger.js';
 export type { GlobalStateLedgerConfig } from './runtime/global-state-ledger.js';
+// LoomStudioOrchestrator - the AI Director governance kernel:
+// per-tick double-buffered telemetry snapshot with monotonic
+// epoch, batched SLM query queue (no Promise per query),
+// per-query-type allowed-action-mask validation, telemetry-epoch
+// staleness rejection, fact proposals routed through (sourceId,
+// expiresAtTick, telemetryEpoch, factTier) provenance envelope,
+// SLM-tier guard that REJECTS VERIFIED tier (admin-only), reserved
+// fact-index 0 the SLM can never write.
+export {
+  LoomStudioOrchestrator,
+  makeHandle as makeStudioHandle,
+  handleSlot as studioSlot,
+  handleGen as studioGen,
+  STUDIO_REASON_NONE,
+  STUDIO_REASON_BAD_SIGNAL,
+  STUDIO_REASON_BAD_QUERY_TYPE,
+  STUDIO_REASON_BAD_HANDLE,
+  STUDIO_REASON_BAD_STATE,
+  STUDIO_REASON_STALE_EPOCH,
+  STUDIO_REASON_BAD_ACTION_MASK,
+  STUDIO_REASON_BAD_FACT_INDEX,
+  STUDIO_REASON_TIER_FORBIDDEN,
+  STUDIO_REASON_BAD_TIER,
+  STUDIO_REASON_QUEUE_FULL,
+  STUDIO_REASON_BAD_TTL,
+  STUDIO_REASON_BAD_SOURCE,
+  FACT_TIER_LOW,
+  FACT_TIER_MEDIUM,
+  FACT_TIER_HIGH,
+  FACT_TIER_VERIFIED,
+  QUERY_STATE_NONE,
+  QUERY_STATE_PENDING,
+  QUERY_STATE_INFLIGHT,
+  QUERY_STATE_COMPLETED,
+  QUERY_STATE_REJECTED,
+  FACT_STATE_NONE,
+  FACT_STATE_PROPOSED,
+  FACT_STATE_APPROVED,
+  FACT_STATE_EXPIRED,
+  RESERVED_FACT_INDEX,
+  QUERY_HANDLE_INVALID,
+  FACT_HANDLE_INVALID,
+  QUERY_RECORD_STRIDE,
+  FACT_RECORD_STRIDE,
+} from './runtime/studio-orchestrator.js';
+export type { StudioOrchestratorConfig } from './runtime/studio-orchestrator.js';
 // 1.7.5 MILESTONE (Wave 1.7 networking complete) - ChatChannel +
 // ChatChannelRegistry: moderated multi-channel chat with rate
 // limit + filter hooks.
