@@ -1437,6 +1437,41 @@ export {
   FSR_REASON_BAD_CHANNEL,
 } from './runtime/loom-fsr.js';
 export type { LoomFSRConfig } from './runtime/loom-fsr.js';
+// SealedAssetRegistry - the delayed-key-disclosure manifest:
+// AES-GCM envelope packing convention, AAD binding (event/asset/
+// version/contentHash), per-asset state machine (SEALED →
+// KEY_DISCLOSED → DECRYPTING → READY/FAILED/REVOKED), per-event
+// entitlement + region scoped key disclosure, opaque CDN-hash
+// indirection, transferable-buffer accounting. The WebCrypto AES-
+// GCM call + SSE delivery + CDN fetch are the deferred layers.
+export {
+  SealedAssetRegistry,
+  SEALED_STATE_NONE,
+  SEALED_STATE_SEALED,
+  SEALED_STATE_KEY_DISCLOSED,
+  SEALED_STATE_DECRYPTING,
+  SEALED_STATE_READY,
+  SEALED_STATE_FAILED,
+  SEALED_STATE_REVOKED,
+  SEALED_REASON_NONE,
+  SEALED_REASON_BAD_ASSET,
+  SEALED_REASON_BAD_EVENT,
+  SEALED_REASON_BAD_HANDLE,
+  SEALED_REASON_BAD_STATE,
+  SEALED_REASON_BAD_ENVELOPE,
+  SEALED_REASON_NOT_ENTITLED,
+  SEALED_REASON_BAD_REGION,
+  SEALED_REASON_STALE_GENERATION,
+  SEALED_REASON_DUPLICATE,
+  ENVELOPE_IV_BYTES,
+  ENVELOPE_TAG_BYTES,
+  ENVELOPE_MIN_BYTES,
+  AAD_BYTES,
+  AAD_HASH_BYTES,
+  SEALED_HANDLE_INVALID,
+  SEALED_ASSET_RECORD_STRIDE,
+} from './runtime/sealed-asset.js';
+export type { SealedAssetConfig } from './runtime/sealed-asset.js';
 // 1.7.5 MILESTONE (Wave 1.7 networking complete) - ChatChannel +
 // ChatChannelRegistry: moderated multi-channel chat with rate
 // limit + filter hooks.
