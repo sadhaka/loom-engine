@@ -1021,6 +1021,18 @@ export { LoomFlux } from './runtime/loom-flux.js';
 // and recycling, via a generation-validated phase-change command buffer.
 export { LoomDecay, makeMaterialHandle, materialSlot, materialGeneration } from './runtime/loom-decay.js';
 export type { MaterialHandle, TransitionRule, DecayStats, CommitStats } from './runtime/loom-decay.js';
+// CognitiveMap - a deterministic HTN planner over flat typed-array
+// domain tables, with overlay rollback, method backtracking, plan
+// generation counters, and a step-budgeted priority-queue scheduler.
+export { CognitiveMap } from './runtime/cognitive-map.js';
+export type {
+  CognitiveMapOptions,
+  DomainSpec,
+  PrimitiveDefinition,
+  MethodDefinition,
+  PlanResult,
+  PlanFailureReason,
+} from './runtime/cognitive-map.js';
 // 1.7.5 MILESTONE (Wave 1.7 networking complete) - ChatChannel +
 // ChatChannelRegistry: moderated multi-channel chat with rate
 // limit + filter hooks.
