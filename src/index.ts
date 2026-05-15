@@ -1138,6 +1138,11 @@ export {
   EVICTION_RECORD_STRIDE,
 } from './runtime/infinite-horizon-streamer.js';
 export type { ChunkHandle, InfiniteHorizonStreamerConfig } from './runtime/infinite-horizon-streamer.js';
+// OmniveilSKB - a semantic knowledge base: source-attributed truth
+// claims as (subject, predicate, object) triples with a distinct-
+// source consensus count, open-addressed storage, identity-verified
+// consensus, and contradiction / per-source poisoning rules.
+export { OmniveilSKB, CLAIM_QUAD_STRIDE } from './runtime/omniveil-skb.js';
 // 1.7.5 MILESTONE (Wave 1.7 networking complete) - ChatChannel +
 // ChatChannelRegistry: moderated multi-channel chat with rate
 // limit + filter hooks.
