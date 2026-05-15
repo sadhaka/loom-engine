@@ -1300,6 +1300,43 @@ export {
   AUDIT_RECORD_STRIDE as PULSE_AUDIT_RECORD_STRIDE,
 } from './runtime/loom-pulse.js';
 export type { LoomPulseConfig } from './runtime/loom-pulse.js';
+// LoomFlow - the adaptive-network packet router: three lanes
+// (UNRELIABLE_MOVEMENT, RELIABLE_COMBAT, RELIABLE_ECONOMY), each
+// with its own per-lane sequence space, authority epoch, jitter
+// buffer with TTL-driven late-packet drop, per-(lane, client)
+// idempotency ring, per-client throttle with hysteresis +
+// backpressure, and a transport profile picker (WEBTRANSPORT >
+// WEBRTC > WEBSOCKET). The actual transport channel is the
+// deferred integration layer.
+export {
+  LoomFlow,
+  pickTransport,
+  LANE_UNRELIABLE_MOVEMENT,
+  LANE_RELIABLE_COMBAT,
+  LANE_RELIABLE_ECONOMY,
+  TRANSPORT_WEBTRANSPORT,
+  TRANSPORT_WEBRTC,
+  TRANSPORT_WEBSOCKET,
+  TRANSPORT_INVALID,
+  FLOW_CAP_WEBTRANSPORT,
+  FLOW_CAP_WEBRTC,
+  FLOW_CAP_WEBSOCKET,
+  FLOW_REASON_NONE,
+  FLOW_REASON_STALE_SEQ,
+  FLOW_REASON_STALE_EPOCH,
+  FLOW_REASON_DUPLICATE,
+  FLOW_REASON_THROTTLED,
+  FLOW_REASON_BUFFER_FULL,
+  FLOW_REASON_BAD_LANE,
+  FLOW_REASON_BAD_CLIENT,
+  FLOW_REASON_BAD_SEQ,
+  FLOW_REASON_TTL_EXPIRED,
+  FLOW_REASON_OUTBOUND_FULL,
+  PACKET_INVALID,
+  FLOW_EVENT_STRIDE,
+  FLOW_PACKET_STRIDE,
+} from './runtime/loom-flow.js';
+export type { LoomFlowConfig } from './runtime/loom-flow.js';
 // 1.7.5 MILESTONE (Wave 1.7 networking complete) - ChatChannel +
 // ChatChannelRegistry: moderated multi-channel chat with rate
 // limit + filter hooks.
