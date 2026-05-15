@@ -1,9 +1,17 @@
 # Loom Engine
 
-Browser-first 2D / 2.5D game engine for [TheWorldTable.ai](https://theworldtable.ai).
-Canvas2D primary backend, ECS, render-graph stages, Director-bridge
-SSE integration. No external engine reuse - built from scratch in
-TypeScript.
+Uniquely adaptable TypeScript engine for AI-driven worlds. Cross-session
+NPC memory via NarrativeMemory; asymmetric relationships via
+RelationshipGraph + EmotionState; deterministic replay via mulberry32 +
+per-tick state hash. **Trinity Mainframe v2.0** adds 14 pure-logic
+kernels (acoustic propagation, voxel mesh, packet routing, AI Director
+governance, anti-cheat, more) that drive a deferred WebGPU /
+WebTransport / WebCrypto / WASM-SIMD integration layer.
+
+Try the live playground at [theworldtable.ai/engine](https://theworldtable.ai/engine/) -
+8 click-to-expand component demos + a multi-component NPC sustain dial
+that runs the engine in your browser. No external engine reuse - built
+from scratch in TypeScript for [TheWorldTable.ai](https://theworldtable.ai).
 
 Repo: [sadhaka/loom-engine](https://github.com/sadhaka/loom-engine).
 API docs: [loom-engine.pages.dev](https://loom-engine.pages.dev/).

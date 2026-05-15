@@ -1,7 +1,7 @@
 {
   "name": "loom-engine",
   "version": "2.0.0",
-  "description": "Browser-first 2D / 2.5D game engine. Canvas2D, ECS, render-graph stages, Director-bridge SSE integration. Built from scratch in TypeScript for TheWorldTable.ai.",
+  "description": "Uniquely adaptable TypeScript engine for AI-driven worlds. Cross-session NPC memory, asymmetric relationships, deterministic replay. Trinity Mainframe v2.0 adds 14 pure-logic kernels for AI-MMORPG runtime.",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
