@@ -1041,6 +1041,10 @@ export type {
   Trade,
   BatchResult,
 } from './runtime/market-simulation.js';
+// GeneticPersonaEngine - a 256-bit genome table with seeded-PRNG
+// bitwise crossover + mutation; a component table keyed by an
+// externally-owned entityId, deliberately with no authority mapping.
+export { GeneticPersonaEngine, GENOME_WORDS, GENOME_BITS } from './runtime/genetic-persona-engine.js';
 // 1.7.5 MILESTONE (Wave 1.7 networking complete) - ChatChannel +
 // ChatChannelRegistry: moderated multi-channel chat with rate
 // limit + filter hooks.
