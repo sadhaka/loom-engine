@@ -1081,6 +1081,23 @@ export {
   SNAPSHOT_UNCHANGED,
 } from './runtime/ai-behavior-buffer.js';
 export type { ObserverHandle } from './runtime/ai-behavior-buffer.js';
+// AssetVirtualizer - a bounded LRU cache for virtualized GPU assets:
+// wrap-safe LRU eviction, a load queue, a delayed GPUTexture
+// destruction queue, a shared placeholder, and generation-checked
+// stale-load rejection. The real GPU calls + async loading are deferred.
+export {
+  AssetVirtualizer,
+  makeAssetHandle,
+  assetSlot,
+  assetGeneration,
+  SLOT_STATE_FREE,
+  SLOT_STATE_QUEUED,
+  SLOT_STATE_LOADING,
+  SLOT_STATE_RESIDENT,
+  ASSET_HANDLE_INVALID,
+  DESTROY_NONE,
+} from './runtime/asset-virtualizer.js';
+export type { AssetHandle, AssetVirtualizerConfig } from './runtime/asset-virtualizer.js';
 // 1.7.5 MILESTONE (Wave 1.7 networking complete) - ChatChannel +
 // ChatChannelRegistry: moderated multi-channel chat with rate
 // limit + filter hooks.
