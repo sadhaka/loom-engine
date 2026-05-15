@@ -7,6 +7,19 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 2.0.1 - 2026-05-15 (Description refresh - npm card + landing + README)
+
+**No code changes.** Refreshes the engine description copy across
+`package.json`, `README.md`, `landing/index.html` (loom-engine.pages.dev),
+the GitHub repo subtitle, and the consumer-side TWT `/engine/` page.
+The pre-Trinity copy ("Browser-first 2D / 2.5D game engine") undersold
+what v2.0.0 actually shipped; new copy names the existing v1.x niches
+(NarrativeMemory, RelationshipGraph + EmotionState, deterministic
+replay) AND the Trinity Mainframe v2.0 kernel categories (acoustic
+propagation, voxel mesh, packet routing, AI Director governance,
+anti-cheat). npm card refresh requires this version bump because the
+registry only refreshes description on publish.
+
 ## 2.0.0 - 2026-05-15 (Trinity Mainframe complete - 14 components, full Vol I + Vol II ingestion)
 
 **Closes the Trinity Mainframe ingestion: 14 new pure-logic kernels
