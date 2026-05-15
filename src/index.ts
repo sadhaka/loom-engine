@@ -1501,6 +1501,38 @@ export type {
   LoomForgeBridgeConfig,
   StepCallback,
 } from './runtime/loom-forge-bridge.js';
+// GlobalStateLedger - the spatio-temporal persistence kernel:
+// (regionId, lamport64, nodeId, sequence) total ordering, per-delta
+// idempotency-key + authority-epoch binding, versioned NewValue
+// codec, per-region Lamport clock, per-componentTypeId merge-rule
+// registry (LWW / SUM / BITSET_OR / CRDT_CUSTOM), atomic +
+// auditable compaction, vector-DB-index marker bit. The actual
+// SQLite WAL writes + vector-DB writes + on-disk compaction are
+// the deferred integration layers.
+export {
+  GlobalStateLedger,
+  LEDGER_REASON_NONE,
+  LEDGER_REASON_BAD_REGION,
+  LEDGER_REASON_BAD_NODE,
+  LEDGER_REASON_BAD_ENTITY,
+  LEDGER_REASON_BAD_COMPONENT,
+  LEDGER_REASON_BAD_CODEC_VERSION,
+  LEDGER_REASON_STALE_EPOCH,
+  LEDGER_REASON_DUPLICATE_KEY,
+  LEDGER_REASON_FULL,
+  LEDGER_REASON_BAD_LAMPORT,
+  LEDGER_REASON_BAD_RULE,
+  MERGE_RULE_NONE,
+  MERGE_RULE_LAST_WRITE_WINS,
+  MERGE_RULE_SUM,
+  MERGE_RULE_BITSET_OR,
+  MERGE_RULE_CRDT_CUSTOM,
+  DELTA_FLAG_HAS_VECTOR_EMBEDDING,
+  DELTA_HANDLE_INVALID,
+  DELTA_RECORD_STRIDE,
+  COMPACTION_ENTRY_STRIDE,
+} from './runtime/global-state-ledger.js';
+export type { GlobalStateLedgerConfig } from './runtime/global-state-ledger.js';
 // 1.7.5 MILESTONE (Wave 1.7 networking complete) - ChatChannel +
 // ChatChannelRegistry: moderated multi-channel chat with rate
 // limit + filter hooks.
