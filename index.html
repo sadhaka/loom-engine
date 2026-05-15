@@ -5,12 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#0a0805">
 <meta name="color-scheme" content="dark">
-<meta name="description" content="Loom Engine v1.6.5 - TS engine for AI-driven worlds: cross-session NPC memory, asymmetric relationships, deterministic replay.">
-<meta property="og:title" content="Loom Engine // v1.6.5">
-<meta property="og:description" content="TS engine for AI-driven worlds: cross-session NPC memory, asymmetric relationships, deterministic replay.">
+<meta name="description" content="Loom Engine v2.0.0 - TS engine for AI-driven worlds: 14 Trinity Mainframe kernels, 3,984 tests, cross-session NPC memory, deterministic replay.">
+<meta property="og:title" content="Loom Engine // v2.0.0 - Trinity Mainframe">
+<meta property="og:description" content="14 new pure-logic kernels for AI-driven worlds. SonicSync, LoomFlow, NeuralMaterial, AetherGrid, GlobalStateLedger, and more. 3,984 tests green.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://loom-engine.pages.dev/">
-<title>Loom Engine // v1.6.5</title>
+<title>Loom Engine // v2.0.0</title>
 <style>
 :root {
   --bg: #0a0805;
@@ -338,10 +338,10 @@ footer a { color: var(--fg-dim); }
 <div class="wrap">
 
   <header class="banner">
-    <h1>LOOM ENGINE<span class="slash">//</span>v1.6.5</h1>
+    <h1>LOOM ENGINE<span class="slash">//</span>v2.0.0</h1>
     <div class="banner-meta">
-      <div><strong>3218</strong> tests green</div>
-      <div><strong>128</strong> versions since 0.10</div>
+      <div><strong>3,984</strong> tests green</div>
+      <div><strong>136</strong> versions since 0.10</div>
       <div><strong>BUSL-1.1</strong> source-available</div>
     </div>
   </header>
@@ -367,15 +367,20 @@ footer a { color: var(--fg-dim); }
         <div class="target">/mainframe (theworldtable.ai)</div>
         <div class="hint">9-panel showcase running the engine on itself. ECS world, force-directed module graph, NarrativeMemory matrix, SoundtrackDirector waveform, and more.</div>
       </a>
+      <a class="action" href="https://theworldtable.ai/engine/">
+        <div class="label">Live playground</div>
+        <div class="target">theworldtable.ai/engine</div>
+        <div class="hint">Run the engine in your browser. NPC sustain dial + 8 click-to-expand component demos: VoxelCompute marching cubes, SonicSync acoustic DDA, LoomFlow packet jitter, AetherGrid split-brain, and more.</div>
+      </a>
       <a class="action" href="https://github.com/sadhaka/loom-engine">
         <div class="label">Source</div>
         <div class="target">github.com/sadhaka/loom-engine</div>
-        <div class="hint">198 source files / 46.8k LOC + 155 test files / 40.9k LOC. BUSL-1.1; converts to Apache 2.0 on 2030-05-08.</div>
+        <div class="hint">247 source files / 69.5k LOC + 206 test files / 54.5k LOC. BUSL-1.1; converts to Apache 2.0 on 2030-05-08.</div>
       </a>
-      <a class="action" href="https://www.npmjs.com/package/@sadhaka/loom-engine">
+      <a class="action" href="https://www.npmjs.com/package/loom-engine">
         <div class="label">Package</div>
-        <div class="target">@sadhaka/loom-engine</div>
-        <div class="hint">Rapid stream publishes to <code>--tag beta</code>. Wave milestones promoted to <code>latest</code> manually. Install: <code>npm i @sadhaka/loom-engine</code>.</div>
+        <div class="target">loom-engine</div>
+        <div class="hint">Rapid stream publishes to <code>--tag beta</code>. Wave milestones promoted to <code>latest</code> manually. Install: <code>npm i loom-engine</code>.</div>
       </a>
     </div>
   </section>
@@ -383,10 +388,10 @@ footer a { color: var(--fg-dim); }
   <section>
     <h2><span class="num">02</span>Quickstart</h2>
     <div class="code"><span class="com">// 1. install</span>
-<span class="ix">$</span> <span class="kw">npm</span> i @sadhaka/loom-engine
+<span class="ix">$</span> <span class="kw">npm</span> i loom-engine
 
 <span class="com">// 2. attach to a canvas</span>
-<span class="kw">import</span> { <span class="ix">Engine</span> } <span class="kw">from</span> <span class="str">'@sadhaka/loom-engine'</span>;
+<span class="kw">import</span> { <span class="ix">Engine</span> } <span class="kw">from</span> <span class="str">'loom-engine'</span>;
 <span class="kw">var</span> canvas = document.querySelector(<span class="str">'canvas'</span>);
 <span class="kw">var</span> engine = <span class="ix">Engine</span>.create({ canvas: canvas });
 
@@ -403,18 +408,18 @@ requestAnimationFrame(tick);</div>
     <div class="stats">
       <div class="stat">
         <div class="stat-label">Tests</div>
-        <div class="stat-value">3,218</div>
-        <div class="stat-sub">3,218 / 3,218 green at v1.6.5</div>
+        <div class="stat-value">3,984</div>
+        <div class="stat-sub">3,984 / 3,984 green at v2.0.0</div>
       </div>
       <div class="stat">
         <div class="stat-label">Versions</div>
-        <div class="stat-value">128</div>
+        <div class="stat-value">136</div>
         <div class="stat-sub">since v0.10.0 / 2026</div>
       </div>
       <div class="stat">
         <div class="stat-label">Source</div>
-        <div class="stat-value">46,802</div>
-        <div class="stat-sub">LOC / 198 files</div>
+        <div class="stat-value">69,500</div>
+        <div class="stat-sub">LOC / 247 files</div>
       </div>
       <div class="stat">
         <div class="stat-label">License</div>
@@ -451,10 +456,47 @@ requestAnimationFrame(tick);</div>
         <div class="v">v1.5.5</div>
         <div class="label">KnowledgeMap</div>
       </div>
-      <div class="milestone tip">
+      <div class="milestone">
         <div class="v">v1.6.5</div>
-        <div class="label">WorldSeed</div>
+        <div class="label">WorldSeed (procgen complete)</div>
       </div>
+      <div class="milestone">
+        <div class="v">v1.7.5</div>
+        <div class="label">ChatChannel (networking complete)</div>
+      </div>
+      <div class="milestone tip">
+        <div class="v">v2.0.0</div>
+        <div class="label">Trinity Mainframe (14 kernels)</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- v2.0.0 Trinity Mainframe drop. 14 new pure-logic kernels that
+       take the engine from a Canvas2D / ECS engine into the foundation
+       of an AI-driven MMORPG runtime. -->
+  <section>
+    <h2><span class="num">04A</span>Wave 2.0 - Trinity Mainframe</h2>
+    <p style="color:var(--fg-dim);font-size:12px;margin:0 0 12px 0;">
+      14 pure-logic kernels enforcing 90+ Codex hardening gates. All non-negotiable
+      engine invariants honoured: no RNG, no wall clock, no Atomics, fixed-capacity,
+      every input bounds-checked. Try them live at
+      <a href="https://theworldtable.ai/engine/" style="color:var(--fg-bright)">theworldtable.ai/engine</a>.
+    </p>
+    <div class="actions">
+      <div class="action"><div class="label">SonicSync</div><div class="hint">Acoustic propagation: voxel DDA + double-buffered perception events. 40 tests / 7 gates.</div></div>
+      <div class="action"><div class="label">LoomVerify</div><div class="hint">Anti-cheat: PASS/RESYNC/REJECT verdicts, regional Merkle witnesses, value-class ZK gate. 36 tests / 7 gates.</div></div>
+      <div class="action"><div class="label">NeuralMaterial</div><div class="hint">PBR synthesis: capability-gated PACKED_F16/F16/F32 paths, atlas LRU, GPU-timestamp latency. 33 tests / 7 gates.</div></div>
+      <div class="action"><div class="label">InferenceOrchestrator</div><div class="hint">NPC AI router: LOCAL_SLM consented + CLOUD rate-limited, batched dispatch, critical ceiling. 37 tests / 6 gates.</div></div>
+      <div class="action"><div class="label">LoomPulse</div><div class="hint">Player-vibe inference: EMA + confidence + hysteresis, default-deny consent, NO direct reputation. 22 tests / 7 gates.</div></div>
+      <div class="action"><div class="label">LoomFlow</div><div class="hint">Adaptive networking: 3 lanes, per-lane sequence + epoch + idempotency, throttle hysteresis. 37 tests / 6 gates.</div></div>
+      <div class="action"><div class="label">NeuralAnimationSystem</div><div class="hint">Motion-matching + inertialization: feature-DB search, real per-bone delta, exp() LUT decay. 24 tests / 6 gates.</div></div>
+      <div class="action"><div class="label">VoxelComputeSystem</div><div class="hint">Marching-cubes mesher: front/back epoch-swapped density, Bourke MC tables, capacity-checked emit. 24 tests / 6 gates.</div></div>
+      <div class="action"><div class="label">AetherGrid</div><div class="hint">N2N authority handoff: two-phase transfer, idempotency dedup, split-brain detection, crash recovery. 29 tests / 6 gates.</div></div>
+      <div class="action"><div class="label">LoomFSR</div><div class="hint">Temporal upscaler: Halton(2,3) jitter, ping-pong color/depth/normal history, FSR-class sharpening. 26 tests / 7 gates.</div></div>
+      <div class="action"><div class="label">SealedAssetRegistry</div><div class="hint">AES-GCM delayed-key disclosure: AAD binding, entitlement+region scoping, transferable buffers. 27 tests / 7 gates.</div></div>
+      <div class="action"><div class="label">LoomForgeBridge</div><div class="hint">WASM-SIMD physics: strict build contract, single-source memory layout, double-buffered phase barrier. 26 tests / 6 gates.</div></div>
+      <div class="action"><div class="label">GlobalStateLedger</div><div class="hint">Spatio-temporal persistence: Lamport ordering, per-component merge rules, auditable compaction. 27 tests / 7 gates.</div></div>
+      <div class="action"><div class="label">LoomStudioOrchestrator</div><div class="hint">AI Director governance: telemetry epochs, batched SLM queries, fact-tier guard, reserved index 0. 29 tests / 6 gates.</div></div>
     </div>
   </section>
 
@@ -468,7 +510,7 @@ requestAnimationFrame(tick);</div>
         <ul>
           <li>Pair-engineered architecture, primitive design, code review</li>
           <li>Deterministic-replay-first stance, var-only browser source</li>
-          <li>128 commits since v0.10.0 land Pure Addition</li>
+          <li>136 commits since v0.10.0 land Pure Addition</li>
         </ul>
       </div>
       <div class="author-cell">
@@ -490,7 +532,7 @@ requestAnimationFrame(tick);</div>
     <div>
       <a href="https://github.com/sadhaka/loom-engine/blob/main/CHANGELOG.md">CHANGELOG</a>
       &nbsp;|&nbsp;
-      <a href="https://github.com/sadhaka/loom-engine/releases/tag/v1.6.5">v1.6.5 release</a>
+      <a href="https://github.com/sadhaka/loom-engine/releases/tag/v2.0.0">v2.0.0 release</a>
       &nbsp;|&nbsp;
       <a href="reference.html">API reference</a>
     </div>
