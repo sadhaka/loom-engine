@@ -354,6 +354,111 @@ export { WebGPURenderer, SHADER_STAGE_VERTEX, SHADER_STAGE_FRAGMENT, SHADER_STAG
 // compact events one frame later without flooding. The actual WebGPU
 // acoustic ray-tracer is the deferred integration layer.
 export { SonicSync, FP_SHIFT, FP_ONE, FP_HALF, ATTENUATION_FULL, ATTENUATION_NONE, TRACE_INAUDIBLE, SOURCE_SLOT_INVALID, LISTENER_SLOT_INVALID, PERCEPTION_EVENT_STRIDE, } from './runtime/sonic-sync.js';
+// LoomVerify - the anti-cheat verifier: a server-side claim verdict
+// pipeline with PASS / RESYNC / REJECT outcomes. Fixed-point integer
+// claim envelopes, single-use nonce table with TTL, regional Merkle
+// witnesses, key-epoch rotation with grace window, value-class gated
+// ZK escalation, TTL-decayed per-entity violation score for the
+// moderation pipeline. Never mutates the world; only emits verdicts.
+// The Groth16 / Plonk WASM verifier is the deferred integration layer.
+export { LoomVerify, VERDICT_NONE, VERDICT_PASS, VERDICT_RESYNC, VERDICT_REJECT, VERDICT_ID_INVALID, VERDICT_RECORD_STRIDE, REASON_NONE, REASON_BAD_NONCE, REASON_NONCE_EXPIRED, REASON_BAD_REGION_ROOT, REASON_BAD_KEY_EPOCH, REASON_PHYSICS, REASON_BAD_TICK, REASON_BAD_ENTITY, REASON_BAD_ACTION, REASON_CRYPTO_FAIL, REASON_NEEDS_PROOF, VALUE_CLASS_LOW, VALUE_CLASS_MEDIUM, VALUE_CLASS_HIGH, } from './runtime/loom-verify.js';
+// NeuralMaterial - the runtime PBR-material synthesis kernel: a
+// device-capability-gated path picker (PACKED_F16 / F16 / F32 fallback),
+// an LRU atlas slot allocator with mipmap-ready bits, an SoA job
+// queue with no Promise-per-material fan-out, a delayed-destruction
+// queue for evicted GPU resources, and a rolling GPU-timestamp
+// latency window for frame-budget claims. The deferred WebGPU
+// dispatch / pipeline / mipmap pass is the integration layer.
+export { NeuralMaterial, pickPath, makeNeuralMaterialHandle, neuralMaterialSlot, neuralMaterialGeneration, NEURAL_SLOT_STATE_FREE, NEURAL_SLOT_STATE_QUEUED, NEURAL_SLOT_STATE_SYNTHESIZING, NEURAL_SLOT_STATE_RESIDENT, PATH_PACKED_F16, PATH_F16, PATH_F32, PATH_INVALID, CAP_SHADER_F16, CAP_PACKED_4X8, CAP_TEXTURE_RGBA16F, CAP_TIMESTAMP_QUERY, MATERIAL_HANDLE_INVALID, JOB_ID_INVALID, ATLAS_SLOT_INVALID, NEURAL_DESTROY_NONE, JOB_RECORD_STRIDE, } from './runtime/neural-material.js';
+// InferenceOrchestrator - the NPC-AI inference router: per-lane
+// SoA request queues (LOCAL_SLM consented + CLOUD rate-limited),
+// zero-allocation batch drain so the deferred dispatcher makes ONE
+// inference call per batch (no Promise per NPC), per-lane token /
+// rate / TTL / critical-ceiling budgets, and post-inference action
+// validation against per-actionType allowed-result masks. The
+// actual local-SLM and cloud-LLM HTTP calls are the deferred layer.
+export { InferenceOrchestrator, makeRequestHandle, requestSlot, requestLane, requestGeneration, LANE_LOCAL_SLM, LANE_CLOUD, PRIORITY_LOW, PRIORITY_NORMAL, PRIORITY_HIGH, PRIORITY_CRITICAL, REQUEST_STATE_NONE, REQUEST_STATE_PENDING, REQUEST_STATE_INFLIGHT, REQUEST_STATE_COMPLETED, REQUEST_STATE_CANCELLED, REQUEST_STATE_EXPIRED, REASON_NONE as INFERENCE_REASON_NONE, REASON_RATE_LIMITED, REASON_BUDGET_EXHAUSTED, REASON_CRITICAL_CEILING, REASON_CONSENT_DENIED, REASON_DEADLINE_EXCEEDED, REASON_BAD_RESULT, REASON_STALE_HANDLE, REASON_BAD_LANE, REASON_BAD_PRIORITY, REASON_BAD_NPC, REASON_BAD_TOKENS, REASON_BAD_TTL, REASON_BAD_ACTION as INFERENCE_REASON_BAD_ACTION, REQUEST_HANDLE_INVALID, DROP_EVENT_STRIDE, } from './runtime/inference-orchestrator.js';
+// LoomPulse - the player-vibe inference kernel: Q16.16 fixed-point
+// EMA accumulators per vibe with confidence + decay + hysteresis,
+// double-buffered front/back state, an explicit player-consent
+// kill switch (default OFF), a deliberately-narrow output surface
+// so inferred emotion CANNOT directly write permanent reputation,
+// a corroboration-required read for any reputation pipeline, an
+// atmosphere-impact clamp for "subtle local effects only", and a
+// per-vibe audit ring for offline bias / misclassification analysis.
+export { LoomPulse, PULSE_FP_SHIFT, PULSE_FP_ONE, VIBE_INVALID, AUDIT_RECORD_STRIDE as PULSE_AUDIT_RECORD_STRIDE, } from './runtime/loom-pulse.js';
+// LoomFlow - the adaptive-network packet router: three lanes
+// (UNRELIABLE_MOVEMENT, RELIABLE_COMBAT, RELIABLE_ECONOMY), each
+// with its own per-lane sequence space, authority epoch, jitter
+// buffer with TTL-driven late-packet drop, per-(lane, client)
+// idempotency ring, per-client throttle with hysteresis +
+// backpressure, and a transport profile picker (WEBTRANSPORT >
+// WEBRTC > WEBSOCKET). The actual transport channel is the
+// deferred integration layer.
+export { LoomFlow, pickTransport, LANE_UNRELIABLE_MOVEMENT, LANE_RELIABLE_COMBAT, LANE_RELIABLE_ECONOMY, TRANSPORT_WEBTRANSPORT, TRANSPORT_WEBRTC, TRANSPORT_WEBSOCKET, TRANSPORT_INVALID, FLOW_CAP_WEBTRANSPORT, FLOW_CAP_WEBRTC, FLOW_CAP_WEBSOCKET, FLOW_REASON_NONE, FLOW_REASON_STALE_SEQ, FLOW_REASON_STALE_EPOCH, FLOW_REASON_DUPLICATE, FLOW_REASON_THROTTLED, FLOW_REASON_BUFFER_FULL, FLOW_REASON_BAD_LANE, FLOW_REASON_BAD_CLIENT, FLOW_REASON_BAD_SEQ, FLOW_REASON_TTL_EXPIRED, FLOW_REASON_OUTBOUND_FULL, PACKET_INVALID, FLOW_EVENT_STRIDE, FLOW_PACKET_STRIDE, } from './runtime/loom-flow.js';
+// NeuralAnimationSystem - the motion-matching + inertialization
+// kernel: Q16.16 fp feature DB + pose DB, brute-force best-match
+// search, real per-bone pose-delta extraction at the transition,
+// exponential per-bone inertial decay (precomputed exp() LUT),
+// foot-locking mask. The WGSL compute-offload of the search and
+// the bone-matrix render upload are the deferred integration layer.
+export { NeuralAnimationSystem, ANIM_FP_SHIFT, ANIM_FP_ONE, BONE_SLOT_STRIDE, FOOT_LEFT, FOOT_RIGHT, ANIM_CLIP_INVALID, ANIM_FRAME_INVALID, ANIM_ENTITY_INVALID, } from './runtime/neural-animation.js';
+// VoxelComputeSystem - the marching-cubes voxel mesher: SoA per-chunk
+// density (front/back epoch-swapped) + material; externally-loaded
+// 256-entry edge + 256x16 tri lookup tables; CPU mesher with real
+// 8-corner indexing + linear edge interpolation; capacity-checked
+// vertex emission with overflow counter; pre-allocated counter-reset
+// buffer for the deferred GPU dispatcher's atomic reset pass.
+export { VoxelComputeSystem, VOXEL_VERTEX_STRIDE, VOXEL_FP_SHIFT, VOXEL_FP_ONE, VOXEL_CHUNK_INVALID, } from './runtime/voxel-compute.js';
+// AetherGrid - the N2N authority handoff kernel: per-entity owner +
+// epoch (the fencing token), two-phase transfer state machine with
+// idempotency keys / deadline expiry / commit/abort, SoA chunk
+// replication queue with per-chunk seq numbers + stale rejection,
+// split-brain detection (same-epoch divergent owners), and crash
+// recovery via checkpoint reload. Control / data plane explicitly
+// split for the deferred gRPC + shared-memory transports.
+export { AetherGrid, makeHandle as makeTransferHandle, handleSlot as transferSlot, handleGen as transferGen, TRANSFER_STATE_NONE, TRANSFER_STATE_PROPOSED, TRANSFER_STATE_COMMITTED, TRANSFER_STATE_ABORTED, TRANSFER_STATE_EXPIRED, AETHER_REASON_NONE, AETHER_REASON_BAD_ENTITY, AETHER_REASON_BAD_NODE, AETHER_REASON_BAD_HANDLE, AETHER_REASON_BAD_STATE, AETHER_REASON_STALE_EPOCH, AETHER_REASON_SPLIT_BRAIN, AETHER_REASON_DEADLINE_EXCEEDED, AETHER_REASON_DUPLICATE_KEY, AETHER_REASON_BAD_SEQ, AETHER_REASON_BUFFER_FULL, TRANSFER_HANDLE_INVALID, NODE_INVALID, TRANSFER_RECORD_STRIDE, REPLICATION_RECORD_STRIDE, } from './runtime/aether-grid.js';
+// LoomFSR - the temporal upscaler kernel: precomputed Halton(2,3)
+// sub-pixel jitter, ping-pong color/depth/normal history texture
+// handles (no GPU copy), per-pixel reactive/disocclusion mask,
+// configured spatial sharpening for FSR-class reconstruction,
+// validated texture format/usage/alignment. The deferred WGSL
+// resolve pass + GPU texture binding is the integration layer.
+export { LoomFSR, FSR_FP_SHIFT, FSR_FP_ONE, FSR_FP_HALF, FSR_CHANNEL_COLOR, FSR_CHANNEL_DEPTH, FSR_CHANNEL_NORMAL, TEX_FORMAT_RGBA8_UNORM, TEX_FORMAT_RGBA16_FLOAT, TEX_FORMAT_R32_FLOAT, TEX_FORMAT_RG16_SNORM, TEX_USAGE_TEXTURE_BINDING, TEX_USAGE_STORAGE_BINDING, TEX_USAGE_RENDER_ATTACHMENT, TEX_USAGE_COPY_DST, TEX_USAGE_COPY_SRC, REACTIVE_BIT_REACTIVE, REACTIVE_BIT_DISOCCLUDED, TEX_HANDLE_INVALID, FSR_REASON_NONE, FSR_REASON_BAD_FORMAT, FSR_REASON_BAD_USAGE, FSR_REASON_BAD_ALIGNMENT, FSR_REASON_BAD_COORD, FSR_REASON_BAD_CHANNEL, } from './runtime/loom-fsr.js';
+// SealedAssetRegistry - the delayed-key-disclosure manifest:
+// AES-GCM envelope packing convention, AAD binding (event/asset/
+// version/contentHash), per-asset state machine (SEALED →
+// KEY_DISCLOSED → DECRYPTING → READY/FAILED/REVOKED), per-event
+// entitlement + region scoped key disclosure, opaque CDN-hash
+// indirection, transferable-buffer accounting. The WebCrypto AES-
+// GCM call + SSE delivery + CDN fetch are the deferred layers.
+export { SealedAssetRegistry, SEALED_STATE_NONE, SEALED_STATE_SEALED, SEALED_STATE_KEY_DISCLOSED, SEALED_STATE_DECRYPTING, SEALED_STATE_READY, SEALED_STATE_FAILED, SEALED_STATE_REVOKED, SEALED_REASON_NONE, SEALED_REASON_BAD_ASSET, SEALED_REASON_BAD_EVENT, SEALED_REASON_BAD_HANDLE, SEALED_REASON_BAD_STATE, SEALED_REASON_BAD_ENVELOPE, SEALED_REASON_NOT_ENTITLED, SEALED_REASON_BAD_REGION, SEALED_REASON_STALE_GENERATION, SEALED_REASON_DUPLICATE, ENVELOPE_IV_BYTES, ENVELOPE_TAG_BYTES, ENVELOPE_MIN_BYTES, AAD_BYTES, AAD_HASH_BYTES, SEALED_HANDLE_INVALID, SEALED_ASSET_RECORD_STRIDE, } from './runtime/sealed-asset.js';
+// LoomForgeBridge - the WASM-SIMD physics integration kernel:
+// strict build contract (imported shared memory + min/max pages +
+// SIMD), single-source memory layout constants, initialized-flag
+// gate, validated dt + activeCount before delegating to the bound
+// step callback, double-buffered position phase barrier so render
+// never reads mid-write. The actual Wasm module instantiation +
+// SIMD step kernel + SAB shared memory are the integration layer.
+export { LoomForgeBridge, FORGE_POS_STRIDE, FORGE_VEL_STRIDE, FORGE_SCRATCH_STRIDE, FORGE_POS_OFFSET, WASM_PAGE_BYTES, FORGE_STATE_UNINITIALIZED, FORGE_STATE_READY, FORGE_REASON_NONE, FORGE_REASON_NOT_INITIALIZED, FORGE_REASON_BAD_DT, FORGE_REASON_BAD_COUNT, FORGE_REASON_BAD_CONTRACT, FORGE_REASON_NO_CALLBACK, FORGE_MAX_DT_FP, } from './runtime/loom-forge-bridge.js';
+// GlobalStateLedger - the spatio-temporal persistence kernel:
+// (regionId, lamport64, nodeId, sequence) total ordering, per-delta
+// idempotency-key + authority-epoch binding, versioned NewValue
+// codec, per-region Lamport clock, per-componentTypeId merge-rule
+// registry (LWW / SUM / BITSET_OR / CRDT_CUSTOM), atomic +
+// auditable compaction, vector-DB-index marker bit. The actual
+// SQLite WAL writes + vector-DB writes + on-disk compaction are
+// the deferred integration layers.
+export { GlobalStateLedger, LEDGER_REASON_NONE, LEDGER_REASON_BAD_REGION, LEDGER_REASON_BAD_NODE, LEDGER_REASON_BAD_ENTITY, LEDGER_REASON_BAD_COMPONENT, LEDGER_REASON_BAD_CODEC_VERSION, LEDGER_REASON_STALE_EPOCH, LEDGER_REASON_DUPLICATE_KEY, LEDGER_REASON_FULL, LEDGER_REASON_BAD_LAMPORT, LEDGER_REASON_BAD_RULE, MERGE_RULE_NONE, MERGE_RULE_LAST_WRITE_WINS, MERGE_RULE_SUM, MERGE_RULE_BITSET_OR, MERGE_RULE_CRDT_CUSTOM, DELTA_FLAG_HAS_VECTOR_EMBEDDING, DELTA_HANDLE_INVALID, DELTA_RECORD_STRIDE, COMPACTION_ENTRY_STRIDE, } from './runtime/global-state-ledger.js';
+// LoomStudioOrchestrator - the AI Director governance kernel:
+// per-tick double-buffered telemetry snapshot with monotonic
+// epoch, batched SLM query queue (no Promise per query),
+// per-query-type allowed-action-mask validation, telemetry-epoch
+// staleness rejection, fact proposals routed through (sourceId,
+// expiresAtTick, telemetryEpoch, factTier) provenance envelope,
+// SLM-tier guard that REJECTS VERIFIED tier (admin-only), reserved
+// fact-index 0 the SLM can never write.
+export { LoomStudioOrchestrator, makeHandle as makeStudioHandle, handleSlot as studioSlot, handleGen as studioGen, STUDIO_REASON_NONE, STUDIO_REASON_BAD_SIGNAL, STUDIO_REASON_BAD_QUERY_TYPE, STUDIO_REASON_BAD_HANDLE, STUDIO_REASON_BAD_STATE, STUDIO_REASON_STALE_EPOCH, STUDIO_REASON_BAD_ACTION_MASK, STUDIO_REASON_BAD_FACT_INDEX, STUDIO_REASON_TIER_FORBIDDEN, STUDIO_REASON_BAD_TIER, STUDIO_REASON_QUEUE_FULL, STUDIO_REASON_BAD_TTL, STUDIO_REASON_BAD_SOURCE, FACT_TIER_LOW, FACT_TIER_MEDIUM, FACT_TIER_HIGH, FACT_TIER_VERIFIED, QUERY_STATE_NONE, QUERY_STATE_PENDING, QUERY_STATE_INFLIGHT, QUERY_STATE_COMPLETED, QUERY_STATE_REJECTED, FACT_STATE_NONE, FACT_STATE_PROPOSED, FACT_STATE_APPROVED, FACT_STATE_EXPIRED, RESERVED_FACT_INDEX, QUERY_HANDLE_INVALID, FACT_HANDLE_INVALID, QUERY_RECORD_STRIDE, FACT_RECORD_STRIDE, } from './runtime/studio-orchestrator.js';
 // 1.7.5 MILESTONE (Wave 1.7 networking complete) - ChatChannel +
 // ChatChannelRegistry: moderated multi-channel chat with rate
 // limit + filter hooks.
