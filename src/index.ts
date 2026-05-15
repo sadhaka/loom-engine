@@ -1021,6 +1021,12 @@ export { LoomFlux } from './runtime/loom-flux.js';
 // and recycling, via a generation-validated phase-change command buffer.
 export { LoomDecay, makeMaterialHandle, materialSlot, materialGeneration } from './runtime/loom-decay.js';
 export type { MaterialHandle, TransitionRule, DecayStats, CommitStats } from './runtime/loom-decay.js';
+// PhysicsSystem - a 2D AABB collision primitive over a SoA collider
+// pool: SpatialGrid 3x3 broadphase, AABB narrowphase, and positional
+// minimum-translation push-apart, split into integrate / syncGrid /
+// detect / resolve phases so the stale-state gates hold by construction.
+export { PhysicsSystem, makeColliderHandle, colliderSlot, colliderGeneration } from './runtime/physics-system.js';
+export type { ColliderHandle, PhysicsStepStats } from './runtime/physics-system.js';
 // 1.7.5 MILESTONE (Wave 1.7 networking complete) - ChatChannel +
 // ChatChannelRegistry: moderated multi-channel chat with rate
 // limit + filter hooks.
