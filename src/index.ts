@@ -1284,6 +1284,22 @@ export {
   DROP_EVENT_STRIDE,
 } from './runtime/inference-orchestrator.js';
 export type { RequestHandle, InferenceOrchestratorConfig } from './runtime/inference-orchestrator.js';
+// LoomPulse - the player-vibe inference kernel: Q16.16 fixed-point
+// EMA accumulators per vibe with confidence + decay + hysteresis,
+// double-buffered front/back state, an explicit player-consent
+// kill switch (default OFF), a deliberately-narrow output surface
+// so inferred emotion CANNOT directly write permanent reputation,
+// a corroboration-required read for any reputation pipeline, an
+// atmosphere-impact clamp for "subtle local effects only", and a
+// per-vibe audit ring for offline bias / misclassification analysis.
+export {
+  LoomPulse,
+  PULSE_FP_SHIFT,
+  PULSE_FP_ONE,
+  VIBE_INVALID,
+  AUDIT_RECORD_STRIDE as PULSE_AUDIT_RECORD_STRIDE,
+} from './runtime/loom-pulse.js';
+export type { LoomPulseConfig } from './runtime/loom-pulse.js';
 // 1.7.5 MILESTONE (Wave 1.7 networking complete) - ChatChannel +
 // ChatChannelRegistry: moderated multi-channel chat with rate
 // limit + filter hooks.
