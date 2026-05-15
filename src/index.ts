@@ -1369,6 +1369,40 @@ export {
   VOXEL_CHUNK_INVALID,
 } from './runtime/voxel-compute.js';
 export type { VoxelComputeConfig } from './runtime/voxel-compute.js';
+// AetherGrid - the N2N authority handoff kernel: per-entity owner +
+// epoch (the fencing token), two-phase transfer state machine with
+// idempotency keys / deadline expiry / commit/abort, SoA chunk
+// replication queue with per-chunk seq numbers + stale rejection,
+// split-brain detection (same-epoch divergent owners), and crash
+// recovery via checkpoint reload. Control / data plane explicitly
+// split for the deferred gRPC + shared-memory transports.
+export {
+  AetherGrid,
+  makeHandle as makeTransferHandle,
+  handleSlot as transferSlot,
+  handleGen as transferGen,
+  TRANSFER_STATE_NONE,
+  TRANSFER_STATE_PROPOSED,
+  TRANSFER_STATE_COMMITTED,
+  TRANSFER_STATE_ABORTED,
+  TRANSFER_STATE_EXPIRED,
+  AETHER_REASON_NONE,
+  AETHER_REASON_BAD_ENTITY,
+  AETHER_REASON_BAD_NODE,
+  AETHER_REASON_BAD_HANDLE,
+  AETHER_REASON_BAD_STATE,
+  AETHER_REASON_STALE_EPOCH,
+  AETHER_REASON_SPLIT_BRAIN,
+  AETHER_REASON_DEADLINE_EXCEEDED,
+  AETHER_REASON_DUPLICATE_KEY,
+  AETHER_REASON_BAD_SEQ,
+  AETHER_REASON_BUFFER_FULL,
+  TRANSFER_HANDLE_INVALID,
+  NODE_INVALID,
+  TRANSFER_RECORD_STRIDE,
+  REPLICATION_RECORD_STRIDE,
+} from './runtime/aether-grid.js';
+export type { AetherGridConfig } from './runtime/aether-grid.js';
 // 1.7.5 MILESTONE (Wave 1.7 networking complete) - ChatChannel +
 // ChatChannelRegistry: moderated multi-channel chat with rate
 // limit + filter hooks.
