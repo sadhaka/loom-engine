@@ -1403,6 +1403,40 @@ export {
   REPLICATION_RECORD_STRIDE,
 } from './runtime/aether-grid.js';
 export type { AetherGridConfig } from './runtime/aether-grid.js';
+// LoomFSR - the temporal upscaler kernel: precomputed Halton(2,3)
+// sub-pixel jitter, ping-pong color/depth/normal history texture
+// handles (no GPU copy), per-pixel reactive/disocclusion mask,
+// configured spatial sharpening for FSR-class reconstruction,
+// validated texture format/usage/alignment. The deferred WGSL
+// resolve pass + GPU texture binding is the integration layer.
+export {
+  LoomFSR,
+  FSR_FP_SHIFT,
+  FSR_FP_ONE,
+  FSR_FP_HALF,
+  FSR_CHANNEL_COLOR,
+  FSR_CHANNEL_DEPTH,
+  FSR_CHANNEL_NORMAL,
+  TEX_FORMAT_RGBA8_UNORM,
+  TEX_FORMAT_RGBA16_FLOAT,
+  TEX_FORMAT_R32_FLOAT,
+  TEX_FORMAT_RG16_SNORM,
+  TEX_USAGE_TEXTURE_BINDING,
+  TEX_USAGE_STORAGE_BINDING,
+  TEX_USAGE_RENDER_ATTACHMENT,
+  TEX_USAGE_COPY_DST,
+  TEX_USAGE_COPY_SRC,
+  REACTIVE_BIT_REACTIVE,
+  REACTIVE_BIT_DISOCCLUDED,
+  TEX_HANDLE_INVALID,
+  FSR_REASON_NONE,
+  FSR_REASON_BAD_FORMAT,
+  FSR_REASON_BAD_USAGE,
+  FSR_REASON_BAD_ALIGNMENT,
+  FSR_REASON_BAD_COORD,
+  FSR_REASON_BAD_CHANNEL,
+} from './runtime/loom-fsr.js';
+export type { LoomFSRConfig } from './runtime/loom-fsr.js';
 // 1.7.5 MILESTONE (Wave 1.7 networking complete) - ChatChannel +
 // ChatChannelRegistry: moderated multi-channel chat with rate
 // limit + filter hooks.
