@@ -1045,6 +1045,18 @@ export type {
 // bitwise crossover + mutation; a component table keyed by an
 // externally-owned entityId, deliberately with no authority mapping.
 export { GeneticPersonaEngine, GENOME_WORDS, GENOME_BITS } from './runtime/genetic-persona-engine.js';
+// CognitiveMap - a deterministic HTN planner over flat typed-array
+// domain tables, with overlay rollback, method backtracking, plan
+// generation counters, and a step-budgeted priority-queue scheduler.
+export { CognitiveMap } from './runtime/cognitive-map.js';
+export type {
+  CognitiveMapOptions,
+  DomainSpec,
+  PrimitiveDefinition,
+  MethodDefinition,
+  PlanResult,
+  PlanFailureReason,
+} from './runtime/cognitive-map.js';
 // 1.7.5 MILESTONE (Wave 1.7 networking complete) - ChatChannel +
 // ChatChannelRegistry: moderated multi-channel chat with rate
 // limit + filter hooks.
