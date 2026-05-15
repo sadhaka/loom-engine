@@ -1178,6 +1178,37 @@ export {
   PERCEPTION_EVENT_STRIDE,
 } from './runtime/sonic-sync.js';
 export type { SonicSyncConfig } from './runtime/sonic-sync.js';
+// LoomVerify - the anti-cheat verifier: a server-side claim verdict
+// pipeline with PASS / RESYNC / REJECT outcomes. Fixed-point integer
+// claim envelopes, single-use nonce table with TTL, regional Merkle
+// witnesses, key-epoch rotation with grace window, value-class gated
+// ZK escalation, TTL-decayed per-entity violation score for the
+// moderation pipeline. Never mutates the world; only emits verdicts.
+// The Groth16 / Plonk WASM verifier is the deferred integration layer.
+export {
+  LoomVerify,
+  VERDICT_NONE,
+  VERDICT_PASS,
+  VERDICT_RESYNC,
+  VERDICT_REJECT,
+  VERDICT_ID_INVALID,
+  VERDICT_RECORD_STRIDE,
+  REASON_NONE,
+  REASON_BAD_NONCE,
+  REASON_NONCE_EXPIRED,
+  REASON_BAD_REGION_ROOT,
+  REASON_BAD_KEY_EPOCH,
+  REASON_PHYSICS,
+  REASON_BAD_TICK,
+  REASON_BAD_ENTITY,
+  REASON_BAD_ACTION,
+  REASON_CRYPTO_FAIL,
+  REASON_NEEDS_PROOF,
+  VALUE_CLASS_LOW,
+  VALUE_CLASS_MEDIUM,
+  VALUE_CLASS_HIGH,
+} from './runtime/loom-verify.js';
+export type { ClaimEnvelope, LoomVerifyConfig } from './runtime/loom-verify.js';
 // 1.7.5 MILESTONE (Wave 1.7 networking complete) - ChatChannel +
 // ChatChannelRegistry: moderated multi-channel chat with rate
 // limit + filter hooks.
