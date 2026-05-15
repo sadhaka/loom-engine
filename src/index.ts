@@ -1241,6 +1241,49 @@ export {
   JOB_RECORD_STRIDE,
 } from './runtime/neural-material.js';
 export type { NeuralMaterialHandle, NeuralMaterialConfig } from './runtime/neural-material.js';
+// InferenceOrchestrator - the NPC-AI inference router: per-lane
+// SoA request queues (LOCAL_SLM consented + CLOUD rate-limited),
+// zero-allocation batch drain so the deferred dispatcher makes ONE
+// inference call per batch (no Promise per NPC), per-lane token /
+// rate / TTL / critical-ceiling budgets, and post-inference action
+// validation against per-actionType allowed-result masks. The
+// actual local-SLM and cloud-LLM HTTP calls are the deferred layer.
+export {
+  InferenceOrchestrator,
+  makeRequestHandle,
+  requestSlot,
+  requestLane,
+  requestGeneration,
+  LANE_LOCAL_SLM,
+  LANE_CLOUD,
+  PRIORITY_LOW,
+  PRIORITY_NORMAL,
+  PRIORITY_HIGH,
+  PRIORITY_CRITICAL,
+  REQUEST_STATE_NONE,
+  REQUEST_STATE_PENDING,
+  REQUEST_STATE_INFLIGHT,
+  REQUEST_STATE_COMPLETED,
+  REQUEST_STATE_CANCELLED,
+  REQUEST_STATE_EXPIRED,
+  REASON_NONE as INFERENCE_REASON_NONE,
+  REASON_RATE_LIMITED,
+  REASON_BUDGET_EXHAUSTED,
+  REASON_CRITICAL_CEILING,
+  REASON_CONSENT_DENIED,
+  REASON_DEADLINE_EXCEEDED,
+  REASON_BAD_RESULT,
+  REASON_STALE_HANDLE,
+  REASON_BAD_LANE,
+  REASON_BAD_PRIORITY,
+  REASON_BAD_NPC,
+  REASON_BAD_TOKENS,
+  REASON_BAD_TTL,
+  REASON_BAD_ACTION as INFERENCE_REASON_BAD_ACTION,
+  REQUEST_HANDLE_INVALID,
+  DROP_EVENT_STRIDE,
+} from './runtime/inference-orchestrator.js';
+export type { RequestHandle, InferenceOrchestratorConfig } from './runtime/inference-orchestrator.js';
 // 1.7.5 MILESTONE (Wave 1.7 networking complete) - ChatChannel +
 // ChatChannelRegistry: moderated multi-channel chat with rate
 // limit + filter hooks.
