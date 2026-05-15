@@ -1057,6 +1057,16 @@ export type {
   PlanResult,
   PlanFailureReason,
 } from './runtime/cognitive-map.js';
+// LoomChrono - a deterministic rewind / replay log: a circular ring of
+// fixed-size keyframes plus a circular log of fixed-size input events,
+// both generation-validated, with a typed replay plan that fills a
+// caller-provided index buffer.
+export { LoomChrono, chronoSlot, chronoGeneration } from './runtime/loom-chrono.js';
+export type {
+  LoomChronoOptions,
+  ReplayPlan,
+  ReplayPlanReason,
+} from './runtime/loom-chrono.js';
 // 1.7.5 MILESTONE (Wave 1.7 networking complete) - ChatChannel +
 // ChatChannelRegistry: moderated multi-channel chat with rate
 // limit + filter hooks.
