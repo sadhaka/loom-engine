@@ -11,6 +11,24 @@ The design spec (`LOOM-ENGINE-SPEC.md`) lives in the consuming
 TheWorldTable.ai repo and is the canonical source for phase
 plans and architectural decisions.
 
+## v2.0.0 - Trinity Mainframe complete
+
+The 2.0.0 drop closes the Trinity Mainframe ingestion - 14 new
+pure-logic kernels that take the engine from a Canvas2D / ECS base
+into the foundation of an AI-driven MMORPG runtime. Each kernel is
+the safe single-thread / single-owner core that drives a deferred
+WebGPU / WebTransport / WebCrypto / WASM-SIMD / SQLite-WAL
+integration layer. All Codex hardening gates enforced inline; all
+non-negotiable engine gates (no RNG, no wall clock, no Atomics,
+fixed-capacity, every input bounds-checked) honoured across the
+board. 3984 tests pass; see [CHANGELOG.md](./CHANGELOG.md) for the
+per-component breakdown.
+
+New components: SonicSync, LoomVerify, NeuralMaterial,
+InferenceOrchestrator, LoomPulse, LoomFlow, NeuralAnimationSystem,
+VoxelComputeSystem, AetherGrid, LoomFSR, SealedAssetRegistry,
+LoomForgeBridge, GlobalStateLedger, LoomStudioOrchestrator.
+
 ## Install
 
 ```sh

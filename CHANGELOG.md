@@ -7,6 +7,131 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 2.0.0 - 2026-05-15 (Trinity Mainframe complete - 14 components, full Vol I + Vol II ingestion)
+
+**Closes the Trinity Mainframe ingestion: 14 new pure-logic kernels
+that take the Loom Engine from a Canvas2D / ECS engine into the
+foundation of an AI-driven MMORPG runtime. Every kernel is the
+single-thread / single-owner safe core that drives a deferred
+WebGPU / WebTransport / WebCrypto / WASM-SIMD / SQLite-WAL
+integration layer. All Codex hardening gates enforced inline; all
+non-negotiable engine gates (no RNG, no wall clock, no Atomics,
+fixed-capacity, every input bounds-checked) honoured across the
+board.**
+
+3984 tests pass (previously 3671); 313 new tests across the 14
+components. tsc + build:demos + bench:fast all clean. No regression
+in the existing surface; every Trinity export is additive.
+
+### Volume I (§14, §16-§20)
+
+- **§14 SonicSync** - acoustic propagation: Q16.16 fp source/listener
+  pools, Amanatides-Woo 3D DDA voxel occlusion, double-buffered
+  perception-event ring, (source, listener, semantic) cooldown hash.
+  [PR #17](https://github.com/sadhaka/loom-engine/pull/17), 40 tests, 7 gates.
+- **§16 LoomVerify** - anti-cheat verifier: PASS/RESYNC/REJECT
+  verdicts, integer-only claim envelope, regional Merkle witnesses,
+  key-epoch rotation with grace, value-class gated ZK escalation,
+  TTL-decayed per-entity violation score.
+  [PR #18](https://github.com/sadhaka/loom-engine/pull/18), 36 tests, 7 gates.
+- **§17 NeuralMaterial** - PBR material synthesis: capability-gated
+  PACKED_F16 / F16 / F32 path picker, atlas LRU + array-texture
+  addressing, mipmap-ready bits, async job queue with stale-job
+  drop, GPU-timestamp p50/p95 latency window.
+  [PR #19](https://github.com/sadhaka/loom-engine/pull/19), 33 tests, 7 gates.
+- **§18 InferenceOrchestrator** - NPC AI router: two lanes
+  (LOCAL_SLM consented + CLOUD rate-limited), batched inference
+  (no Promise per NPC), critical-priority budget ceiling, consent
+  re-routing, post-inference allowed-action-mask validation.
+  [PR #20](https://github.com/sadhaka/loom-engine/pull/20), 37 tests, 6 gates.
+- **§19 LoomPulse** - player-vibe inference: Q16.16 EMA + confidence
+  decay + hysteresis, default-deny consent kill switch, NO direct
+  permanent-reputation surface, corroboration-required reputation
+  read, atmosphere-impact clamp for "subtle local effects only".
+  [PR #21](https://github.com/sadhaka/loom-engine/pull/21), 22 tests, 7 gates.
+- **§20 LoomFlow** - adaptive networking: three integer lanes
+  (UNRELIABLE_MOVEMENT / RELIABLE_COMBAT / RELIABLE_ECONOMY),
+  per-lane sequence + epoch + idempotency, jitter buffer with TTL,
+  per-client throttle hysteresis, WebTransport > WebRTC > WebSocket.
+  [PR #22](https://github.com/sadhaka/loom-engine/pull/22), 37 tests, 6 gates.
+
+### Volume II (§23, §24, §26-§31)
+
+- **§23 NeuralAnimationSystem** - motion-matching + inertialization:
+  Q16.16 feature DB, brute-force squared-L2 search, per-bone pose
+  delta extraction at transitions, exponential decay via precomputed
+  exp() LUT, foot-locking mask.
+  [PR #23](https://github.com/sadhaka/loom-engine/pull/23), 24 tests, 6 gates.
+- **§24 VoxelComputeSystem** - marching-cubes mesher: SoA per-chunk
+  density (front/back epoch-swapped) + material, externally-loaded
+  Bourke MC tables, capacity-checked vertex emit, pre-allocated
+  counter-reset buffer for the GPU dispatcher.
+  [PR #24](https://github.com/sadhaka/loom-engine/pull/24), 24 tests, 6 gates.
+- **§26 AetherGrid** - N2N authority handoff: per-entity
+  (ownerNode, epoch) fencing token, two-phase transfer state
+  machine, per-fromNode idempotency dedup, split-brain detection,
+  crash-recovery via checkpoint reload, control + data plane split.
+  [PR #25](https://github.com/sadhaka/loom-engine/pull/25), 29 tests, 6 gates.
+- **§27 LoomFSR** - temporal upscaler: precomputed Halton(2,3) jitter,
+  per-channel ping-pong color/depth/normal history (no GPU copy),
+  per-pixel reactive/disocclusion mask, FSR-class spatial sharpening,
+  texture format/usage/alignment validation.
+  [PR #26](https://github.com/sadhaka/loom-engine/pull/26), 26 tests, 7 gates.
+- **§28 SealedAssetRegistry** - delayed-key disclosure: AES-GCM
+  envelope packing, AAD binding (event/asset/version/contentHash),
+  per-event entitlement + region scoped key release, opaque CDN-hash
+  indirection, transferable-buffer accounting, generation counters
+  for stale-callback rejection.
+  [PR #27](https://github.com/sadhaka/loom-engine/pull/27), 27 tests, 7 gates.
+- **§29 LoomForgeBridge** - WASM-SIMD physics integration: explicit
+  Wasm build contract (importedSharedMemory + min/max pages + SIMD),
+  single-source memory layout constants, initialized-flag gate,
+  validated dt + activeCount, double-buffered position phase barrier.
+  [PR #28](https://github.com/sadhaka/loom-engine/pull/28), 26 tests, 6 gates.
+- **§30 GlobalStateLedger** - spatio-temporal persistence:
+  (regionId, lamport64, nodeId, sequence) total ordering, per-delta
+  idempotency + epoch, versioned NewValue codec, per-component
+  merge-rule registry, atomic + auditable compaction, vector-DB
+  marker bit (derived index only).
+  [PR #29](https://github.com/sadhaka/loom-engine/pull/29), 27 tests, 7 gates.
+- **§31 LoomStudioOrchestrator** - AI Director governance:
+  per-tick double-buffered telemetry epoch, batched SLM query queue,
+  per-queryType allowed-action-mask validation, fact proposals with
+  (sourceId, expiresAtTick, telemetryEpoch, factTier) provenance,
+  reserved fact-index 0 + VERIFIED-tier admin-only path.
+  [PR #30](https://github.com/sadhaka/loom-engine/pull/30), 29 tests, 6 gates.
+
+### Trinity protocol notes
+
+Each kernel was implemented from the Trinity dossier (Gemini blueprint
++ Codex hardening audit) under a strict per-component workflow: a
+fresh branch off main, the dossier sections re-read at fork time, the
+6-7 Codex gates enforced explicitly with named tests, all three
+verification gates (tsc / tsx --test / build:demos) green before any
+push. Internal mechanic decisions (hashing, ring wrap policy, fp vs
+float) were committed in code without escalation; product/scope/naming
+decisions went through AskUserQuestion. The pure-logic core ships in
+each kernel's .ts file; the deferred integration layer (WebGPU
+dispatch, WebTransport channel binding, WebCrypto AES-GCM call,
+wasm-simd module instantiation, SQLite WAL writes, etc.) is the next
+ingestion wave.
+
+### Naming collisions resolved by export aliasing
+
+- `MaterialHandle` / `makeMaterialHandle` / `materialSlot` /
+  `materialGeneration` (LoomDecay) vs `NeuralMaterialHandle` /
+  `makeNeuralMaterialHandle` / `neuralMaterialSlot` /
+  `neuralMaterialGeneration` (NeuralMaterial)
+- `SLOT_STATE_FREE` / `_QUEUED` / `_RESIDENT` (AssetVirtualizer) vs
+  `NEURAL_SLOT_STATE_*` (NeuralMaterial)
+- `DESTROY_NONE` (AssetVirtualizer) vs `NEURAL_DESTROY_NONE`
+  (NeuralMaterial)
+- `AUDIT_RECORD_STRIDE` (BlackSwan) vs `PULSE_AUDIT_RECORD_STRIDE`
+  (LoomPulse)
+- `REASON_NONE` / `REASON_BAD_ACTION` (LoomVerify) vs
+  `INFERENCE_REASON_NONE` / `INFERENCE_REASON_BAD_ACTION`
+  (InferenceOrchestrator)
+
 ## 1.7.6 - 2026-05-14 (Generational-handle hardening + determinism verification harness)
 
 **Hardens the ECS core against use-after-free, adds a deterministic

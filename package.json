@@ -1,6 +1,6 @@
 {
   "name": "loom-engine",
-  "version": "1.7.6",
+  "version": "2.0.0",
   "description": "Browser-first 2D / 2.5D game engine. Canvas2D, ECS, render-graph stages, Director-bridge SSE integration. Built from scratch in TypeScript for TheWorldTable.ai.",
   "type": "module",
   "main": "./dist/index.js",
