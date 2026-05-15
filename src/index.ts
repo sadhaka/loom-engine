@@ -1067,6 +1067,20 @@ export type {
   ReplayPlan,
   ReplayPlanReason,
 } from './runtime/loom-chrono.js';
+// AIBehaviorBuffer - a zero-allocation SoA snapshot store for LLM
+// context ingestion: one aliased backing buffer, a plain-counter
+// seqlock publish protocol, and a built-in generation-stamped observer
+// change-feed. Single-writer; the SAB + Atomics worker variant is deferred.
+export {
+  AIBehaviorBuffer,
+  makeObserverHandle,
+  observerSlot,
+  observerGeneration,
+  SNAPSHOT_NEVER_WRITTEN,
+  SNAPSHOT_TORN,
+  SNAPSHOT_UNCHANGED,
+} from './runtime/ai-behavior-buffer.js';
+export type { ObserverHandle } from './runtime/ai-behavior-buffer.js';
 // 1.7.5 MILESTONE (Wave 1.7 networking complete) - ChatChannel +
 // ChatChannelRegistry: moderated multi-channel chat with rate
 // limit + filter hooks.
