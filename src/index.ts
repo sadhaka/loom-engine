@@ -1355,6 +1355,20 @@ export {
   ANIM_ENTITY_INVALID,
 } from './runtime/neural-animation.js';
 export type { NeuralAnimationConfig } from './runtime/neural-animation.js';
+// VoxelComputeSystem - the marching-cubes voxel mesher: SoA per-chunk
+// density (front/back epoch-swapped) + material; externally-loaded
+// 256-entry edge + 256x16 tri lookup tables; CPU mesher with real
+// 8-corner indexing + linear edge interpolation; capacity-checked
+// vertex emission with overflow counter; pre-allocated counter-reset
+// buffer for the deferred GPU dispatcher's atomic reset pass.
+export {
+  VoxelComputeSystem,
+  VOXEL_VERTEX_STRIDE,
+  VOXEL_FP_SHIFT,
+  VOXEL_FP_ONE,
+  VOXEL_CHUNK_INVALID,
+} from './runtime/voxel-compute.js';
+export type { VoxelComputeConfig } from './runtime/voxel-compute.js';
 // 1.7.5 MILESTONE (Wave 1.7 networking complete) - ChatChannel +
 // ChatChannelRegistry: moderated multi-channel chat with rate
 // limit + filter hooks.
