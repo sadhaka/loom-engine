@@ -291,6 +291,29 @@ export { LoomFlux } from './runtime/loom-flux.js';
 // material-fatigue pool that decays materials toward phase changes
 // and recycling, via a generation-validated phase-change command buffer.
 export { LoomDecay, makeMaterialHandle, materialSlot, materialGeneration } from './runtime/loom-decay.js';
+// PhysicsSystem - a 2D AABB collision primitive over a SoA collider
+// pool: SpatialGrid 3x3 broadphase, AABB narrowphase, and positional
+// minimum-translation push-apart, split into integrate / syncGrid /
+// detect / resolve phases so the stale-state gates hold by construction.
+export { PhysicsSystem, makeColliderHandle, colliderSlot, colliderGeneration } from './runtime/physics-system.js';
+// MarketSimulation - a deterministic batch-auction order book: Int32
+// wealth + inventory ledgers, escrowed conservation-safe settlement,
+// maker-price matching, generation-validated order handles. SAB
+// multi-producer ingestion is the deferred layer.
+export { MarketSimulation } from './runtime/market-simulation.js';
+// GeneticPersonaEngine - a 256-bit genome table with seeded-PRNG
+// bitwise crossover + mutation; a component table keyed by an
+// externally-owned entityId, deliberately with no authority mapping.
+export { GeneticPersonaEngine, GENOME_WORDS, GENOME_BITS } from './runtime/genetic-persona-engine.js';
+// CognitiveMap - a deterministic HTN planner over flat typed-array
+// domain tables, with overlay rollback, method backtracking, plan
+// generation counters, and a step-budgeted priority-queue scheduler.
+export { CognitiveMap } from './runtime/cognitive-map.js';
+// LoomChrono - a deterministic rewind / replay log: a circular ring of
+// fixed-size keyframes plus a circular log of fixed-size input events,
+// both generation-validated, with a typed replay plan that fills a
+// caller-provided index buffer.
+export { LoomChrono, chronoSlot, chronoGeneration } from './runtime/loom-chrono.js';
 // 1.7.5 MILESTONE (Wave 1.7 networking complete) - ChatChannel +
 // ChatChannelRegistry: moderated multi-channel chat with rate
 // limit + filter hooks.
