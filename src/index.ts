@@ -1027,6 +1027,20 @@ export type { MaterialHandle, TransitionRule, DecayStats, CommitStats } from './
 // detect / resolve phases so the stale-state gates hold by construction.
 export { PhysicsSystem, makeColliderHandle, colliderSlot, colliderGeneration } from './runtime/physics-system.js';
 export type { ColliderHandle, PhysicsStepStats } from './runtime/physics-system.js';
+// MarketSimulation - a deterministic batch-auction order book: Int32
+// wealth + inventory ledgers, escrowed conservation-safe settlement,
+// maker-price matching, generation-validated order handles. SAB
+// multi-producer ingestion is the deferred layer.
+export { MarketSimulation } from './runtime/market-simulation.js';
+export type {
+  OrderSide,
+  MarketSimulationOptions,
+  PlaceOrderSpec,
+  PlaceOrderResult,
+  OrderView,
+  Trade,
+  BatchResult,
+} from './runtime/market-simulation.js';
 // 1.7.5 MILESTONE (Wave 1.7 networking complete) - ChatChannel +
 // ChatChannelRegistry: moderated multi-channel chat with rate
 // limit + filter hooks.
