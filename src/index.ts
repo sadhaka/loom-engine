@@ -1209,6 +1209,38 @@ export {
   VALUE_CLASS_HIGH,
 } from './runtime/loom-verify.js';
 export type { ClaimEnvelope, LoomVerifyConfig } from './runtime/loom-verify.js';
+// NeuralMaterial - the runtime PBR-material synthesis kernel: a
+// device-capability-gated path picker (PACKED_F16 / F16 / F32 fallback),
+// an LRU atlas slot allocator with mipmap-ready bits, an SoA job
+// queue with no Promise-per-material fan-out, a delayed-destruction
+// queue for evicted GPU resources, and a rolling GPU-timestamp
+// latency window for frame-budget claims. The deferred WebGPU
+// dispatch / pipeline / mipmap pass is the integration layer.
+export {
+  NeuralMaterial,
+  pickPath,
+  makeNeuralMaterialHandle,
+  neuralMaterialSlot,
+  neuralMaterialGeneration,
+  NEURAL_SLOT_STATE_FREE,
+  NEURAL_SLOT_STATE_QUEUED,
+  NEURAL_SLOT_STATE_SYNTHESIZING,
+  NEURAL_SLOT_STATE_RESIDENT,
+  PATH_PACKED_F16,
+  PATH_F16,
+  PATH_F32,
+  PATH_INVALID,
+  CAP_SHADER_F16,
+  CAP_PACKED_4X8,
+  CAP_TEXTURE_RGBA16F,
+  CAP_TIMESTAMP_QUERY,
+  MATERIAL_HANDLE_INVALID,
+  JOB_ID_INVALID,
+  ATLAS_SLOT_INVALID,
+  NEURAL_DESTROY_NONE,
+  JOB_RECORD_STRIDE,
+} from './runtime/neural-material.js';
+export type { NeuralMaterialHandle, NeuralMaterialConfig } from './runtime/neural-material.js';
 // 1.7.5 MILESTONE (Wave 1.7 networking complete) - ChatChannel +
 // ChatChannelRegistry: moderated multi-channel chat with rate
 // limit + filter hooks.
