@@ -347,6 +347,13 @@ export { OmniveilSKB, CLAIM_QUAD_STRIDE } from './runtime/omniveil-skb.js';
 // descriptor, and device-lost state. The actual GPU API calls are the
 // deferred integration layer.
 export { WebGPURenderer, SHADER_STAGE_VERTEX, SHADER_STAGE_FRAGMENT, SHADER_STAGE_COMPUTE, BUFFER_TYPE_UNIFORM, BUFFER_TYPE_STORAGE, BUFFER_TYPE_READ_ONLY_STORAGE, UPLOAD_NONE, } from './runtime/webgpu-renderer.js';
+// SonicSync - the acoustic propagation kernel: SoA source/listener
+// pools, a Q16.16 fixed-point voxel grid, Amanatides-Woo 3D DDA
+// occlusion tracing, a double-buffered perception-event ring, and a
+// (source, listener, semanticId) cooldown hash so the consumer reads
+// compact events one frame later without flooding. The actual WebGPU
+// acoustic ray-tracer is the deferred integration layer.
+export { SonicSync, FP_SHIFT, FP_ONE, FP_HALF, ATTENUATION_FULL, ATTENUATION_NONE, TRACE_INAUDIBLE, SOURCE_SLOT_INVALID, LISTENER_SLOT_INVALID, PERCEPTION_EVENT_STRIDE, } from './runtime/sonic-sync.js';
 // 1.7.5 MILESTONE (Wave 1.7 networking complete) - ChatChannel +
 // ChatChannelRegistry: moderated multi-channel chat with rate
 // limit + filter hooks.

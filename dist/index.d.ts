@@ -280,6 +280,8 @@ export type { ChunkHandle, InfiniteHorizonStreamerConfig } from './runtime/infin
 export { OmniveilSKB, CLAIM_QUAD_STRIDE } from './runtime/omniveil-skb.js';
 export { WebGPURenderer, SHADER_STAGE_VERTEX, SHADER_STAGE_FRAGMENT, SHADER_STAGE_COMPUTE, BUFFER_TYPE_UNIFORM, BUFFER_TYPE_STORAGE, BUFFER_TYPE_READ_ONLY_STORAGE, UPLOAD_NONE, } from './runtime/webgpu-renderer.js';
 export type { BufferBindingDescriptor, WebGPURendererConfig } from './runtime/webgpu-renderer.js';
+export { SonicSync, FP_SHIFT, FP_ONE, FP_HALF, ATTENUATION_FULL, ATTENUATION_NONE, TRACE_INAUDIBLE, SOURCE_SLOT_INVALID, LISTENER_SLOT_INVALID, PERCEPTION_EVENT_STRIDE, } from './runtime/sonic-sync.js';
+export type { SonicSyncConfig } from './runtime/sonic-sync.js';
 export { ChatChannel, ChatChannelRegistry, RESOURCE_CHAT_CHANNEL, RESOURCE_CHAT_CHANNEL_REGISTRY } from './runtime/chat-channel.js';
 export type { ChatMessage, ChatMember, SendResult, ChatFilter, ChatChannelOptions } from './runtime/chat-channel.js';
 export { attachChatChannelToWs } from './runtime/ws-adapters/chat-channel-ws.js';
