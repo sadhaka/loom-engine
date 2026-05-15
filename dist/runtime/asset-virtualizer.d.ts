@@ -1,0 +1,66 @@
+export declare const SLOT_STATE_FREE = 0;
+export declare const SLOT_STATE_QUEUED = 1;
+export declare const SLOT_STATE_LOADING = 2;
+export declare const SLOT_STATE_RESIDENT = 3;
+export declare const ASSET_HANDLE_INVALID = -1;
+export declare const DESTROY_NONE = -1;
+export type AssetHandle = number;
+export declare function makeAssetHandle(slot: number, generation: number): AssetHandle;
+export declare function assetSlot(handle: AssetHandle): number;
+export declare function assetGeneration(handle: AssetHandle): number;
+export interface AssetVirtualizerConfig {
+    capacity: number;
+    maxAssetId: number;
+    destroyDelay: number;
+    destroyQueueSize: number;
+}
+export declare class AssetVirtualizer {
+    readonly capacity: number;
+    readonly maxAssetId: number;
+    readonly destroyDelay: number;
+    readonly destroyQueueSize: number;
+    readonly tableSize: number;
+    private readonly mask;
+    private readonly slotAssetId;
+    private readonly slotState;
+    private readonly slotGpuHandle;
+    private readonly slotLastUsedTick;
+    private readonly slotGeneration;
+    private readonly slotLoadIndex;
+    private readonly loadQueue;
+    private loadQueueCount;
+    private readonly destroyQueue;
+    private destroyHead;
+    private destroyCount;
+    private placeholderHandle;
+    private cachedCount;
+    constructor(config: AssetVirtualizerConfig);
+    setPlaceholder(gpuHandle: number): void;
+    getPlaceholder(): number;
+    getCachedCount(): number;
+    getLoadQueueCount(): number;
+    getDestroyQueueCount(): number;
+    touch(assetId: number, currentTick: number): AssetHandle;
+    findAsset(assetId: number): AssetHandle;
+    getState(handle: AssetHandle): number;
+    isResident(handle: AssetHandle): boolean;
+    getAssetId(handle: AssetHandle): number;
+    getGpuHandle(handle: AssetHandle): number;
+    dequeueLoad(): AssetHandle;
+    completeLoad(handle: AssetHandle, gpuHandle: number, currentTick: number): boolean;
+    drainDestroyed(currentTick: number): number;
+    dispose(currentTick: number): void;
+    clear(): void;
+    private findSlot;
+    private registerSlot;
+    private evictLRU;
+    private freeSlot;
+    private pushLoadQueue;
+    private removeFromLoadQueue;
+    private pushDestroy;
+    private resolveSlot;
+    private requireAssetId;
+    private requireTick;
+    private requireGpuHandle;
+}
+//# sourceMappingURL=asset-virtualizer.d.ts.map

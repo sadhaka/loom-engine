@@ -1,0 +1,66 @@
+export declare const CHUNK_STATE_NONE = 0;
+export declare const CHUNK_STATE_QUEUED = 1;
+export declare const CHUNK_STATE_LOADING = 2;
+export declare const CHUNK_STATE_READY = 3;
+export declare const EVICTION_RECORD_STRIDE = 4;
+export declare const CHUNK_HANDLE_INVALID = -1;
+export type ChunkHandle = number;
+export declare function makeChunkHandle(slot: number, generation: number): ChunkHandle;
+export declare function chunkSlot(handle: ChunkHandle): number;
+export declare function chunkGeneration(handle: ChunkHandle): number;
+export interface InfiniteHorizonStreamerConfig {
+    worldBitsPerAxis: number;
+    horizonRadius: number;
+    maxChunks: number;
+    payloadStride: number;
+    evictionQueueSize: number;
+}
+export declare class InfiniteHorizonStreamer {
+    readonly worldBitsPerAxis: number;
+    readonly horizonRadius: number;
+    readonly maxChunks: number;
+    readonly payloadStride: number;
+    readonly evictionQueueSize: number;
+    private readonly coordBias;
+    private readonly mask;
+    private readonly chunkMorton;
+    private readonly chunkX;
+    private readonly chunkY;
+    private readonly chunkState;
+    private readonly chunkGeneration;
+    private readonly chunkLoadIndex;
+    private readonly chunkPayload;
+    private readonly loadQueue;
+    private loadQueueCount;
+    private readonly evictionQueue;
+    private evictionCount;
+    private chunkCount;
+    constructor(config: InfiniteHorizonStreamerConfig);
+    getMortonCode(chunkX: number, chunkY: number): number;
+    getChunkCount(): number;
+    getLoadQueueCount(): number;
+    getEvictionQueueCount(): number;
+    updateHorizon(viewChunkX: number, viewChunkY: number): void;
+    dequeueLoad(): ChunkHandle;
+    publishChunk(handle: ChunkHandle, values: ArrayLike<number>, count?: number): boolean;
+    cancelChunk(handle: ChunkHandle): boolean;
+    dequeueEviction(out: Int32Array): boolean;
+    findChunk(chunkX: number, chunkY: number): ChunkHandle;
+    getChunkState(handle: ChunkHandle): number;
+    isChunkReady(handle: ChunkHandle): boolean;
+    getChunkX(handle: ChunkHandle): number;
+    getChunkY(handle: ChunkHandle): number;
+    getChunkMorton(handle: ChunkHandle): number;
+    readChunkPayload(handle: ChunkHandle, out: Uint32Array): boolean;
+    clear(): void;
+    private mortonEncode;
+    private findSlot;
+    private registerChunk;
+    private freeChunk;
+    private pushLoadQueue;
+    private removeFromLoadQueue;
+    private pushEviction;
+    private resolveSlot;
+    private requireChunkCoord;
+}
+//# sourceMappingURL=infinite-horizon-streamer.d.ts.map

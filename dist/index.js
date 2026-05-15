@@ -314,6 +314,39 @@ export { CognitiveMap } from './runtime/cognitive-map.js';
 // both generation-validated, with a typed replay plan that fills a
 // caller-provided index buffer.
 export { LoomChrono, chronoSlot, chronoGeneration } from './runtime/loom-chrono.js';
+// AIBehaviorBuffer - a zero-allocation SoA snapshot store for LLM
+// context ingestion: one aliased backing buffer, a plain-counter
+// seqlock publish protocol, and a built-in generation-stamped observer
+// change-feed. Single-writer; the SAB + Atomics worker variant is deferred.
+export { AIBehaviorBuffer, makeObserverHandle, observerSlot, observerGeneration, SNAPSHOT_NEVER_WRITTEN, SNAPSHOT_TORN, SNAPSHOT_UNCHANGED, } from './runtime/ai-behavior-buffer.js';
+// AssetVirtualizer - a bounded LRU cache for virtualized GPU assets:
+// wrap-safe LRU eviction, a load queue, a delayed GPUTexture
+// destruction queue, a shared placeholder, and generation-checked
+// stale-load rejection. The real GPU calls + async loading are deferred.
+export { AssetVirtualizer, makeAssetHandle, assetSlot, assetGeneration, SLOT_STATE_FREE, SLOT_STATE_QUEUED, SLOT_STATE_LOADING, SLOT_STATE_RESIDENT, ASSET_HANDLE_INVALID, DESTROY_NONE, } from './runtime/asset-virtualizer.js';
+// BlackSwan - the chaos engine: a windowed entropy monitor plus a
+// governed event-proposal pipeline. Untrusted proposals move through
+// a PROPOSED -> APPROVED -> CANARY/ACTIVE -> EXPIRED state machine
+// under Mainframe approval; every transition is audit-logged. It never
+// mutates the world directly.
+export { BlackSwan, makeEventHandle, eventSlot, eventGeneration, EVENT_STATE_NONE, EVENT_STATE_PROPOSED, EVENT_STATE_APPROVED, EVENT_STATE_CANARY, EVENT_STATE_ACTIVE, EVENT_STATE_EXPIRED, EVENT_STATE_REJECTED, EVENT_STATE_REVOKED, EVENT_HANDLE_INVALID, AUDIT_RECORD_STRIDE, } from './runtime/black-swan.js';
+// InfiniteHorizonStreamer - a Morton-coded chunk streaming manager:
+// discovers the chunks around a moving viewpoint, queues the missing
+// ones, evicts the ones that fall out of range. Signed-coordinate
+// Morton encoding (no BigInt), open-addressed registry, load + eviction
+// queues, payload-before-state publish ordering.
+export { InfiniteHorizonStreamer, makeChunkHandle, chunkSlot, chunkGeneration, CHUNK_STATE_NONE, CHUNK_STATE_QUEUED, CHUNK_STATE_LOADING, CHUNK_STATE_READY, CHUNK_HANDLE_INVALID, EVICTION_RECORD_STRIDE, } from './runtime/infinite-horizon-streamer.js';
+// OmniveilSKB - a semantic knowledge base: source-attributed truth
+// claims as (subject, predicate, object) triples with a distinct-
+// source consensus count, open-addressed storage, identity-verified
+// consensus, and contradiction / per-source poisoning rules.
+export { OmniveilSKB, CLAIM_QUAD_STRIDE } from './runtime/omniveil-skb.js';
+// WebGPURenderer - the safe pure-logic core of the WebGPU SoA bridge:
+// a double-buffered staging ring, upload validation against the
+// device storage-buffer limit, an explicit bind-group-layout
+// descriptor, and device-lost state. The actual GPU API calls are the
+// deferred integration layer.
+export { WebGPURenderer, SHADER_STAGE_VERTEX, SHADER_STAGE_FRAGMENT, SHADER_STAGE_COMPUTE, BUFFER_TYPE_UNIFORM, BUFFER_TYPE_STORAGE, BUFFER_TYPE_READ_ONLY_STORAGE, UPLOAD_NONE, } from './runtime/webgpu-renderer.js';
 // 1.7.5 MILESTONE (Wave 1.7 networking complete) - ChatChannel +
 // ChatChannelRegistry: moderated multi-channel chat with rate
 // limit + filter hooks.
