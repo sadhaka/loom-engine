@@ -1472,6 +1472,35 @@ export {
   SEALED_ASSET_RECORD_STRIDE,
 } from './runtime/sealed-asset.js';
 export type { SealedAssetConfig } from './runtime/sealed-asset.js';
+// LoomForgeBridge - the WASM-SIMD physics integration kernel:
+// strict build contract (imported shared memory + min/max pages +
+// SIMD), single-source memory layout constants, initialized-flag
+// gate, validated dt + activeCount before delegating to the bound
+// step callback, double-buffered position phase barrier so render
+// never reads mid-write. The actual Wasm module instantiation +
+// SIMD step kernel + SAB shared memory are the integration layer.
+export {
+  LoomForgeBridge,
+  FORGE_POS_STRIDE,
+  FORGE_VEL_STRIDE,
+  FORGE_SCRATCH_STRIDE,
+  FORGE_POS_OFFSET,
+  WASM_PAGE_BYTES,
+  FORGE_STATE_UNINITIALIZED,
+  FORGE_STATE_READY,
+  FORGE_REASON_NONE,
+  FORGE_REASON_NOT_INITIALIZED,
+  FORGE_REASON_BAD_DT,
+  FORGE_REASON_BAD_COUNT,
+  FORGE_REASON_BAD_CONTRACT,
+  FORGE_REASON_NO_CALLBACK,
+  FORGE_MAX_DT_FP,
+} from './runtime/loom-forge-bridge.js';
+export type {
+  LoomForgeBuildContract,
+  LoomForgeBridgeConfig,
+  StepCallback,
+} from './runtime/loom-forge-bridge.js';
 // 1.7.5 MILESTONE (Wave 1.7 networking complete) - ChatChannel +
 // ChatChannelRegistry: moderated multi-channel chat with rate
 // limit + filter hooks.
