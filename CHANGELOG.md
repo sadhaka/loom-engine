@@ -7,7 +7,7 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
-## 2.1.0 - 2026-05-16 (Bestiary - Trinity Wave 2.1 universal creature lifecycle kernel)
+## 2.1.0 - 2026-05-17 (Bestiary - Trinity Wave 2.1 universal creature lifecycle kernel)
 
 **One new pure-logic kernel.** `BestiaryKernel` is the universal NPC
 creature lifecycle primitive: SoA storage at <100 bytes per creature,
@@ -38,8 +38,9 @@ patterns matching the signatureBehaviors field. Consumers can swap
 the factory wholesale via `setBehaviorTreeFactory` for richer per-
 variant authoring.
 
-All 48 tests pass; 30 concurrent creatures × 60 ticks completes in
-under 4ms on a desktop V8.
+All 48 BestiaryKernel tests pass (full suite: 4032 / 4032 green,
+up from 3984 at v2.0.0); 30 concurrent creatures × 60 ticks
+completes in under 4ms on a desktop V8.
 
 ## 2.0.1 - 2026-05-15 (Description refresh - npm card + landing + README)
 
