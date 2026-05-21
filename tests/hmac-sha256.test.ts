@@ -116,3 +116,19 @@ test('sha256/hmac match node:crypto for random inputs (0..200 bytes)', async () 
       refMac, 'hmac len=' + n);
   }
 });
+
+test('hmac-sha256: empty key / empty message match node:crypto (2.2.3)', async () => {
+  const { createHmac } = await import('node:crypto');
+  // empty key (the loop above always uses key length >= 1)
+  assert.equal(
+    hmacSha256Hex(new Uint8Array(0), 'message'),
+    createHmac('sha256', Buffer.alloc(0)).update('message').digest('hex'));
+  // empty message
+  assert.equal(
+    hmacSha256Hex('key', new Uint8Array(0)),
+    createHmac('sha256', 'key').update(Buffer.alloc(0)).digest('hex'));
+  // both empty
+  assert.equal(
+    hmacSha256Hex(new Uint8Array(0), new Uint8Array(0)),
+    createHmac('sha256', Buffer.alloc(0)).update(Buffer.alloc(0)).digest('hex'));
+});

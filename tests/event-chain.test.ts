@@ -264,3 +264,87 @@ test('event-chain: fromVerifiedSnapshot does not mutate on a tampered snapshot',
   assert.equal(ok.ok, true);
   assert.equal(dst.size(), 2);
 });
+
+// --- 2.2.3 hardening: round-2 audit (canonical injectivity + clone isolation) -
+
+test('event-chain: negative zero is rejected on append (no seq advance)', () => {
+  const chain = EventChain.create({ key: KEY });
+  assert.equal(chain.append('a', { v: -0 }), null);
+  assert.equal(chain.size(), 0);
+  assert.equal(chain.append('a', { v: 0 })!.seq, 1); // +0 is valid; seq not burned
+});
+
+test('event-chain: 0 -> -0 tamper cannot pass verify', () => {
+  const chain = EventChain.create({ key: KEY });
+  chain.append('a', { v: 0 });
+  const snap = chain.toSnapshot();
+  (snap[0]!.payload as { v: number }).v = -0; // String(-0) === "0" but distinct value
+  assert.equal(EventChain.verifyRecords(KEY, snap).ok, false);
+});
+
+test('event-chain: JSON-erased object metadata is rejected on append', () => {
+  const chain = EventChain.create({ key: KEY });
+  // symbol key
+  const sym = Symbol('s');
+  assert.equal(chain.append('a', { [sym]: 1 }), null);
+  // non-enumerable own prop
+  const nonEnum: Record<string, unknown> = {};
+  Object.defineProperty(nonEnum, 'hidden', { value: 1, enumerable: false, configurable: true });
+  assert.equal(chain.append('a', nonEnum), null);
+  // accessor (getter) prop
+  const accessor: Record<string, unknown> = {};
+  Object.defineProperty(accessor, 'g', { get() { return 1; }, enumerable: true, configurable: true });
+  assert.equal(chain.append('a', accessor), null);
+  assert.equal(chain.size(), 0);
+  assert.equal(chain.append('a', { plain: 1 })!.seq, 1); // seq not burned by rejects
+});
+
+test('event-chain: extra/symbol array properties are rejected on append', () => {
+  const chain = EventChain.create({ key: KEY });
+  const withExtra = [1, 2];
+  (withExtra as unknown as Record<string, number>).extra = 9;
+  assert.equal(chain.append('a', { arr: withExtra }), null);
+  const withSym = [1];
+  (withSym as unknown as Record<symbol, number>)[Symbol('x')] = 9;
+  assert.equal(chain.append('a', { arr: withSym }), null);
+  assert.equal(chain.size(), 0);
+  assert.equal(chain.append('a', { arr: [1, 2] })!.seq, 1); // a plain array is fine
+});
+
+test('event-chain: verifySeal returns false (no throw) on a lone-surrogate head', () => {
+  const chain = EventChain.create({ key: KEY });
+  chain.append('a', { x: 1 });
+  const seal = chain.seal();
+  const bad = { ...seal, head: '\uD800' }; // tampered head with a lone high surrogate
+  assert.equal(EventChain.verifySeal(KEY, bad), false);
+  assert.equal(EventChain.verifyRecords(KEY, chain.toSnapshot(), '', bad).ok, false);
+});
+
+test('event-chain: toSnapshot payload is a deep copy - mutating it cannot reach chain state', () => {
+  const chain = EventChain.create({ key: KEY });
+  chain.append('a', { x: 1 });
+  const snap = chain.toSnapshot();
+  (snap[0]!.payload as { x: number }).x = 999;
+  assert.equal(chain.verify().ok, true);                          // live chain intact
+  assert.equal((chain.bySeq(1)!.payload as { x: number }).x, 1);  // stored value unchanged
+});
+
+test('event-chain: fromSnapshot deep-copies - mutating the source after load is inert', () => {
+  const src = EventChain.create({ key: KEY });
+  src.append('a', { x: 1 });
+  const snap = src.toSnapshot();
+  const dst = EventChain.create({ key: KEY });
+  dst.fromSnapshot(snap);
+  (snap[0]!.payload as { x: number }).x = 999;                    // mutate source AFTER load
+  assert.equal(dst.verify().ok, true);
+  assert.equal((dst.bySeq(1)!.payload as { x: number }).x, 1);
+});
+
+test('event-chain: append deep-copies - mutating the caller object after append is inert', () => {
+  const chain = EventChain.create({ key: KEY });
+  const input = { x: 1 };
+  chain.append('a', input);
+  input.x = 999;                                                  // mutate caller object AFTER append
+  assert.equal(chain.verify().ok, true);
+  assert.equal((chain.bySeq(1)!.payload as { x: number }).x, 1);
+});

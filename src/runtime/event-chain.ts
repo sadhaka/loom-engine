@@ -34,6 +34,12 @@
 //     tail truncation is detectable (a bare hash chain cannot see records
 //     removed from the end without an external length commitment).
 //   - signature comparison is constant-time (timingSafeEqualHex).
+//   - 2.2.3 closes the remaining canonicalization injectivity gaps: -0 (which
+//     stringifies to "0" yet is a distinct JS value), JSON-erased object/array
+//     metadata (symbol keys, non-enumerables, accessors, extra array props),
+//     and seal-head lone surrogates are all rejected fail-closed; stored
+//     payloads are deep-cloned at every trust boundary so no external reference
+//     can mutate signed chain state after the fact.
 //
 // SCOPE: integrity, not secrecy. Payloads are stored in the clear; the
 // signature proves they were not altered. The HMAC key is a runtime
@@ -120,6 +126,64 @@ function assertCleanString(s: string): void {
   }
 }
 
+// 2.2.3 audit MED 1: an array's signed surface is EXACTLY its dense numeric
+// elements. Any other own property (a symbol, a non-index string key like
+// `arr.extra = 9`, a non-enumerable, or an accessor) is invisible to a plain
+// element walk, so two distinct arrays could canonicalize identically. Reject
+// the whole array fail-closed if any non-element own key exists. Validated
+// BEFORE values are read so an attacker's index getter is never invoked.
+function assertArraySurface(arr: ReadonlyArray<unknown>): void {
+  for (var k of Reflect.ownKeys(arr)) {
+    if (typeof k === 'symbol') throw new Error('EventChain: symbol key not allowed in payload');
+    if (k === 'length') continue; // the canonical, non-enumerable length data prop
+    var n = Number(k);
+    if (!(Number.isInteger(n) && n >= 0 && n < arr.length && String(n) === k)) {
+      throw new Error('EventChain: non-index array property not allowed in payload');
+    }
+    var d = Object.getOwnPropertyDescriptor(arr, k);
+    if (!d || !d.enumerable || typeof d.get === 'function' || typeof d.set === 'function') {
+      throw new Error('EventChain: non-data array element not allowed in payload');
+    }
+  }
+}
+
+// 2.2.3 audit MED 1: a plain object's signed surface is EXACTLY its enumerable
+// own string-keyed DATA properties. Symbol keys, non-enumerable own props, and
+// accessor (get/set) props are dropped by a JSON walk, so they would let two
+// distinct objects collide. Reject fail-closed. Validated BEFORE values are read
+// so an attacker's getter is never invoked.
+function assertObjectSurface(obj: object): void {
+  for (var k of Reflect.ownKeys(obj)) {
+    if (typeof k === 'symbol') throw new Error('EventChain: symbol key not allowed in payload');
+    var d = Object.getOwnPropertyDescriptor(obj, k);
+    if (!d || !d.enumerable || typeof d.get === 'function' || typeof d.set === 'function') {
+      throw new Error('EventChain: non-enumerable or accessor property not allowed in payload');
+    }
+  }
+}
+
+// 2.2.3 audit MED 2: a structural deep copy of a JSON-shaped value, used at the
+// trust boundary so a stored payload and any returned/loaded payload are
+// independent objects - an external reference can never mutate chain state after
+// the fact (or vice versa). Mirrors canonicalJson's accepted surface; primitives
+// (incl. functions, which valid payloads never contain) pass through by value.
+function deepCloneJson<V>(v: V): V {
+  if (v === null || typeof v !== 'object') return v;
+  if (Array.isArray(v)) {
+    var arr: unknown[] = [];
+    for (var i = 0; i < v.length; i++) arr.push(deepCloneJson((v as unknown[])[i]));
+    return arr as unknown as V;
+  }
+  var out: Record<string, unknown> = {};
+  var src = v as Record<string, unknown>;
+  var keys = Object.keys(src);
+  for (var j = 0; j < keys.length; j++) {
+    var kk = keys[j] as string;
+    out[kk] = deepCloneJson(src[kk]);
+  }
+  return out as unknown as V;
+}
+
 // Deterministic, STRICT JSON: object keys sorted recursively so the signed
 // message is stable regardless of insertion order. 2.2.2 audit HIGH 2: rather
 // than collapse non-JSON values to null (which let null / NaN / undefined /
@@ -134,6 +198,12 @@ function canonicalJson(value: unknown): string {
     if (!isFinite(value as number)) {
       throw new Error('EventChain: non-finite number (NaN/Infinity) not allowed in payload');
     }
+    // 2.2.3 audit HIGH: String(-0) === '0' but Object.is(-0, 0) === false, so a
+    // signed 0 could be mutated to -0 (a distinct JS value) and still verify.
+    // Reject -0 fail-closed - valid event data never carries negative zero.
+    if (Object.is(value, -0)) {
+      throw new Error('EventChain: negative zero not allowed in payload');
+    }
     return String(value);
   }
   if (t === 'boolean') return (value as boolean) ? 'true' : 'false';
@@ -142,6 +212,7 @@ function canonicalJson(value: unknown): string {
     throw new Error('EventChain: ' + t + ' not allowed in payload');
   }
   if (Array.isArray(value)) {
+    assertArraySurface(value);
     var items: string[] = [];
     for (var i = 0; i < value.length; i++) {
       if (!(i in value)) throw new Error('EventChain: sparse array (hole) not allowed in payload');
@@ -154,6 +225,7 @@ function canonicalJson(value: unknown): string {
     // Date / Map / Set / class instances etc. are not faithfully serializable.
     throw new Error('EventChain: only plain objects allowed in payload');
   }
+  assertObjectSurface(value as object);
   var obj = value as Record<string, unknown>;
   var keys = Object.keys(obj).sort();
   var pairs: string[] = [];
@@ -175,13 +247,20 @@ function canonicalMessage(seq: number, type: string, payload: unknown, prevSig: 
     + field(canonicalJson(payload)) + field(prevSig);
 }
 
-// The string fed to HMAC for a seal commitment.
+// The string fed to HMAC for a seal commitment. 2.2.3 audit MED 3: the head is
+// validated for clean Unicode like every other signed string, so a tampered
+// seal head with a lone surrogate cannot be lossily re-encoded into a colliding
+// commitment (TextEncoder maps lone surrogates to U+FFFD).
 function sealMessage(count: number, head: string): string {
+  assertCleanString(head);
   return field(SEAL_DOMAIN) + field(String(count)) + field(head);
 }
 
+// 2.2.3 audit MED 4: payload is DEEP-CLONED so the returned record shares no
+// mutable state with the stored one - a holder mutating a listed/snapshotted
+// payload can never reach back into chain state (and break verify()).
 function cloneRecord<T>(r: ChainedRecord<T>): ChainedRecord<T> {
-  return { seq: r.seq, type: r.type, payload: r.payload, prevSig: r.prevSig, sig: r.sig };
+  return { seq: r.seq, type: r.type, payload: deepCloneJson(r.payload), prevSig: r.prevSig, sig: r.sig };
 }
 
 export class EventChain<T = unknown> {
@@ -228,7 +307,10 @@ export class EventChain<T = unknown> {
     } catch (e) {
       return null; // fail closed - do not store, do not advance nextSeq
     }
-    var rec: ChainedRecord<T> = { seq: seq, type: type, payload: payload, prevSig: prevSig, sig: sig };
+    // 2.2.3 audit MED 4: store a deep copy so a caller mutating its input object
+    // after append cannot reach back into (and desync) signed chain state. sign()
+    // above already ran over the original, so the clone's canonical form matches.
+    var rec: ChainedRecord<T> = { seq: seq, type: type, payload: deepCloneJson(payload), prevSig: prevSig, sig: sig };
     this.records.push(rec);
     this.nextSeq = seq + 1;
     this.headSig = sig;
@@ -305,7 +387,14 @@ export class EventChain<T = unknown> {
       || typeof seal.sig !== 'string') {
       return false;
     }
-    var expected = hmacSha256Hex(key, sealMessage(seal.count, seal.head));
+    var expected: string;
+    try {
+      expected = hmacSha256Hex(key, sealMessage(seal.count, seal.head));
+    } catch (e) {
+      // 2.2.3: a malformed head (e.g. a tampered-in lone surrogate) can never be
+      // part of a valid seal - fail closed rather than throw.
+      return false;
+    }
     return timingSafeEqualHex(expected, seal.sig);
   }
 
@@ -363,7 +452,9 @@ export class EventChain<T = unknown> {
       if (typeof r.seq !== 'number' || !isFinite(r.seq) || r.seq <= 0) continue;
       if (typeof r.type !== 'string' || r.type.length === 0) continue;
       if (typeof r.sig !== 'string' || typeof r.prevSig !== 'string') continue;
-      this.records.push({ seq: r.seq, type: r.type, payload: r.payload, prevSig: r.prevSig, sig: r.sig });
+      // 2.2.3 audit MED 4: deep-clone on load so mutating the source rows after
+      // fromSnapshot / fromVerifiedSnapshot cannot reach into loaded chain state.
+      this.records.push({ seq: r.seq, type: r.type, payload: deepCloneJson(r.payload), prevSig: r.prevSig, sig: r.sig });
       if (r.seq > maxSeq) maxSeq = r.seq;
       lastSig = r.sig;
     }
