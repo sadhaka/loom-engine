@@ -40,6 +40,10 @@
 //     and seal-head lone surrogates are all rejected fail-closed; stored
 //     payloads are deep-cloned at every trust boundary so no external reference
 //     can mutate signed chain state after the fact.
+//   - 2.2.4 rejects an own '__proto__' data key (which a JSON-parsed payload can
+//     carry but a normal-prototype clone cannot faithfully round-trip) and
+//     deep-clones via defineProperty so no clone path can hit the prototype
+//     setter.
 //
 // SCOPE: integrity, not secrecy. Payloads are stored in the clear; the
 // signature proves they were not altered. The HMAC key is a runtime
@@ -155,6 +159,10 @@ function assertArraySurface(arr: ReadonlyArray<unknown>): void {
 function assertObjectSurface(obj: object): void {
   for (var k of Reflect.ownKeys(obj)) {
     if (typeof k === 'symbol') throw new Error('EventChain: symbol key not allowed in payload');
+    // A JSON-parsed '__proto__' is an own data key but cannot be faithfully
+    // round-tripped through a normal-prototype clone (the assignment hits the
+    // prototype setter), so reject it fail-closed rather than risk drift.
+    if (k === '__proto__') throw new Error('EventChain: "__proto__" key not allowed in payload');
     var d = Object.getOwnPropertyDescriptor(obj, k);
     if (!d || !d.enumerable || typeof d.get === 'function' || typeof d.set === 'function') {
       throw new Error('EventChain: non-enumerable or accessor property not allowed in payload');
@@ -179,7 +187,12 @@ function deepCloneJson<V>(v: V): V {
   var keys = Object.keys(src);
   for (var j = 0; j < keys.length; j++) {
     var kk = keys[j] as string;
-    out[kk] = deepCloneJson(src[kk]);
+    // defineProperty (not out[kk] = ...) so an own '__proto__' key on an
+    // untrusted raw snapshot creates a real own property instead of hitting the
+    // prototype setter (no transient prototype pollution of the clone).
+    Object.defineProperty(out, kk, {
+      value: deepCloneJson(src[kk]), enumerable: true, writable: true, configurable: true,
+    });
   }
   return out as unknown as V;
 }

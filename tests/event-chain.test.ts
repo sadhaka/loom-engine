@@ -311,6 +311,14 @@ test('event-chain: extra/symbol array properties are rejected on append', () => 
   assert.equal(chain.append('a', { arr: [1, 2] })!.seq, 1); // a plain array is fine
 });
 
+test('event-chain: a JSON-parsed __proto__ data key is rejected on append', () => {
+  const chain = EventChain.create({ key: KEY });
+  const polluted = JSON.parse('{"__proto__":{"x":1}}'); // own "__proto__" data key
+  assert.equal(chain.append('a', polluted), null);
+  assert.equal(chain.size(), 0);
+  assert.equal(chain.append('a', { ok: 1 })!.seq, 1); // seq not burned
+});
+
 test('event-chain: verifySeal returns false (no throw) on a lone-surrogate head', () => {
   const chain = EventChain.create({ key: KEY });
   chain.append('a', { x: 1 });
