@@ -23,6 +23,7 @@
 
 import { test } from 'node:test';
 import { strict as assert } from 'node:assert';
+import { readFileSync } from 'node:fs';
 
 import {
   // Engine + backend registry
@@ -209,8 +210,13 @@ test('webgl2 backend registers itself when WebGL2Device is imported', () => {
   assert.ok(isBackendRegistered('canvas2d'));
 });
 
-test('engine version constant agrees with package.json (1.7.5)', () => {
-  assert.equal(LOOM_ENGINE_VERSION, '1.7.5');
+test('engine version constant agrees with package.json', () => {
+  // Read the real version so this never goes stale on a release bump
+  // (it previously hardcoded 1.7.5 and silently diverged from package.json).
+  const pkg = JSON.parse(
+    readFileSync(new URL('../package.json', import.meta.url), 'utf8'),
+  ) as { version: string };
+  assert.equal(LOOM_ENGINE_VERSION, pkg.version);
 });
 
 test('Engine.create with no backend defaults to Canvas2DDevice', () => {

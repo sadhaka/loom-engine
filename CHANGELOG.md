@@ -7,6 +7,53 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 2.2.0 - 2026-05-21 (EventChain - tamper-evident HMAC-chained event log)
+
+**One new pure-logic kernel.** `EventChain` is the integrity-bearing
+sibling of `EventLog` (0.83.0): every appended record is signed with
+HMAC-SHA-256, and each signature folds in the previous record's
+signature, so the whole log is a hash chain. `verify()` recomputes every
+signature AND checks the chain linkage, catching three tamper classes a
+plain log cannot:
+
+- field tampering   - a payload / type / seq edited at rest (sig_mismatch)
+- record deletion   - a middle record removed (broken_chain_link)
+- record reordering - records shuffled (broken_chain_link)
+
+Use it for audit trails, anti-cheat event tapes, economy / ledger logs,
+or any "prove this sequence was not altered" requirement. The pattern is
+ported from the server-authoritative event tape running in production in
+TheWorldTable's LoomMaster backend (the same chain that guards its combat
+resolution and currency ledger).
+
+Ships with `hmacSha256` - a small, dependency-free, SYNCHRONOUS
+HMAC-SHA-256 (FIPS 180-4 + RFC 2104). The engine's other crypto
+(`sealed-asset`) uses async Web Crypto; EventChain needs a sync signer so
+`append()` / `verify()` stay synchronous like every other kernel. It is
+verified against the published NIST SHA-256 and RFC 4231 HMAC test
+vectors, depends only on `TextEncoder` + typed arrays, and runs
+identically in the browser and Node.
+
+API: `EventChain.create({ key, genesis? })`, `append(type, payload)`,
+`verify()`, and static `EventChain.verifyRecords(key, records, genesis?)`
+to verify an external snapshot, plus `toSnapshot` / `fromSnapshot`,
+`bySeq`, `byType`, `head`. New exports: `EventChain`,
+`RESOURCE_EVENT_CHAIN`, `sha256Hex`, `sha256Bytes`, `hmacSha256Hex`,
+`hmacSha256Bytes`.
+
+INTEGRITY, NOT SECRECY: payloads are stored in the clear; the signature
+proves they were not altered. The HMAC key is a runtime parameter, never
+persisted or logged by the engine. Canonical JSON sorts object keys so
+signing is order-independent; output is self-consistent within the engine
+and is not promised byte-compatible with other languages' HMAC framing.
+
+26 new tests (11 HMAC known-answer vectors + 15 EventChain integrity
+checks) bring the suite to 4058 / 4058 green. Also corrects the long-stale
+`LOOM_ENGINE_VERSION` constant (was '1.7.5', adrift since the 2.x bumps) so
+it tracks package.json again, and rewrites the two version-pin tests
+(smoke + webgl2-device) to read package.json dynamically so they can never
+drift on a future release.
+
 ## 2.1.0 - 2026-05-17 (Bestiary - Trinity Wave 2.1 universal creature lifecycle kernel)
 
 **One new pure-logic kernel.** `BestiaryKernel` is the universal NPC

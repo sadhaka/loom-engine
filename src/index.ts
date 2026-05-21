@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '1.7.5';
+export const LOOM_ENGINE_VERSION = '2.2.0';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -553,6 +553,14 @@ export type { ThresholdSpec, TriggerDirection } from './runtime/threshold-trigge
 // 0.83.0 - structured replay-friendly event log.
 export { EventLog, RESOURCE_EVENT_LOG } from './runtime/event-log.js';
 export type { EventRecord, EventLogOptions } from './runtime/event-log.js';
+// 2.2.0 - dependency-free synchronous HMAC-SHA-256 (integrity primitive).
+export { sha256Bytes, sha256Hex, hmacSha256Bytes, hmacSha256Hex } from './runtime/hmac-sha256.js';
+// 2.2.0 - tamper-evident HMAC-chained event log (the integrity-bearing
+// sibling of EventLog; detects field tamper, deletion, and reordering).
+export { EventChain, RESOURCE_EVENT_CHAIN } from './runtime/event-chain.js';
+export type {
+  ChainedRecord, EventChainOptions, ChainMismatch, ChainVerifyResult,
+} from './runtime/event-chain.js';
 // 0.84.0 - declarative asset list + dependency graph.
 export { AssetManifest, RESOURCE_ASSET_MANIFEST } from './runtime/asset-manifest.js';
 export type {

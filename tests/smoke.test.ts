@@ -7,6 +7,7 @@
 
 import { test } from 'node:test';
 import { strict as assert } from 'node:assert';
+import { readFileSync } from 'node:fs';
 
 import {
   // Math
@@ -49,9 +50,13 @@ import {
 
 test('engine version constant agrees with package.json', () => {
   // Audit L-01 (0.10.0): the constant drifted from package.json after
-  // the productization bump. Pin both together; bump in the same
-  // commit when cutting a release.
-  assert.equal(LOOM_ENGINE_VERSION, '1.7.5');
+  // the productization bump. Read the real version so the two can never
+  // drift again - the previous hardcoded literal (1.7.5) was itself stale
+  // by the time package.json reached 2.x.
+  const pkg = JSON.parse(
+    readFileSync(new URL('../package.json', import.meta.url), 'utf8'),
+  ) as { version: string };
+  assert.equal(LOOM_ENGINE_VERSION, pkg.version);
 });
 
 test('math: clamp + lerp + approxEq', () => {
