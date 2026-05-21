@@ -99,3 +99,20 @@ test('timingSafeEqualHex: length mismatch -> false', () => {
   assert.equal(timingSafeEqualHex('abcd', 'abc'), false);
   assert.equal(timingSafeEqualHex('', 'a'), false);
 });
+
+// --- 2.2.2: Node crypto parity over random inputs at block boundaries -------
+
+test('sha256/hmac match node:crypto for random inputs (0..200 bytes)', async () => {
+  const { createHash, createHmac, randomBytes } = await import('node:crypto');
+  const lengths = [0, 1, 31, 32, 55, 56, 63, 64, 65, 127, 128, 129, 200];
+  for (const n of lengths) {
+    const msg = randomBytes(n);
+    const key = randomBytes((n % 80) + 1); // vary key length incl. > 64 (block)
+    const refHash = createHash('sha256').update(msg).digest('hex');
+    assert.equal(sha256Hex(new Uint8Array(msg)), refHash, 'sha256 len=' + n);
+    const refMac = createHmac('sha256', key).update(msg).digest('hex');
+    assert.equal(
+      hmacSha256Hex(new Uint8Array(key), new Uint8Array(msg)),
+      refMac, 'hmac len=' + n);
+  }
+});

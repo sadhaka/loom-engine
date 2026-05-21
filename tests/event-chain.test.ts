@@ -202,3 +202,65 @@ test('event-chain: intact chain verifies against its own seal', () => {
   const seal = chain.seal();
   assert.equal(chain.verify(seal).ok, true);
 });
+
+// --- 2.2.2 hardening: strict canonicalization + verify-before-mutate --------
+
+test('event-chain: lone surrogate is rejected on append (no seq advance)', () => {
+  const chain = EventChain.create({ key: KEY });
+  assert.equal(chain.append('\uD800', { x: 1 }), null);   // lone high surrogate in type
+  assert.equal(chain.append('ok', { s: '\uDC00' }), null); // lone low surrogate in payload
+  assert.equal(chain.size(), 0);
+  assert.equal(chain.append('ok', { s: 'fine' })!.seq, 1); // seq not burned by rejects
+});
+
+test('event-chain: surrogate collision cannot pass verify', () => {
+  const chain = EventChain.create({ key: KEY });
+  chain.append('rec', { s: '�' });
+  const snap = chain.toSnapshot();
+  (snap[0]!.payload as { s: string }).s = '\uD800'; // distinct string, lossy under TextEncoder
+  assert.equal(EventChain.verifyRecords(KEY, snap).ok, false);
+});
+
+test('event-chain: non-JSON payload values are rejected (no null collapse)', () => {
+  const chain = EventChain.create({ key: KEY });
+  assert.equal(chain.append('a', { x: NaN }), null);
+  assert.equal(chain.append('a', { x: Infinity }), null);
+  assert.equal(chain.append('a', { x: undefined }), null);
+  assert.equal(chain.append('a', { d: new Date() }), null);
+  assert.equal(chain.append('a', { m: new Map() }), null);
+  assert.equal(chain.append('a', { s: new Set() }), null);
+  assert.equal(chain.size(), 0);
+  assert.equal(chain.append('a', { x: null })!.seq, 1); // null is valid JSON
+});
+
+test('event-chain: {x:null} and {x:NaN} no longer collide', () => {
+  const chain = EventChain.create({ key: KEY });
+  const r = chain.append('a', { x: null })!;
+  const snap = chain.toSnapshot();
+  (snap[0]!.payload as { x: unknown }).x = NaN; // would have collapsed to null pre-2.2.2
+  assert.equal(EventChain.verifyRecords(KEY, snap).ok, false);
+  assert.ok(r.sig.length === 64);
+});
+
+test('event-chain: fromVerifiedSnapshot does not mutate on a tampered snapshot', () => {
+  const src = EventChain.create({ key: KEY });
+  src.append('a', { x: 1 });
+  src.append('b', { x: 2 });
+  const snap = src.toSnapshot();
+  (snap[1]!.payload as { x: number }).x = 999; // tamper
+
+  const dst = EventChain.create({ key: KEY });
+  const res = dst.fromVerifiedSnapshot(snap);
+  assert.equal(res.ok, false);
+  assert.equal(dst.size(), 0);            // instance untouched
+  assert.equal(dst.head(), '');           // genesis unchanged
+
+  // a clean snapshot loads fine (use a SEPARATE chain - toSnapshot shares the
+  // payload object by reference, so the tamper above also dirtied `src`).
+  const clean = EventChain.create({ key: KEY });
+  clean.append('a', { x: 1 });
+  clean.append('b', { x: 2 });
+  const ok = dst.fromVerifiedSnapshot(clean.toSnapshot());
+  assert.equal(ok.ok, true);
+  assert.equal(dst.size(), 2);
+});

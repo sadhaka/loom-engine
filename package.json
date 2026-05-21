@@ -1,6 +1,6 @@
 {
   "name": "loom-engine",
-  "version": "2.2.1",
+  "version": "2.2.2",
   "description": "Uniquely adaptable TypeScript engine for AI-driven worlds. Cross-session NPC memory, asymmetric relationships, deterministic replay. Trinity Mainframe v2.0 adds 14 pure-logic kernels for AI-MMORPG runtime.",
   "type": "module",
   "main": "./dist/index.js",

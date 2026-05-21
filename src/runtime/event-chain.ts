@@ -101,33 +101,76 @@ function field(s: string): string {
   return s.length + ':' + s;
 }
 
-// Deterministic JSON: object keys sorted recursively so the signed message is
-// stable regardless of insertion order. undefined / functions / symbols /
-// non-finite numbers collapse to null (matching what JSON would drop / emit).
+// 2.2.2 audit HIGH 1: reject unpaired surrogates in any signed string.
+// TextEncoder maps lone surrogates lossily to U+FFFD, so two distinct strings
+// could otherwise collide after HMAC encoding. Valid event data never contains
+// lone surrogates; rejecting them keeps the canonical encoding injective.
+function assertCleanString(s: string): void {
+  for (var i = 0; i < s.length; i++) {
+    var c = s.charCodeAt(i);
+    if (c >= 0xd800 && c <= 0xdbff) {
+      var next = s.charCodeAt(i + 1);
+      if (!(next >= 0xdc00 && next <= 0xdfff)) {
+        throw new Error('EventChain: lone high surrogate in a signed string');
+      }
+      i++; // valid surrogate pair - skip the low half
+    } else if (c >= 0xdc00 && c <= 0xdfff) {
+      throw new Error('EventChain: lone low surrogate in a signed string');
+    }
+  }
+}
+
+// Deterministic, STRICT JSON: object keys sorted recursively so the signed
+// message is stable regardless of insertion order. 2.2.2 audit HIGH 2: rather
+// than collapse non-JSON values to null (which let null / NaN / undefined /
+// Date / Map / Set / array-holes all collide), this FAILS CLOSED - any value
+// that cannot be faithfully + injectively serialized throws, and the caller
+// rejects the append or marks the record unverifiable.
 function canonicalJson(value: unknown): string {
-  if (value === null || value === undefined) return 'null';
+  if (value === null) return 'null';
   var t = typeof value;
-  if (t === 'number') return isFinite(value as number) ? String(value) : 'null';
+  if (t === 'string') { assertCleanString(value as string); return JSON.stringify(value); }
+  if (t === 'number') {
+    if (!isFinite(value as number)) {
+      throw new Error('EventChain: non-finite number (NaN/Infinity) not allowed in payload');
+    }
+    return String(value);
+  }
   if (t === 'boolean') return (value as boolean) ? 'true' : 'false';
-  if (t === 'string') return JSON.stringify(value);
-  if (t !== 'object') return 'null'; // function / symbol / bigint
+  if (t === 'undefined') throw new Error('EventChain: undefined not allowed in payload');
+  if (t === 'bigint' || t === 'function' || t === 'symbol') {
+    throw new Error('EventChain: ' + t + ' not allowed in payload');
+  }
   if (Array.isArray(value)) {
     var items: string[] = [];
-    for (var i = 0; i < value.length; i++) items.push(canonicalJson(value[i]));
+    for (var i = 0; i < value.length; i++) {
+      if (!(i in value)) throw new Error('EventChain: sparse array (hole) not allowed in payload');
+      items.push(canonicalJson(value[i]));
+    }
     return '[' + items.join(',') + ']';
+  }
+  var proto = Object.getPrototypeOf(value as object);
+  if (proto !== Object.prototype && proto !== null) {
+    // Date / Map / Set / class instances etc. are not faithfully serializable.
+    throw new Error('EventChain: only plain objects allowed in payload');
   }
   var obj = value as Record<string, unknown>;
   var keys = Object.keys(obj).sort();
   var pairs: string[] = [];
   for (var key of keys) {
+    assertCleanString(key);
     pairs.push(JSON.stringify(key) + ':' + canonicalJson(obj[key]));
   }
   return '{' + pairs.join(',') + '}';
 }
 
-// The exact (injective) string fed to HMAC for one record. prevSig is always
-// folded in, so deletion / reordering changes every downstream signature.
+// The exact (injective) string fed to HMAC for one record. type + prevSig are
+// validated for clean Unicode; payload is strictly canonicalized (throws on bad
+// input). prevSig is always folded in, so deletion / reordering changes every
+// downstream signature.
 function canonicalMessage(seq: number, type: string, payload: unknown, prevSig: string): string {
+  assertCleanString(type);
+  assertCleanString(prevSig);
   return field(RECORD_DOMAIN) + field(String(seq)) + field(type)
     + field(canonicalJson(payload)) + field(prevSig);
 }
@@ -171,15 +214,23 @@ export class EventChain<T = unknown> {
   }
 
   // Append + sign a record. Returns a clone of the stored record, or null on
-  // rejection (disposed / bad type).
+  // rejection (disposed / bad type / non-canonicalizable payload). 2.2.2: an
+  // invalid payload (NaN/undefined/Date/lone-surrogate/etc.) is rejected and
+  // does NOT advance the sequence - sign() is computed before any mutation.
   append(type: string, payload: T): ChainedRecord<T> | null {
     if (this.disposed) return null;
     if (typeof type !== 'string' || type.length === 0) return null;
-    var seq = this.nextSeq++;
+    var seq = this.nextSeq;
     var prevSig = this.headSig;
-    var sig = this.sign(seq, type, payload, prevSig);
+    var sig: string;
+    try {
+      sig = this.sign(seq, type, payload, prevSig);
+    } catch (e) {
+      return null; // fail closed - do not store, do not advance nextSeq
+    }
     var rec: ChainedRecord<T> = { seq: seq, type: type, payload: payload, prevSig: prevSig, sig: sig };
     this.records.push(rec);
+    this.nextSeq = seq + 1;
     this.headSig = sig;
     return cloneRecord(rec);
   }
@@ -203,7 +254,17 @@ export class EventChain<T = unknown> {
     var prevActual = genesis;
     for (var i = 0; i < records.length; i++) {
       var rec = records[i] as ChainedRecord<T>;
-      var expected = hmacSha256Hex(key, canonicalMessage(rec.seq, rec.type, rec.payload, rec.prevSig));
+      var expected: string;
+      try {
+        expected = hmacSha256Hex(key, canonicalMessage(rec.seq, rec.type, rec.payload, rec.prevSig));
+      } catch (e) {
+        // 2.2.2: a record whose stored content is not canonicalizable (e.g. a
+        // tampered-in lone surrogate or non-JSON value) can never carry a valid
+        // signature - treat as a mismatch (fail closed), do not throw.
+        mismatches.push({ seq: rec.seq, type: rec.type, reason: 'sig_mismatch' });
+        prevActual = rec.sig;
+        continue;
+      }
       if (!timingSafeEqualHex(expected, rec.sig)) {
         mismatches.push({ seq: rec.seq, type: rec.type, reason: 'sig_mismatch' });
       }
@@ -308,6 +369,21 @@ export class EventChain<T = unknown> {
     }
     this.nextSeq = maxSeq + 1;
     this.headSig = lastSig;
+  }
+
+  // 2.2.2 audit MED: verify-before-mutate. Verifies the snapshot (and optional
+  // seal) FIRST and only loads it when integrity holds, so an adversarial
+  // snapshot can't desync this instance. Returns the verify result; the
+  // instance is left untouched when ok is false. Prefer this over fromSnapshot
+  // for any snapshot from an untrusted source (disk / network).
+  fromVerifiedSnapshot(records: ChainedRecord<T>[], expectedSeal?: ChainSeal): ChainVerifyResult {
+    if (this.disposed) {
+      return { ok: false, total: 0, mismatches: [{ seq: 0, type: '(disposed)', reason: 'sig_mismatch' }] };
+    }
+    var rows = Array.isArray(records) ? records : [];
+    var res = EventChain.verifyRecords<T>(this.key, rows, this.genesis, expectedSeal);
+    if (res.ok) this.fromSnapshot(rows);
+    return res;
   }
 
   dispose(): void {

@@ -7,6 +7,34 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 2.2.2 - 2026-05-21 (EventChain - round-1 external crypto audit fixes)
+
+Fixes from an independent Codex audit of the 2.2.1 EventChain, before promoting
+to npm `latest`. All HIGH/MED findings closed; the encoding is now provably
+injective and fails closed on anything it cannot faithfully sign.
+
+- HIGH (injectivity): canonical strings could collide because TextEncoder maps
+  lone surrogates lossily to U+FFFD (two distinct strings -> same bytes -> same
+  HMAC). `assertCleanString` now rejects unpaired surrogates in every signed
+  field (type, prevSig, payload strings + object keys); valid Unicode is
+  unaffected.
+- HIGH (semantic collisions): `canonicalJson` previously collapsed
+  `undefined` / `NaN` / `Infinity` / `Date` / `Map` / `Set` / sparse-array holes
+  / functions / symbols / bigint to `null` or `{}`, so distinct payloads could
+  share a signature. It is now STRICT - any value that is not faithfully,
+  injectively serializable throws; `append()` rejects it (no seq burned) and
+  `verifyRecords()` marks such a stored record `sig_mismatch` (never throws).
+- MED (fail-open snapshot): new `fromVerifiedSnapshot(records, seal?)` verifies
+  BEFORE mutating and leaves the instance untouched when verification fails, so
+  an adversarial snapshot cannot desync it. `fromSnapshot` stays for trusted
+  loads.
+- Tests: lone-surrogate rejection + collision, `{x:null}` vs `{x:NaN}` /
+  `undefined` / Date / Map / Set rejection, `fromVerifiedSnapshot` no-mutate,
+  and a node:crypto parity sweep for SHA-256 + HMAC across block-boundary
+  lengths (0..200 bytes, keys above + below the 64-byte block).
+
+6 new tests; full suite 4072 / 4072 green.
+
 ## 2.2.1 - 2026-05-21 (EventChain hardening - pre-`latest` audit pass)
 
 Security + correctness hardening of the 2.2.0 EventChain before promoting it
