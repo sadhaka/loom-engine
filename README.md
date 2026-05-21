@@ -6,7 +6,10 @@ RelationshipGraph + EmotionState; deterministic replay via mulberry32 +
 per-tick state hash. **Trinity Mainframe v2.0** adds 14 pure-logic
 kernels (acoustic propagation, voxel mesh, packet routing, AI Director
 governance, anti-cheat, more) that drive a deferred WebGPU /
-WebTransport / WebCrypto / WASM-SIMD integration layer.
+WebTransport / WebCrypto / WASM-SIMD integration layer. **EventChain
+(2.2.x)** adds a tamper-evident, HMAC-SHA-256-chained event log - the
+integrity layer for audit trails, anti-cheat event tapes, and economy /
+ledger logs.
 
 Try the live playground at [theworldtable.ai/engine](https://theworldtable.ai/engine/) -
 8 click-to-expand component demos + a multi-component NPC sustain dial
@@ -18,6 +21,19 @@ API docs: [loom-engine.pages.dev](https://loom-engine.pages.dev/).
 The design spec (`LOOM-ENGINE-SPEC.md`) lives in the consuming
 TheWorldTable.ai repo and is the canonical source for phase
 plans and architectural decisions.
+
+## v2.2.x - EventChain integrity layer (current)
+
+The 2.2.x line adds **EventChain**, a tamper-evident HMAC-SHA-256-chained
+event log - the integrity-bearing sibling of EventLog. Every record is
+signed and folds in the previous record's signature, so the chain catches
+field tampering, record deletion, reordering, and (with `seal()`) tail
+truncation. Use it for audit trails, anti-cheat event tapes, and economy
+/ ledger logs. Three independent security-audit rounds hardened the
+canonical encoding (length-prefixed + domain-tagged, fail-closed
+canonicalization, deep-clone isolation at every trust boundary); the
+round-3 audit is GREEN with no CRITICAL/HIGH/MED findings. 4082 / 4082
+tests pass. **2.2.4 is the current npm `latest`** (`npm install loom-engine`).
 
 ## v2.0.0 - Trinity Mainframe complete
 
@@ -40,7 +56,7 @@ LoomForgeBridge, GlobalStateLedger, LoomStudioOrchestrator.
 ## Install
 
 ```sh
-npm install @sadhaka/loom-engine
+npm install loom-engine
 ```
 
 Pre-alpha. ESM-only, browser-first. TypeScript types ship in the
@@ -64,7 +80,7 @@ on private repos for free user plans).
 
 ```ts
 // 1. Install
-//    npm install @sadhaka/loom-engine
+//    npm install loom-engine
 import {
   Engine,
   SpriteRenderSystem,
@@ -72,7 +88,7 @@ import {
   VeilBudgetSystem,
   SYSTEM_PHASE_INPUT,
   SYSTEM_PHASE_RENDER,
-} from '@sadhaka/loom-engine';
+} from 'loom-engine';
 
 // 2. Attach to a canvas. Engine.create wires Canvas2DDevice, World,
 //    TransformPool, SpritePool, Time + Camera resources, and the
@@ -121,7 +137,7 @@ needed:
 import {
   SSEDirectorBridge,
   SnapshotRecoveryHelper,
-} from '@sadhaka/loom-engine';
+} from 'loom-engine';
 
 // Credential-free SSE subscription.
 var bridge = new SSEDirectorBridge({
@@ -194,7 +210,7 @@ compatibility on every public API.
 ### Opt into WebGL2
 
 ```ts
-import { Engine, WebGL2Device } from '@sadhaka/loom-engine';
+import { Engine, WebGL2Device } from 'loom-engine';
 
 // Importing WebGL2Device side-effect-registers the 'webgl2' backend
 // factory. The string-based form then works:
@@ -205,7 +221,7 @@ Or inject a pre-built device for absolute control over construction
 (useful when sharing the GL context with another renderer):
 
 ```ts
-import { Engine, WebGL2Device } from '@sadhaka/loom-engine';
+import { Engine, WebGL2Device } from 'loom-engine';
 
 var device = new WebGL2Device(myCanvas);
 var engine = Engine.create({ canvas: myCanvas, device: device });
@@ -283,7 +299,7 @@ on every push to `main`.
 ## Examples
 
 Three minimal, copy-paste-ready starters live under `demo/`. Each is
-roughly 150 lines of TypeScript, imports from `@sadhaka/loom-engine`
+roughly 150 lines of TypeScript, imports from `loom-engine`
 (resolved via `importmap` to the local engine bundle), and runs in
 the browser without a build step on the consumer side.
 
@@ -373,7 +389,7 @@ import {
   RESOURCE_PEER_POOL,
   SYSTEM_PHASE_INPUT,
   SYSTEM_PHASE_RENDER,
-} from '@sadhaka/loom-engine';
+} from 'loom-engine';
 
 const engine = Engine.create({ canvas });
 
@@ -509,7 +525,7 @@ import {
   COLOR_KNOT_STR, COLOR_KNOT_DEX, COLOR_KNOT_INT, COLOR_KNOT_CENTER,
   // Iso
   tileToIso, worldToIso, isoToTile, isoDepthKey,
-} from '@sadhaka/loom-engine';
+} from 'loom-engine';
 
 const engine = Engine.create({ canvas });
 engine.world.addSystem(new InputSystem(), SYSTEM_PHASE_INPUT);
@@ -541,8 +557,8 @@ audit trail any future productization or patent dispute would lean on.
 
 ## Test coverage
 
-208 / 208 tests pass on Node 24 via `tsx --test`. Coverage spans
-all twelve test files in `tests/`:
+4082 / 4082 tests pass via `tsx --test`, spanning 180+ test files in
+`tests/`. Core suites include:
 
 - `smoke.test.ts` - public API barrel, version stamp
 - `world.test.ts` - ECS world, system scheduling, sprite pool, sprite render, time
@@ -661,7 +677,8 @@ from a clean source tree.
 ## Contributing
 
 This is a single-author project (Misha Mitiev) for TheWorldTable.ai.
-The MIT license permits forking and modification; pull requests are
+The BUSL-1.1 license permits forking and modification under the revenue
+cap (see License above); pull requests are
 welcome but not actively triaged - the canonical roadmap is the spec
 file (`LOOM-ENGINE-SPEC.md` in the parent repo) and capacity is
 limited. For bug reports, file an issue with a minimal repro.
