@@ -476,21 +476,31 @@ export class EventChain<T = unknown> {
   fromSnapshot(records: ChainedRecord<T>[]): void {
     if (this.disposed) return;
     if (!Array.isArray(records)) return;
-    this.records = [];
+    // 2.2.5 audit MED: TRANSACTIONAL load. Build into locals and only swap into
+    // the instance after the FULL clone succeeds. deepCloneJson can now throw
+    // (depth overflow), so cloning straight into this.records after clearing it
+    // would leave the instance desynced (records=[] with a stale headSig) on a
+    // hostile too-deep row. On any failure we return with the prior state intact.
+    var nextRecords: Array<ChainedRecord<T>> = [];
     var maxSeq = 0;
     var lastSig = this.genesis;
-    for (var i = 0; i < records.length; i++) {
-      var r = records[i];
-      if (!r || typeof r !== 'object') continue;
-      if (typeof r.seq !== 'number' || !isFinite(r.seq) || r.seq <= 0) continue;
-      if (typeof r.type !== 'string' || r.type.length === 0) continue;
-      if (typeof r.sig !== 'string' || typeof r.prevSig !== 'string') continue;
-      // 2.2.3 audit MED 4: deep-clone on load so mutating the source rows after
-      // fromSnapshot / fromVerifiedSnapshot cannot reach into loaded chain state.
-      this.records.push({ seq: r.seq, type: r.type, payload: deepCloneJson(r.payload), prevSig: r.prevSig, sig: r.sig });
-      if (r.seq > maxSeq) maxSeq = r.seq;
-      lastSig = r.sig;
+    try {
+      for (var i = 0; i < records.length; i++) {
+        var r = records[i];
+        if (!r || typeof r !== 'object') continue;
+        if (typeof r.seq !== 'number' || !isFinite(r.seq) || r.seq <= 0) continue;
+        if (typeof r.type !== 'string' || r.type.length === 0) continue;
+        if (typeof r.sig !== 'string' || typeof r.prevSig !== 'string') continue;
+        // 2.2.3 audit MED 4: deep-clone on load so mutating the source rows after
+        // fromSnapshot / fromVerifiedSnapshot cannot reach into loaded chain state.
+        nextRecords.push({ seq: r.seq, type: r.type, payload: deepCloneJson(r.payload), prevSig: r.prevSig, sig: r.sig });
+        if (r.seq > maxSeq) maxSeq = r.seq;
+        lastSig = r.sig;
+      }
+    } catch (e) {
+      return; // fail closed - leave this.records / nextSeq / headSig untouched
     }
+    this.records = nextRecords;
     this.nextSeq = maxSeq + 1;
     this.headSig = lastSig;
   }

@@ -386,3 +386,33 @@ test('event-chain: a pathologically deep tampered snapshot fails verify (no thro
   const res = EventChain.verifyRecords(KEY, snap);
   assert.equal(res.ok, false); // fails closed via sig_mismatch, does not throw
 });
+
+test('event-chain: depth-cap boundary - 256 deep signs, 257 deep rejects', () => {
+  const chain = EventChain.create({ key: KEY });
+  assert.ok(chain.append('a', nestObject(256)));            // exactly at the cap - allowed
+  assert.equal(chain.append('b', nestObject(257)), null);   // one past the cap - rejected
+  assert.equal(chain.size(), 1);                            // only the in-bounds one landed
+});
+
+test('event-chain: equivalent nested payloads sign identically across instances', () => {
+  const a = EventChain.create({ key: KEY }).append('e', nestObject(10))!;
+  const b = EventChain.create({ key: KEY }).append('e', nestObject(10))!;
+  assert.equal(a.sig, b.sig); // depth is not part of the signed message
+});
+
+test('event-chain: raw fromSnapshot is transactional - a too-deep row leaves the instance intact', () => {
+  const src = EventChain.create({ key: KEY });
+  src.append('a', { x: 1 });
+  src.append('b', { x: 2 });
+  const dst = EventChain.create({ key: KEY });
+  dst.fromSnapshot(src.toSnapshot());
+  assert.equal(dst.size(), 2);
+  const headBefore = dst.head();
+
+  // Hostile snapshot: one row's payload is past the depth cap.
+  const hostile = src.toSnapshot();
+  (hostile[1] as { payload: unknown }).payload = nestObject(5000);
+  assert.doesNotThrow(() => { dst.fromSnapshot(hostile); }); // 2.2.5 MED: no throw
+  assert.equal(dst.size(), 2);            // prior records intact
+  assert.equal(dst.head(), headBefore);   // headSig not desynced
+});
