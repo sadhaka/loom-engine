@@ -255,8 +255,9 @@ test('event-chain: fromVerifiedSnapshot does not mutate on a tampered snapshot',
   assert.equal(dst.size(), 0);            // instance untouched
   assert.equal(dst.head(), '');           // genesis unchanged
 
-  // a clean snapshot loads fine (use a SEPARATE chain - toSnapshot shares the
-  // payload object by reference, so the tamper above also dirtied `src`).
+  // a clean snapshot loads fine. (toSnapshot deep-clones payloads as of 2.2.3,
+  // so the tamper above did NOT dirty `src`; we build a fresh chain anyway for a
+  // self-evidently clean snapshot.)
   const clean = EventChain.create({ key: KEY });
   clean.append('a', { x: 1 });
   clean.append('b', { x: 2 });
@@ -355,4 +356,33 @@ test('event-chain: append deep-copies - mutating the caller object after append 
   input.x = 999;                                                  // mutate caller object AFTER append
   assert.equal(chain.verify().ok, true);
   assert.equal((chain.bySeq(1)!.payload as { x: number }).x, 1);
+});
+
+// --- 2.2.5 hardening: bounded recursion depth (DoS guard) -------------------
+
+function nestObject(n: number): Record<string, unknown> {
+  const root: Record<string, unknown> = {};
+  let cur = root;
+  for (let i = 0; i < n; i++) {
+    const next: Record<string, unknown> = {};
+    cur.n = next;
+    cur = next;
+  }
+  return root;
+}
+
+test('event-chain: payload nested past the depth cap is rejected on append (no seq burn)', () => {
+  const chain = EventChain.create({ key: KEY });
+  assert.equal(chain.append('a', nestObject(5000)), null); // too deep -> rejected early
+  assert.equal(chain.size(), 0);
+  assert.equal(chain.append('a', nestObject(50))!.seq, 1); // reasonable nesting is fine
+});
+
+test('event-chain: a pathologically deep tampered snapshot fails verify (no throw)', () => {
+  const chain = EventChain.create({ key: KEY });
+  chain.append('a', { x: 1 });
+  const snap = chain.toSnapshot();
+  (snap[0] as { payload: unknown }).payload = nestObject(5000); // tamper with a deep object
+  const res = EventChain.verifyRecords(KEY, snap);
+  assert.equal(res.ok, false); // fails closed via sig_mismatch, does not throw
 });

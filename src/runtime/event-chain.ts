@@ -44,6 +44,9 @@
 //     carry but a normal-prototype clone cannot faithfully round-trip) and
 //     deep-clones via defineProperty so no clone path can hit the prototype
 //     setter.
+//   - 2.2.5 bounds canonicalization + clone recursion depth (MAX_CANONICAL_DEPTH)
+//     so a hostile deeply-nested payload from an untrusted snapshot is rejected
+//     early instead of exhausting the stack.
 //
 // SCOPE: integrity, not secrecy. Payloads are stored in the clear; the
 // signature proves they were not altered. The HMAC key is a runtime
@@ -103,6 +106,13 @@ export interface ChainSeal {
 // trailing /1 is a format version for future migrations.
 const RECORD_DOMAIN = 'loom.chain.rec/1';
 const SEAL_DOMAIN = 'loom.chain.seal/1';
+
+// 2.2.5 audit LOW: hard cap on canonicalization / clone recursion depth. Event
+// payloads are shallow; this is far above any legitimate nesting and exists only
+// so a hostile deeply-nested payload (e.g. an untrusted verifyRecords /
+// fromVerifiedSnapshot input) is rejected early and cheaply instead of consuming
+// stack + CPU all the way to a RangeError.
+const MAX_CANONICAL_DEPTH = 256;
 
 // Length-prefixed field: '<len>:<value>' where len is the JS string length.
 // Self-delimiting, so concatenating fields is injective - a value cannot forge
@@ -175,11 +185,14 @@ function assertObjectSurface(obj: object): void {
 // independent objects - an external reference can never mutate chain state after
 // the fact (or vice versa). Mirrors canonicalJson's accepted surface; primitives
 // (incl. functions, which valid payloads never contain) pass through by value.
-function deepCloneJson<V>(v: V): V {
+function deepCloneJson<V>(v: V, depth: number = 0): V {
+  if (depth > MAX_CANONICAL_DEPTH) {
+    throw new Error('EventChain: payload nesting exceeds max depth ' + MAX_CANONICAL_DEPTH);
+  }
   if (v === null || typeof v !== 'object') return v;
   if (Array.isArray(v)) {
     var arr: unknown[] = [];
-    for (var i = 0; i < v.length; i++) arr.push(deepCloneJson((v as unknown[])[i]));
+    for (var i = 0; i < v.length; i++) arr.push(deepCloneJson((v as unknown[])[i], depth + 1));
     return arr as unknown as V;
   }
   var out: Record<string, unknown> = {};
@@ -191,7 +204,7 @@ function deepCloneJson<V>(v: V): V {
     // untrusted raw snapshot creates a real own property instead of hitting the
     // prototype setter (no transient prototype pollution of the clone).
     Object.defineProperty(out, kk, {
-      value: deepCloneJson(src[kk]), enumerable: true, writable: true, configurable: true,
+      value: deepCloneJson(src[kk], depth + 1), enumerable: true, writable: true, configurable: true,
     });
   }
   return out as unknown as V;
@@ -203,7 +216,10 @@ function deepCloneJson<V>(v: V): V {
 // Date / Map / Set / array-holes all collide), this FAILS CLOSED - any value
 // that cannot be faithfully + injectively serialized throws, and the caller
 // rejects the append or marks the record unverifiable.
-function canonicalJson(value: unknown): string {
+function canonicalJson(value: unknown, depth: number = 0): string {
+  if (depth > MAX_CANONICAL_DEPTH) {
+    throw new Error('EventChain: payload nesting exceeds max depth ' + MAX_CANONICAL_DEPTH);
+  }
   if (value === null) return 'null';
   var t = typeof value;
   if (t === 'string') { assertCleanString(value as string); return JSON.stringify(value); }
@@ -229,7 +245,7 @@ function canonicalJson(value: unknown): string {
     var items: string[] = [];
     for (var i = 0; i < value.length; i++) {
       if (!(i in value)) throw new Error('EventChain: sparse array (hole) not allowed in payload');
-      items.push(canonicalJson(value[i]));
+      items.push(canonicalJson(value[i], depth + 1));
     }
     return '[' + items.join(',') + ']';
   }
@@ -238,13 +254,17 @@ function canonicalJson(value: unknown): string {
     // Date / Map / Set / class instances etc. are not faithfully serializable.
     throw new Error('EventChain: only plain objects allowed in payload');
   }
+  // null-proto objects (Object.create(null)) are accepted here and sign
+  // identically to a plain object with the same JSON value: EventChain proves
+  // JSON-VALUE integrity, not JS object-surface identity (2.2.5 audit LOW,
+  // intentional - reject proto === null above if value identity is ever needed).
   assertObjectSurface(value as object);
   var obj = value as Record<string, unknown>;
   var keys = Object.keys(obj).sort();
   var pairs: string[] = [];
   for (var key of keys) {
     assertCleanString(key);
-    pairs.push(JSON.stringify(key) + ':' + canonicalJson(obj[key]));
+    pairs.push(JSON.stringify(key) + ':' + canonicalJson(obj[key], depth + 1));
   }
   return '{' + pairs.join(',') + '}';
 }
