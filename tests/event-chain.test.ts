@@ -147,3 +147,58 @@ test('event-chain: empty / invalid type is rejected', () => {
   assert.equal(chain.append('', { x: 1 }), null);
   assert.equal(chain.size(), 0);
 });
+
+// --- 2.2.1 hardening: injective encoding ----------------------------------
+
+test('event-chain: delimiter-laden type/payload still verify (injective encoding)', () => {
+  const chain = EventChain.create({ key: KEY });
+  chain.append('a|b:c', { 'k|prev:': '99:zzz', nested: { '|': '::' } });
+  chain.append('plain', { x: 1 });
+  assert.equal(chain.verify().ok, true);
+});
+
+test('event-chain: boundary-shift forgery does not collide', () => {
+  // Under a raw "|"-join these two could alias; length-prefixing prevents it.
+  const a = EventChain.create({ key: KEY }).append('x', { v: 'a|b' })!;
+  const b = EventChain.create({ key: KEY }).append('x|b', { v: 'a' })!;
+  assert.notEqual(a.sig, b.sig);
+});
+
+// --- 2.2.1 hardening: seal / tail-truncation ------------------------------
+
+test('event-chain: seal + verifySeal round-trip', () => {
+  const chain = EventChain.create({ key: KEY });
+  chain.append('a', { x: 1 });
+  chain.append('b', { x: 2 });
+  const seal = chain.seal();
+  assert.equal(seal.count, 2);
+  assert.equal(seal.head, chain.head());
+  assert.equal(EventChain.verifySeal(KEY, seal), true);
+  assert.equal(EventChain.verifySeal('wrong-key', seal), false);
+  assert.equal(EventChain.verifySeal(KEY, { ...seal, count: 3 }), false);
+});
+
+test('event-chain: tail truncation is caught only with a seal', () => {
+  const chain = EventChain.create({ key: KEY });
+  chain.append('a', { x: 1 });
+  chain.append('b', { x: 2 });
+  chain.append('c', { x: 3 });
+  const seal = chain.seal();
+  const snap = chain.toSnapshot();
+  snap.pop(); // drop the last record off the END
+
+  // Without the seal, a bare hash chain CANNOT see tail truncation:
+  assert.equal(EventChain.verifyRecords(KEY, snap).ok, true);
+  // With the seal, it is detected:
+  const res = EventChain.verifyRecords(KEY, snap, '', seal);
+  assert.equal(res.ok, false);
+  assert.ok(res.mismatches.some((m) => m.reason === 'seal_mismatch'));
+});
+
+test('event-chain: intact chain verifies against its own seal', () => {
+  const chain = EventChain.create({ key: KEY });
+  chain.append('a', { x: 1 });
+  chain.append('b', { x: 2 });
+  const seal = chain.seal();
+  assert.equal(chain.verify(seal).ok, true);
+});

@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import { strict as assert } from 'node:assert';
 
-import { sha256Hex, hmacSha256Hex } from '../src/index.js';
+import { sha256Hex, hmacSha256Hex, timingSafeEqualHex } from '../src/index.js';
 
 // Repeat a byte N times -> Uint8Array (for the RFC 4231 binary-key vectors).
 function rep(byte: number, n: number): Uint8Array {
@@ -80,4 +80,22 @@ test('hmac-sha256: different key -> different signature', () => {
 
 test('hmac-sha256: single-bit message change -> different signature', () => {
   assert.notEqual(hmacSha256Hex('key', 'message'), hmacSha256Hex('key', 'messagf'));
+});
+
+// --- constant-time compare (2.2.1) -----------------------------------------
+
+test('timingSafeEqualHex: equal strings -> true', () => {
+  const sig = hmacSha256Hex('k', 'm');
+  assert.equal(timingSafeEqualHex(sig, sig), true);
+});
+
+test('timingSafeEqualHex: different same-length strings -> false', () => {
+  const a = hmacSha256Hex('k', 'm1');
+  const b = hmacSha256Hex('k', 'm2');
+  assert.equal(timingSafeEqualHex(a, b), false);
+});
+
+test('timingSafeEqualHex: length mismatch -> false', () => {
+  assert.equal(timingSafeEqualHex('abcd', 'abc'), false);
+  assert.equal(timingSafeEqualHex('', 'a'), false);
 });

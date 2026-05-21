@@ -7,6 +7,31 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 2.2.1 - 2026-05-21 (EventChain hardening - pre-`latest` audit pass)
+
+Security + correctness hardening of the 2.2.0 EventChain before promoting it
+from the npm `beta` tag to `latest`. Additive API only. The record signing
+format changed (length-prefix + domain tag), so 2.2.1 signatures differ from
+2.2.0 - fine on the rapid-stream beta, and a chain is always self-consistent
+within a single version.
+
+- INJECTIVE ENCODING: the signed message is now length-prefixed and
+  domain-separated (`<len>:<value>` per field, tagged `loom.chain.rec/1`)
+  instead of raw `|` joins. A `type` or payload string can no longer forge a
+  field boundary - the encoding is provably injective.
+- TAIL-TRUNCATION DETECTION: new `seal()` returns a signed (count, head)
+  commitment; `verify(seal)` / `verifyRecords(..., seal)` and the static
+  `EventChain.verifySeal()` detect records dropped off the END of the log -
+  something a bare hash chain cannot see without an external length
+  commitment. New `seal_mismatch` reason + `ChainSeal` type.
+- CONSTANT-TIME COMPARE: signature verification now uses `timingSafeEqualHex`
+  (also exported) instead of `!==`, removing the early-exit timing signal if
+  verification ever runs in an online / oracle context.
+
+8 new tests (delimiter-injection, boundary-shift non-collision, seal
+round-trip, tail-truncation with/without seal, constant-time compare); full
+suite 4066 / 4066 green.
+
 ## 2.2.0 - 2026-05-21 (EventChain - tamper-evident HMAC-chained event log)
 
 **One new pure-logic kernel.** `EventChain` is the integrity-bearing

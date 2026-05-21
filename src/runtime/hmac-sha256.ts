@@ -194,3 +194,17 @@ export function hmacSha256Hex(
 ): string {
   return toHex(hmacSha256Bytes(key, message));
 }
+
+// Constant-time equality for two hex strings (e.g. HMAC outputs). Avoids
+// leaking how many leading characters matched via early-exit timing, which
+// matters if verification ever runs in an online / oracle context. Length is
+// not secret, so a length mismatch returns false immediately.
+export function timingSafeEqualHex(a: string, b: string): boolean {
+  if (typeof a !== 'string' || typeof b !== 'string') return false;
+  if (a.length !== b.length) return false;
+  var diff = 0;
+  for (var i = 0; i < a.length; i++) {
+    diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return diff === 0;
+}

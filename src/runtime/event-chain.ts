@@ -4,21 +4,36 @@
 // (0.83.0): every appended record is signed with HMAC-SHA-256, and each
 // signature folds in the PREVIOUS record's signature, so the whole log is a
 // hash chain. verify() recomputes every signature AND checks the chain
-// linkage, catching three distinct tamper classes a plain log cannot:
+// linkage, catching four tamper classes a plain log cannot:
 //
-//   - field tampering   - a payload / type / seq was edited at rest
-//   - record deletion   - a middle record was removed
-//   - record reordering - records were shuffled
+//   - field tampering   - a payload / type / seq edited at rest (sig_mismatch)
+//   - record deletion   - a middle record removed (broken_chain_link)
+//   - record reordering - records shuffled (broken_chain_link)
+//   - tail truncation   - records dropped off the END, detected when an
+//                         earlier seal() commitment is supplied (seal_mismatch)
 //
 // Use it for audit trails, anti-cheat event tapes, economy / ledger logs, or
 // any "prove this sequence was not altered" requirement. Ported from the
-// server-authoritative event tape proven in TheWorldTable's LoomMaster
-// backend (the same chain that guards its combat + currency ledger).
+// server-authoritative event tape running in production in TheWorldTable's
+// LoomMaster backend (the same chain that guards its combat + currency ledger).
 //
 //   var chain = EventChain.create({ key: runtimeSecret });
 //   chain.append('combat.hit', { target: 'goblin', dmg: 7 });
 //   chain.append('xp.award',  { amount: 500 });
-//   var result = chain.verify();   // { ok: true, total: 2, mismatches: [] }
+//   var result = chain.verify();          // { ok: true, total: 2, ... }
+//   var seal = chain.seal();              // persist to detect later truncation
+//   ... later ...
+//   chain.verify(seal);                   // also fails if the tail was cut
+//
+// 2.2.x hardening (pre-`latest`):
+//   - Canonical message is LENGTH-PREFIXED + domain-separated, so the encoding
+//     is injective: no `type` or payload string can forge a field boundary
+//     (the first cut used raw '|' joins, which were ambiguous when a value
+//     contained the delimiter).
+//   - seal() / verifySeal() add an optional signed (count, head) commitment so
+//     tail truncation is detectable (a bare hash chain cannot see records
+//     removed from the end without an external length commitment).
+//   - signature comparison is constant-time (timingSafeEqualHex).
 //
 // SCOPE: integrity, not secrecy. Payloads are stored in the clear; the
 // signature proves they were not altered. The HMAC key is a runtime
@@ -30,7 +45,7 @@
 //
 // Code style: var-only in browser source (matches event-log.ts).
 
-import { hmacSha256Hex } from './hmac-sha256.js';
+import { hmacSha256Hex, timingSafeEqualHex } from './hmac-sha256.js';
 
 export interface ChainedRecord<T = unknown> {
   // Monotonic 1-based sequence number assigned at append time.
@@ -55,7 +70,7 @@ export interface EventChainOptions {
 export interface ChainMismatch {
   seq: number;
   type: string;
-  reason: 'sig_mismatch' | 'broken_chain_link';
+  reason: 'sig_mismatch' | 'broken_chain_link' | 'seal_mismatch';
 }
 
 export interface ChainVerifyResult {
@@ -64,9 +79,31 @@ export interface ChainVerifyResult {
   mismatches: ChainMismatch[];
 }
 
+// A signed commitment to the chain's length + head at a point in time. Persist
+// it (out of band) to later detect tail truncation: a verifier with the seal
+// can prove no records were dropped off the end.
+export interface ChainSeal {
+  count: number;
+  head: string;
+  sig: string;
+}
+
+// Domain tags keep record signatures and seal signatures in separate
+// namespaces (a record HMAC can never be reinterpreted as a seal HMAC). The
+// trailing /1 is a format version for future migrations.
+const RECORD_DOMAIN = 'loom.chain.rec/1';
+const SEAL_DOMAIN = 'loom.chain.seal/1';
+
+// Length-prefixed field: '<len>:<value>' where len is the JS string length.
+// Self-delimiting, so concatenating fields is injective - a value cannot forge
+// a field boundary no matter what characters it contains.
+function field(s: string): string {
+  return s.length + ':' + s;
+}
+
 // Deterministic JSON: object keys sorted recursively so the signed message is
-// stable regardless of insertion order. undefined / functions / symbols
-// collapse to null (same as the structure JSON.stringify would drop).
+// stable regardless of insertion order. undefined / functions / symbols /
+// non-finite numbers collapse to null (matching what JSON would drop / emit).
 function canonicalJson(value: unknown): string {
   if (value === null || value === undefined) return 'null';
   var t = typeof value;
@@ -88,10 +125,16 @@ function canonicalJson(value: unknown): string {
   return '{' + pairs.join(',') + '}';
 }
 
-// The exact byte string fed to HMAC for one record. prevSig is always folded
-// in (prefixed 'prev:') so deletion / reordering changes every downstream sig.
+// The exact (injective) string fed to HMAC for one record. prevSig is always
+// folded in, so deletion / reordering changes every downstream signature.
 function canonicalMessage(seq: number, type: string, payload: unknown, prevSig: string): string {
-  return String(seq) + '|' + type + '|' + canonicalJson(payload) + '|prev:' + prevSig;
+  return field(RECORD_DOMAIN) + field(String(seq)) + field(type)
+    + field(canonicalJson(payload)) + field(prevSig);
+}
+
+// The string fed to HMAC for a seal commitment.
+function sealMessage(count: number, head: string): string {
+  return field(SEAL_DOMAIN) + field(String(count)) + field(head);
 }
 
 function cloneRecord<T>(r: ChainedRecord<T>): ChainedRecord<T> {
@@ -141,35 +184,68 @@ export class EventChain<T = unknown> {
     return cloneRecord(rec);
   }
 
-  // Recompute every signature AND verify chain linkage. Pure over the records;
-  // detects field tamper (sig_mismatch), deletion + reordering (broken_chain_link).
-  verify(): ChainVerifyResult {
-    return EventChain.verifyRecords<T>(this.key, this.records, this.genesis);
+  // Recompute every signature AND verify chain linkage. Pass a prior seal() to
+  // also detect tail truncation. Pure over the records.
+  verify(expectedSeal?: ChainSeal): ChainVerifyResult {
+    return EventChain.verifyRecords<T>(this.key, this.records, this.genesis, expectedSeal);
   }
 
   // Verify an EXTERNAL snapshot without an instance (e.g. records loaded from
-  // disk or the network). Same key + genesis the chain was built with.
+  // disk or the network). Same key + genesis the chain was built with. Supply
+  // expectedSeal to detect tail truncation.
   static verifyRecords<T = unknown>(
     key: string | Uint8Array,
     records: ReadonlyArray<ChainedRecord<T>>,
     genesis: string = '',
+    expectedSeal?: ChainSeal,
   ): ChainVerifyResult {
     var mismatches: ChainMismatch[] = [];
     var prevActual = genesis;
     for (var i = 0; i < records.length; i++) {
       var rec = records[i] as ChainedRecord<T>;
       var expected = hmacSha256Hex(key, canonicalMessage(rec.seq, rec.type, rec.payload, rec.prevSig));
-      if (expected !== rec.sig) {
+      if (!timingSafeEqualHex(expected, rec.sig)) {
         mismatches.push({ seq: rec.seq, type: rec.type, reason: 'sig_mismatch' });
       }
       // Link continuity: a deleted / reordered record makes the stored prevSig
-      // disagree with the real predecessor's signature.
+      // disagree with the real predecessor's signature. (Structural compare of
+      // values both already visible to the holder - no secret, no timing risk.)
       if (rec.prevSig !== prevActual) {
         mismatches.push({ seq: rec.seq, type: rec.type, reason: 'broken_chain_link' });
       }
       prevActual = rec.sig;
     }
+    // Tail-truncation / head commitment: if a prior seal is supplied, the
+    // record count and head must still match it (and the seal itself be valid).
+    if (expectedSeal !== undefined) {
+      var headNow = records.length > 0
+        ? (records[records.length - 1] as ChainedRecord<T>).sig
+        : genesis;
+      var sealValid = EventChain.verifySeal(key, expectedSeal);
+      if (!sealValid || expectedSeal.count !== records.length || expectedSeal.head !== headNow) {
+        mismatches.push({ seq: expectedSeal.count, type: '(seal)', reason: 'seal_mismatch' });
+      }
+    }
     return { ok: mismatches.length === 0, total: records.length, mismatches: mismatches };
+  }
+
+  // Sign the current (count, head) so a holder can later prove no records were
+  // dropped off the end. Persist this out of band.
+  seal(): ChainSeal {
+    var count = this.records.length;
+    var head = this.headSig;
+    return { count: count, head: head, sig: hmacSha256Hex(this.key, sealMessage(count, head)) };
+  }
+
+  // Verify a seal's own signature (constant-time). Does not check it against
+  // any record set - verifyRecords(..., seal) does that.
+  static verifySeal(key: string | Uint8Array, seal: ChainSeal): boolean {
+    if (!seal || typeof seal.count !== 'number' || typeof seal.head !== 'string'
+      || typeof seal.sig !== 'string') {
+      return false;
+    }
+    var expected = hmacSha256Hex(key, sealMessage(seal.count, seal.head));
+    return timingSafeEqualHex(expected, seal.sig);
   }
 
   bySeq(seq: number): ChainedRecord<T> | null {
