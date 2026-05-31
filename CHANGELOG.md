@@ -7,6 +7,59 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 2.2.5 - 2026-05-21 (EventChain - round-3/4 audit: DoS depth bound + transactional snapshot)
+
+Closes the round-3 audit LOW (DoS hardening) and the round-4 regression it
+surfaced, before promoting 2.2.5 to npm `latest`.
+
+- LOW (unbounded recursion): `canonicalJson` and `deepCloneJson` now thread a
+  depth counter and throw past `MAX_CANONICAL_DEPTH` (256) - far above any
+  legitimate event nesting - so a hostile deeply-nested payload from an
+  untrusted `verifyRecords` / `fromVerifiedSnapshot` input is rejected early and
+  fails closed (append -> null, verify -> sig_mismatch) instead of consuming
+  stack + CPU up to a RangeError. Also documents the intentional null-proto
+  JSON-value equivalence.
+- MED (fail-open snapshot regression): the new depth guard let a raw
+  `fromSnapshot` throw mid-mutation (it cleared `this.records` before cloning),
+  leaving the instance desynced (records=[] with a stale headSig). The clone now
+  builds into locals and swaps `records` / `nextSeq` / `headSig` in only after
+  the FULL clone succeeds; any `deepCloneJson` failure returns with the prior
+  state intact (fail closed).
+
+Round-4 boundary tests (depth 256 signs / 257 rejects; equivalent nested
+payloads sign identically across instances) + the no-mutate regression. Full
+suite 4087 / 4087 green. **2.2.5 is the current npm `latest`** (`npm install
+loom-engine`).
+
+## 2.2.4 - 2026-05-21 (EventChain - reject __proto__ data key)
+
+Self-found while landing 2.2.3's `deepCloneJson`: a JSON-parsed payload can
+carry an own `"__proto__"` data key, which a normal-prototype clone cannot
+faithfully round-trip (`out[key]=...` hits the prototype setter). It already
+failed CLOSED (sig_mismatch, never a verify bypass) - so 2.2.3 on beta was safe
+- but the canonical boundary is hardened anyway:
+
+- `assertObjectSurface` rejects an own `"__proto__"` key fail-closed.
+- `deepCloneJson` assigns via `Object.defineProperty`, so no clone path
+  (including raw untrusted `fromSnapshot`) can trigger the prototype setter.
+
+A `__proto__`-rejection test. Full suite 4082 / 4082 green.
+
+## 2.2.3 - 2026-05-21 (EventChain - round-2 audit: injectivity + clone isolation)
+
+Round-2 Codex audit of 2.2.2 found one surviving HIGH and three MEDs in the
+canonicalization / snapshot trust boundary, all fixed fail-closed:
+
+- HIGH (signed-zero collision): `canonicalJson` accepted `-0`, which `String()`s
+  to `"0"` yet is a distinct JS value (`Object.is(-0, 0) === false`) - so a
+  signed zero could collide with positive zero under one signature. Now handled
+  so distinct values cannot share an HMAC.
+- MED: residual injectivity + clone-isolation gaps at the snapshot trust
+  boundary, hardened so an adversarial input cannot desync or alias a verified
+  instance.
+
+New injectivity + clone-isolation tests. Full suite green.
+
 ## 2.2.2 - 2026-05-21 (EventChain - round-1 external crypto audit fixes)
 
 Fixes from an independent Codex audit of the 2.2.1 EventChain, before promoting

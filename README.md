@@ -16,6 +16,13 @@ Try the live playground at [theworldtable.ai/engine](https://theworldtable.ai/en
 that runs the engine in your browser. No external engine reuse - built
 from scratch in TypeScript for [TheWorldTable.ai](https://theworldtable.ai).
 
+The same determinism runs in production: **LoomMaster**
+([theworldtable.ai/loommaster.html](https://theworldtable.ai/loommaster.html))
+is a shipped AI Dungeon Master for D&D 5e + Pathfinder 2e. Every die roll,
+degree-of-success, and HP change is resolved server-side on a seeded PRNG
+(validate-before-show) and every turn is HMAC-chained for replay + anti-cheat -
+the LLM never rolls, it only narrates. The engine owns the truth.
+
 Repo: [sadhaka/loom-engine](https://github.com/sadhaka/loom-engine).
 API docs: [loom-engine.pages.dev](https://loom-engine.pages.dev/).
 The design spec (`LOOM-ENGINE-SPEC.md`) lives in the consuming
@@ -29,11 +36,12 @@ event log - the integrity-bearing sibling of EventLog. Every record is
 signed and folds in the previous record's signature, so the chain catches
 field tampering, record deletion, reordering, and (with `seal()`) tail
 truncation. Use it for audit trails, anti-cheat event tapes, and economy
-/ ledger logs. Three independent security-audit rounds hardened the
+/ ledger logs. Four independent security-audit rounds hardened the
 canonical encoding (length-prefixed + domain-tagged, fail-closed
-canonicalization, deep-clone isolation at every trust boundary); the
-round-3 audit is GREEN with no CRITICAL/HIGH/MED findings. 4082 / 4082
-tests pass. **2.2.4 is the current npm `latest`** (`npm install loom-engine`).
+canonicalization, deep-clone isolation + bounded recursion + transactional
+snapshot at every trust boundary); the round-4 audit is GREEN with no
+CRITICAL/HIGH/MED findings. 4087 / 4087 tests pass. **2.2.5 is the current npm
+`latest`** (`npm install loom-engine`).
 
 ## v2.0.0 - Trinity Mainframe complete
 

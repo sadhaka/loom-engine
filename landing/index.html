@@ -5,12 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#0a0805">
 <meta name="color-scheme" content="dark">
-<meta name="description" content="Loom Engine v2.0.0 - TS engine for AI-driven worlds: 14 Trinity Mainframe kernels, 3,984 tests, cross-session NPC memory, deterministic replay.">
-<meta property="og:title" content="Loom Engine // v2.0.0 - Trinity Mainframe">
-<meta property="og:description" content="14 new pure-logic kernels for AI-driven worlds. SonicSync, LoomFlow, NeuralMaterial, AetherGrid, GlobalStateLedger, and more. 3,984 tests green.">
+<meta name="description" content="Loom Engine v2.2.5 - TS engine for AI-driven worlds: tamper-evident HMAC-SHA-256 EventChain, 14 Trinity Mainframe kernels, 4,087 tests, cross-session NPC memory, deterministic replay.">
+<meta property="og:title" content="Loom Engine // v2.2.5 - EventChain integrity layer">
+<meta property="og:description" content="Tamper-evident HMAC-SHA-256 EventChain for audit trails + anti-cheat, atop 14 Trinity Mainframe kernels. The same determinism powers LoomMaster, a live AI Dungeon Master. 4,087 tests green.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://loom-engine.pages.dev/">
-<title>Loom Engine // v2.0.0</title>
+<title>Loom Engine // v2.2.5</title>
 <style>
 :root {
   --bg: #0a0805;
@@ -338,10 +338,10 @@ footer a { color: var(--fg-dim); }
 <div class="wrap">
 
   <header class="banner">
-    <h1>LOOM ENGINE<span class="slash">//</span>v2.0.0</h1>
+    <h1>LOOM ENGINE<span class="slash">//</span>v2.2.5</h1>
     <div class="banner-meta">
-      <div><strong>3,984</strong> tests green</div>
-      <div><strong>136</strong> versions since 0.10</div>
+      <div><strong>4,087</strong> tests green</div>
+      <div><strong>140+</strong> versions since 0.10</div>
       <div><strong>BUSL-1.1</strong> source-available</div>
     </div>
   </header>
@@ -353,7 +353,14 @@ footer a { color: var(--fg-dim); }
     <strong>Trinity Mainframe v2.0</strong> adds 14 pure-logic kernels (acoustic
     propagation, voxel mesh, packet routing, AI Director governance, anti-cheat, more)
     that drive a deferred WebGPU / WebTransport / WebCrypto / WASM-SIMD integration
-    layer. Try the live playground at
+    layer. <strong>EventChain (v2.2.x)</strong> adds a tamper-evident,
+    HMAC-SHA-256-chained event log for audit trails, anti-cheat, and economy
+    ledgers - four independent security-audit rounds, fail-closed. The same
+    determinism ships in production: <strong>LoomMaster</strong>
+    (<a href="https://theworldtable.ai/loommaster.html">theworldtable.ai/loommaster.html</a>)
+    is a live AI Dungeon Master for D&amp;D 5e + Pathfinder 2e where every roll is
+    resolved server-side on a seeded PRNG and every turn is HMAC-chained - the LLM
+    only narrates. Try the live playground at
     <a href="https://theworldtable.ai/engine/">theworldtable.ai/engine</a>.
     Built from scratch for <a href="https://theworldtable.ai">TheWorldTable.ai</a>,
     available standalone on npm.
