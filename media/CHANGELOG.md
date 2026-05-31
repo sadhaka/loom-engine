@@ -7,6 +7,194 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 2.2.5 - 2026-05-21 (EventChain - round-3/4 audit: DoS depth bound + transactional snapshot)
+
+Closes the round-3 audit LOW (DoS hardening) and the round-4 regression it
+surfaced, before promoting 2.2.5 to npm `latest`.
+
+- LOW (unbounded recursion): `canonicalJson` and `deepCloneJson` now thread a
+  depth counter and throw past `MAX_CANONICAL_DEPTH` (256) - far above any
+  legitimate event nesting - so a hostile deeply-nested payload from an
+  untrusted `verifyRecords` / `fromVerifiedSnapshot` input is rejected early and
+  fails closed (append -> null, verify -> sig_mismatch) instead of consuming
+  stack + CPU up to a RangeError. Also documents the intentional null-proto
+  JSON-value equivalence.
+- MED (fail-open snapshot regression): the new depth guard let a raw
+  `fromSnapshot` throw mid-mutation (it cleared `this.records` before cloning),
+  leaving the instance desynced (records=[] with a stale headSig). The clone now
+  builds into locals and swaps `records` / `nextSeq` / `headSig` in only after
+  the FULL clone succeeds; any `deepCloneJson` failure returns with the prior
+  state intact (fail closed).
+
+Round-4 boundary tests (depth 256 signs / 257 rejects; equivalent nested
+payloads sign identically across instances) + the no-mutate regression. Full
+suite 4087 / 4087 green. **2.2.5 is the current npm `latest`** (`npm install
+loom-engine`).
+
+## 2.2.4 - 2026-05-21 (EventChain - reject __proto__ data key)
+
+Self-found while landing 2.2.3's `deepCloneJson`: a JSON-parsed payload can
+carry an own `"__proto__"` data key, which a normal-prototype clone cannot
+faithfully round-trip (`out[key]=...` hits the prototype setter). It already
+failed CLOSED (sig_mismatch, never a verify bypass) - so 2.2.3 on beta was safe
+- but the canonical boundary is hardened anyway:
+
+- `assertObjectSurface` rejects an own `"__proto__"` key fail-closed.
+- `deepCloneJson` assigns via `Object.defineProperty`, so no clone path
+  (including raw untrusted `fromSnapshot`) can trigger the prototype setter.
+
+A `__proto__`-rejection test. Full suite 4082 / 4082 green.
+
+## 2.2.3 - 2026-05-21 (EventChain - round-2 audit: injectivity + clone isolation)
+
+Round-2 Codex audit of 2.2.2 found one surviving HIGH and three MEDs in the
+canonicalization / snapshot trust boundary, all fixed fail-closed:
+
+- HIGH (signed-zero collision): `canonicalJson` accepted `-0`, which `String()`s
+  to `"0"` yet is a distinct JS value (`Object.is(-0, 0) === false`) - so a
+  signed zero could collide with positive zero under one signature. Now handled
+  so distinct values cannot share an HMAC.
+- MED: residual injectivity + clone-isolation gaps at the snapshot trust
+  boundary, hardened so an adversarial input cannot desync or alias a verified
+  instance.
+
+New injectivity + clone-isolation tests. Full suite green.
+
+## 2.2.2 - 2026-05-21 (EventChain - round-1 external crypto audit fixes)
+
+Fixes from an independent Codex audit of the 2.2.1 EventChain, before promoting
+to npm `latest`. All HIGH/MED findings closed; the encoding is now provably
+injective and fails closed on anything it cannot faithfully sign.
+
+- HIGH (injectivity): canonical strings could collide because TextEncoder maps
+  lone surrogates lossily to U+FFFD (two distinct strings -> same bytes -> same
+  HMAC). `assertCleanString` now rejects unpaired surrogates in every signed
+  field (type, prevSig, payload strings + object keys); valid Unicode is
+  unaffected.
+- HIGH (semantic collisions): `canonicalJson` previously collapsed
+  `undefined` / `NaN` / `Infinity` / `Date` / `Map` / `Set` / sparse-array holes
+  / functions / symbols / bigint to `null` or `{}`, so distinct payloads could
+  share a signature. It is now STRICT - any value that is not faithfully,
+  injectively serializable throws; `append()` rejects it (no seq burned) and
+  `verifyRecords()` marks such a stored record `sig_mismatch` (never throws).
+- MED (fail-open snapshot): new `fromVerifiedSnapshot(records, seal?)` verifies
+  BEFORE mutating and leaves the instance untouched when verification fails, so
+  an adversarial snapshot cannot desync it. `fromSnapshot` stays for trusted
+  loads.
+- Tests: lone-surrogate rejection + collision, `{x:null}` vs `{x:NaN}` /
+  `undefined` / Date / Map / Set rejection, `fromVerifiedSnapshot` no-mutate,
+  and a node:crypto parity sweep for SHA-256 + HMAC across block-boundary
+  lengths (0..200 bytes, keys above + below the 64-byte block).
+
+6 new tests; full suite 4072 / 4072 green.
+
+## 2.2.1 - 2026-05-21 (EventChain hardening - pre-`latest` audit pass)
+
+Security + correctness hardening of the 2.2.0 EventChain before promoting it
+from the npm `beta` tag to `latest`. Additive API only. The record signing
+format changed (length-prefix + domain tag), so 2.2.1 signatures differ from
+2.2.0 - fine on the rapid-stream beta, and a chain is always self-consistent
+within a single version.
+
+- INJECTIVE ENCODING: the signed message is now length-prefixed and
+  domain-separated (`<len>:<value>` per field, tagged `loom.chain.rec/1`)
+  instead of raw `|` joins. A `type` or payload string can no longer forge a
+  field boundary - the encoding is provably injective.
+- TAIL-TRUNCATION DETECTION: new `seal()` returns a signed (count, head)
+  commitment; `verify(seal)` / `verifyRecords(..., seal)` and the static
+  `EventChain.verifySeal()` detect records dropped off the END of the log -
+  something a bare hash chain cannot see without an external length
+  commitment. New `seal_mismatch` reason + `ChainSeal` type.
+- CONSTANT-TIME COMPARE: signature verification now uses `timingSafeEqualHex`
+  (also exported) instead of `!==`, removing the early-exit timing signal if
+  verification ever runs in an online / oracle context.
+
+8 new tests (delimiter-injection, boundary-shift non-collision, seal
+round-trip, tail-truncation with/without seal, constant-time compare); full
+suite 4066 / 4066 green.
+
+## 2.2.0 - 2026-05-21 (EventChain - tamper-evident HMAC-chained event log)
+
+**One new pure-logic kernel.** `EventChain` is the integrity-bearing
+sibling of `EventLog` (0.83.0): every appended record is signed with
+HMAC-SHA-256, and each signature folds in the previous record's
+signature, so the whole log is a hash chain. `verify()` recomputes every
+signature AND checks the chain linkage, catching three tamper classes a
+plain log cannot:
+
+- field tampering   - a payload / type / seq edited at rest (sig_mismatch)
+- record deletion   - a middle record removed (broken_chain_link)
+- record reordering - records shuffled (broken_chain_link)
+
+Use it for audit trails, anti-cheat event tapes, economy / ledger logs,
+or any "prove this sequence was not altered" requirement. The pattern is
+ported from the server-authoritative event tape running in production in
+TheWorldTable's LoomMaster backend (the same chain that guards its combat
+resolution and currency ledger).
+
+Ships with `hmacSha256` - a small, dependency-free, SYNCHRONOUS
+HMAC-SHA-256 (FIPS 180-4 + RFC 2104). The engine's other crypto
+(`sealed-asset`) uses async Web Crypto; EventChain needs a sync signer so
+`append()` / `verify()` stay synchronous like every other kernel. It is
+verified against the published NIST SHA-256 and RFC 4231 HMAC test
+vectors, depends only on `TextEncoder` + typed arrays, and runs
+identically in the browser and Node.
+
+API: `EventChain.create({ key, genesis? })`, `append(type, payload)`,
+`verify()`, and static `EventChain.verifyRecords(key, records, genesis?)`
+to verify an external snapshot, plus `toSnapshot` / `fromSnapshot`,
+`bySeq`, `byType`, `head`. New exports: `EventChain`,
+`RESOURCE_EVENT_CHAIN`, `sha256Hex`, `sha256Bytes`, `hmacSha256Hex`,
+`hmacSha256Bytes`.
+
+INTEGRITY, NOT SECRECY: payloads are stored in the clear; the signature
+proves they were not altered. The HMAC key is a runtime parameter, never
+persisted or logged by the engine. Canonical JSON sorts object keys so
+signing is order-independent; output is self-consistent within the engine
+and is not promised byte-compatible with other languages' HMAC framing.
+
+26 new tests (11 HMAC known-answer vectors + 15 EventChain integrity
+checks) bring the suite to 4058 / 4058 green. Also corrects the long-stale
+`LOOM_ENGINE_VERSION` constant (was '1.7.5', adrift since the 2.x bumps) so
+it tracks package.json again, and rewrites the two version-pin tests
+(smoke + webgl2-device) to read package.json dynamically so they can never
+drift on a future release.
+
+## 2.1.0 - 2026-05-17 (Bestiary - Trinity Wave 2.1 universal creature lifecycle kernel)
+
+**One new pure-logic kernel.** `BestiaryKernel` is the universal NPC
+creature lifecycle primitive: SoA storage at <100 bytes per creature,
+generational 32-bit handles, per-slot pre-allocated BehaviorTree
+instances, double-buffered death FX event ring, and zero-allocation
+hot-loop ticks. Integrates the existing Trinity kernels through one
+facade so consumers stop writing their own ad-hoc AI / spawn / death
+pipelines:
+
+- `SonicSync` perception drained into per-slot blackboards
+- `LoomPulse` mood values pulled into BT context each tick
+- `InferenceOrchestrator` cloud-lane requests submitted for T3+ only
+- `NarrativeMemory` prior-death recall biases initial mood
+- `BehaviorTree` instances drive intent (action, velocity, facing)
+  per tick; the kernel reads intent and writes SoA
+
+Ships with `CREATURE_CATALOG`: 6 skeleton variants for Wave 2.1 -
+warrior, archer, caster (T1 fodder), bone reaver, choir skeleton
+(T2 elite), and First Standing (T3 mini-boss with cloud inference).
+Each variant declares spec data (sizeScale, palette key, BT id,
+mood channel, audible signature, perception radius, inference lane,
+death FX taxonomy, signature behaviors) so adding a new family
+requires zero kernel code changes.
+
+`defaultBehaviorTreeFactory` ships authored fallback BTs for all 6
+variants - pursue / kite / channel / charge / wail / fallback-selector
+patterns matching the signatureBehaviors field. Consumers can swap
+the factory wholesale via `setBehaviorTreeFactory` for richer per-
+variant authoring.
+
+All 48 BestiaryKernel tests pass (full suite: 4032 / 4032 green,
+up from 3984 at v2.0.0); 30 concurrent creatures × 60 ticks
+completes in under 4ms on a desktop V8.
+
 ## 2.0.1 - 2026-05-15 (Description refresh - npm card + landing + README)
 
 **No code changes.** Refreshes the engine description copy across

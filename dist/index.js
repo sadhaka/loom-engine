@@ -8,7 +8,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '1.7.5';
+export const LOOM_ENGINE_VERSION = '2.2.5';
 export { vec2, vec3, rect, clamp, lerp, smoothstep, approxEq, rectContains, rectIntersects, visibleInView, } from './util/math.js';
 export { rgba, hexToRgba, rgbaToHexString, rgbaToCssString, colorLerp, COLOR_WHITE, COLOR_BLACK, COLOR_TRANSPARENT, COLOR_KNOT_STR, COLOR_KNOT_DEX, COLOR_KNOT_INT, COLOR_KNOT_CENTER, } from './util/color.js';
 export { EntityAllocator, NULL_ENTITY, entityIndex, entityGeneration, makeEntity, } from './entity.js';
@@ -150,6 +150,13 @@ export { Quadtree, RESOURCE_QUADTREE } from './runtime/quadtree.js';
 export { ThresholdTrigger, RESOURCE_THRESHOLD_TRIGGER } from './runtime/threshold-trigger.js';
 // 0.83.0 - structured replay-friendly event log.
 export { EventLog, RESOURCE_EVENT_LOG } from './runtime/event-log.js';
+// 2.2.0 - dependency-free synchronous HMAC-SHA-256 (integrity primitive) +
+// constant-time hex compare (2.2.1).
+export { sha256Bytes, sha256Hex, hmacSha256Bytes, hmacSha256Hex, timingSafeEqualHex, } from './runtime/hmac-sha256.js';
+// 2.2.0 - tamper-evident HMAC-chained event log (the integrity-bearing
+// sibling of EventLog; detects field tamper, deletion, reordering, and - with
+// a seal() commitment - tail truncation).
+export { EventChain, RESOURCE_EVENT_CHAIN } from './runtime/event-chain.js';
 // 0.84.0 - declarative asset list + dependency graph.
 export { AssetManifest, RESOURCE_ASSET_MANIFEST } from './runtime/asset-manifest.js';
 // 0.85.0 - keybinding profile manager (M9 0.85 milestone).
@@ -556,4 +563,12 @@ export { PeerPresenceSystem, PeerRenderSystem, } from './systems/peer-presence-s
 export { DeltaCompressor, DELTA_WIRE_MAGIC, DELTA_WIRE_VERSION, DELTA_MAX_COLUMNS, deltaFrameToBase64, deltaFrameFromBase64, } from './network/delta-compressor.js';
 export { InputReconciliation, FIXED_POINT_SHIFT, FIXED_POINT_ONE, floatToFixed, fixedToFloat, } from './network/input-reconciliation.js';
 export { ClientPluginRegistry, MapPluginStorage as ClientMapPluginStorage, ConsolePluginLogger as ClientConsolePluginLogger, PluginEntropy, PluginError, ALL_SCOPES as CLIENT_PLUGIN_SCOPES, DEFAULT_PLUGIN_STORAGE_MAX_BYTES as CLIENT_PLUGIN_DEFAULT_STORAGE_MAX_BYTES, DEFAULT_PLUGIN_TICK_BUDGET_MS as CLIENT_PLUGIN_DEFAULT_TICK_BUDGET_MS, setWithTtl as clientPluginSetWithTtl, getWithTtlCheck as clientPluginGetWithTtlCheck, } from './plugins/index.js';
+// Bestiary - Trinity Wave 2.1 candidate creature lifecycle kernel.
+// SoA storage of NPC creatures with generational handles, ticked from
+// per-slot BehaviorTrees, fed perception events from SonicSync, mood
+// values from LoomPulse, AI decisions from InferenceOrchestrator for
+// high-tier creatures, and prior-encounter bias from NarrativeMemory
+// at spawn. Emits compact death FX events through a double-buffered
+// ring for the render layer.
+export { BestiaryKernel, CREATURE_CATALOG, RESOURCE_BESTIARY, BESTIARY_FP_SHIFT, BESTIARY_FP_ONE, TIER_FODDER, TIER_ELITE, TIER_MINIBOSS, TIER_BOSS, TIER_RAID, INFERENCE_LANE_NONE as BESTIARY_INFERENCE_LANE_NONE, INFERENCE_LANE_LOCAL_SLM as BESTIARY_INFERENCE_LANE_LOCAL_SLM, INFERENCE_LANE_CLOUD as BESTIARY_INFERENCE_LANE_CLOUD, DEATH_FX_NONE, DEATH_FX_BONE_SHATTER, DEATH_FX_SOUL_WISP_RISE, DEATH_FX_SIGIL_BURST, DEATH_FX_CYAN_DIVIDE_SPLIT_2, DEATH_FX_CHAMPION_COLLAPSE, CREATURE_ACTION_IDLE, CREATURE_ACTION_PATROL, CREATURE_ACTION_PURSUE, CREATURE_ACTION_WIND_UP, CREATURE_ACTION_SWING, CREATURE_ACTION_DRAW, CREATURE_ACTION_RELEASE, CREATURE_ACTION_CHANNEL, CREATURE_ACTION_TAUNT, CREATURE_ACTION_FLEE, CREATURE_ACTION_TAKE_DAMAGE, CREATURE_ACTION_DEAD, CREATURE_HANDLE_INVALID, TARGET_HANDLE_NONE, VARIANT_IDX_INVALID, MOOD_AGITATION, MOOD_FEAR, MOOD_CAUTION, MOOD_BLOODLUST, MOOD_SORROW, MOOD_DOMINANCE, MOOD_INVALID, SONIC_SEMANTIC_PLAYER_FOOTSTEP, SONIC_SEMANTIC_PLAYER_ATTACK, SONIC_SEMANTIC_ALLY_DEATH, DEFAULT_LISTENER_SEMANTIC_MASK, DEATH_FX_EVENT_STRIDE, BB_KEY_HP, BB_KEY_MAX_HP, BB_KEY_POS_X, BB_KEY_POS_Y, BB_KEY_FACING, BB_KEY_MOOD, BB_KEY_TARGET_HANDLE, BB_KEY_TARGET_X, BB_KEY_TARGET_Y, BB_KEY_PERCEIVED_SOURCE, BB_KEY_PERCEIVED_DISTANCE, BB_KEY_TICK_COUNT, BB_KEY_VARIANT_IDX, BB_KEY_INTENT_ACTION, BB_KEY_INTENT_VEL_X, BB_KEY_INTENT_VEL_Y, BB_KEY_INTENT_FACING, BB_KEY_INFERENCE_DECISION, BB_KEY_BIAS_FROM_MEMORY, makeCreatureHandle, creatureSlot, creatureGeneration, getVariantIndex, getSpec, isCatalogValid, defaultBehaviorTreeFactory, } from './runtime/bestiary.js';
 //# sourceMappingURL=index.js.map
