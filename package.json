@@ -57,7 +57,7 @@
     "prepublishOnly": "npm test && npm run build"
   },
   "devDependencies": {
-    "tsx": "^4.19.0",
+    "tsx": "^4.22.3",
     "typedoc": "^0.28.19",
     "typedoc-plugin-markdown": "^4.11.0",
     "typescript": "^5.4.0"
