@@ -634,6 +634,12 @@ Versions 0.11.0 and later are licensed under the
 [Business Source License 1.1](./LICENSE) - SPDX identifier `BUSL-1.1`,
 declared in `package.json`. Copyright (c) 2026 Misha Mitiev.
 
+GitHub's repo header shows "Other" / "NOASSERTION" for this repo: its license
+detector (licensee) only recognizes the open-source licenses catalogued on
+choosealicense.com, and BUSL-1.1 is source-available, not in that set - so every
+BUSL project displays this way. It is cosmetic; the authoritative license is the
+LICENSE file plus the `BUSL-1.1` SPDX id in package.json.
+
 For a one-page plain-English overview of the terms (what you can do for
 free, what requires a commercial license, the Change Date conversion to
 Apache 2.0), see [docs/LICENSE-HEADER.md](./docs/LICENSE-HEADER.md).
