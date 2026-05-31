@@ -631,14 +631,12 @@ serving the last successful build but go stale), check
 ## License
 
 Versions 0.11.0 and later are licensed under the
-[Business Source License 1.1](./LICENSE) ("BUSL-1.1").
-Copyright (c) 2026 Misha Mitiev.
+[Business Source License 1.1](./LICENSE) - SPDX identifier `BUSL-1.1`,
+declared in `package.json`. Copyright (c) 2026 Misha Mitiev.
 
 For a one-page plain-English overview of the terms (what you can do for
 free, what requires a commercial license, the Change Date conversion to
-Apache 2.0), see [LICENSE-HEADER.md](./LICENSE-HEADER.md). GitHub displays
-"NOASSERTION" on the repo header because BUSL-1.1 is not in the SPDX
-license identifier list - this is cosmetic and explained in the header.
+Apache 2.0), see [docs/LICENSE-HEADER.md](./docs/LICENSE-HEADER.md).
 
 - **Free for use** below USD $1,000,000 annual gross revenue from any
   product, game, or service that incorporates this engine. Personal
