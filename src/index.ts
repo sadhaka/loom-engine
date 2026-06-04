@@ -354,6 +354,21 @@ export {
   RESOURCE_RANGE_BANDS,
 } from './runtime/range-bands.js';
 export type { RangeBand, RangeBandField, SetPairOptions } from './runtime/range-bands.js';
+// 2.3.0 - Reaction Economy: the per-round "1 reaction per combatant" ceiling.
+export {
+  REACTIONS_PER_ROUND,
+  createReactionLedger,
+  canReact,
+  reactionsRemaining,
+  spendReaction,
+  advanceReactionRound,
+  setReactionRound,
+  pruneStaleSpends,
+  clearReactions,
+  reactionLedgerSnapshot,
+  RESOURCE_REACTION_ECONOMY,
+} from './runtime/reaction-economy.js';
+export type { ReactionLedger } from './runtime/reaction-economy.js';
 // 0.55.0 - A* pathfinder on a grid (grid-agnostic via isWalkable callback).
 export { findPath, RESOURCE_PATHFINDER } from './runtime/pathfinder.js';
 export type {
