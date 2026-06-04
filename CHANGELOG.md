@@ -7,6 +7,36 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 2.3.0 - 2026-06-05 (Combat determinism extraction - range bands + reaction economy + narration contract)
+
+Extracts the generic, framework-agnostic deterministic combat primitives proven
+in production (TheWorldTable / LoomMaster) into the public engine. Each is pure +
+deterministic (no RNG, no wall-clock) so it replays byte-identically - the basis
+for server-authoritative anti-cheat + honest AI-narrated play.
+
+- **Range Bands** (`runtime/range-bands`): grid-free relative positioning - every
+  combatant pair has a band (Engaged <=5ft / Near <=30ft / Far) instead of (x, y),
+  so an AI narrator's weak spatial reasoning never decides positioning. Raw-float
+  thresholds (5.49ft is Near, not rounded to Engaged); an insertion-ordered
+  `RangeBandField` snapshots / replays identically. `bandFromDistanceFt` /
+  `bandWithin` / `compareBands` + the field API.
+- **Reaction Economy** (`runtime/reaction-economy`): the per-round "1 reaction per
+  combatant" ceiling (kills infinite-reaction loops), as a storage-free
+  `ReactionLedger`. Each spend is round-tagged, so a stale prior-round spend is
+  inert even if a reset is missed. `canReact` / `spendReaction` /
+  `advanceReactionRound`.
+- **Narration Contract** (`runtime/narration-contract`): the engine-owns-outcomes
+  guarantee - the differentiator vs pure-LLM story apps. `findInventedNumber`
+  flags any mechanics number the prose states that the engine did NOT produce,
+  catching numerals AND number-words ("seven", "twenty-one"). Validate-before-show
+  for AI-narrated dice.
+
+28 new tests (raw-float band edges, the reaction ceiling + round-tag robustness,
+invented-number detection incl. number-words). `tsc` clean.
+
+In progress for this milestone: 5e + PF2e ruleset adapters (action economy /
+initiative / conditions, with SRD CC-BY + PF2e ORC attribution).
+
 ## 2.2.5 - 2026-05-21 (EventChain - round-3/4 audit: DoS depth bound + transactional snapshot)
 
 Closes the round-3 audit LOW (DoS hardening) and the round-4 regression it
