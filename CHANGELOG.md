@@ -31,11 +31,19 @@ for server-authoritative anti-cheat + honest AI-narrated play.
   catching numerals AND number-words ("seven", "twenty-one"). Validate-before-show
   for AI-narrated dice.
 
-28 new tests (raw-float band edges, the reaction ceiling + round-tag robustness,
-invented-number detection incl. number-words). `tsc` clean.
+- **Ruleset Adapters** (`runtime/ruleset`): the three mechanics that differ by
+  system, deterministic + content-agnostic. Action economy (`startTurnBudget` -
+  5e action+bonus+reaction, PF2e 3-actions+reaction; `canSpend`/`spend`),
+  `initiativeOrder` (total desc, tiebreak modifier > natural d20 > id - one
+  tiebreak correct for both 5e and PF2e), and a condition-duration tracker
+  (`applyCondition`/`tickConditions`/`activeConditions`, names supplied by the
+  caller so no SRD text is reproduced). Compatible with the D&D 5e SRD (CC-BY-4.0)
+  and the Pathfinder Second Edition Remaster ruleset (ORC License); attribution
+  in NOTICE.md. Not affiliated with or endorsed by Wizards of the Coast or Paizo.
 
-In progress for this milestone: 5e + PF2e ruleset adapters (action economy /
-initiative / conditions, with SRD CC-BY + PF2e ORC attribution).
+35 new tests (raw-float band edges, the reaction ceiling + round-tag robustness,
+invented-number detection incl. number-words, the initiative tiebreak, condition
+ticking). `tsc` clean. SRD/ORC attribution added (NOTICE.md).
 
 ## 2.2.5 - 2026-05-21 (EventChain - round-3/4 audit: DoS depth bound + transactional snapshot)
 

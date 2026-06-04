@@ -378,6 +378,23 @@ export {
   RESOURCE_NARRATION_CONTRACT,
 } from './runtime/narration-contract.js';
 export type { NarrationContractOptions } from './runtime/narration-contract.js';
+// 2.3.0 - Ruleset Adapters: 5e + PF2e action economy / initiative / conditions.
+export {
+  startTurnBudget,
+  canSpend,
+  spend,
+  initiativeOrder,
+  createConditionTrack,
+  applyCondition,
+  removeCondition,
+  hasCondition,
+  conditionRemaining,
+  tickConditions,
+  activeConditions,
+  DURATION_UNTIL_REMOVED,
+  RESOURCE_RULESET,
+} from './runtime/ruleset.js';
+export type { RulesetId, TurnBudget, InitiativeEntry, ConditionTrack } from './runtime/ruleset.js';
 // 0.55.0 - A* pathfinder on a grid (grid-agnostic via isWalkable callback).
 export { findPath, RESOURCE_PATHFINDER } from './runtime/pathfinder.js';
 export type {
