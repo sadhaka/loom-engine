@@ -1,0 +1,14 @@
+[package]
+name = "loom_combat"
+description = "Deterministic combat primitives for the Loom Engine - reaction economy, ruleset adapters (5e/PF2e), range bands."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+# ZERO deps. Pure deterministic logic. (Dice live in loom_math; these modules
+# are RNG-free - ordering, budgets, ceilings, conditions.)
+
+[lints.clippy]
+float_arithmetic = "deny"

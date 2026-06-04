@@ -3,5 +3,9 @@
 version = 4
 
 [[package]]
+name = "loom_combat"
+version = "0.1.0"
+
+[[package]]
 name = "loom_math"
 version = "0.1.0"
