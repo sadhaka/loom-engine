@@ -1,0 +1,22 @@
+[package]
+name = "loom_c_abi"
+description = "C ABI surface of the Loom Engine deterministic core - the FFI boundary that unlocks C# (Unity), Godot (GDExtension), Go (cgo), and any C consumer."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lib]
+name = "loom_engine"
+# cdylib -> .dll/.so/.dylib for Unity/C# P/Invoke + Godot GDExtension.
+# staticlib -> .a/.lib for Go cgo + static native linking.
+crate-type = ["cdylib", "staticlib"]
+
+[dependencies]
+loom_math = { path = "../loom_math" }
+loom_combat = { path = "../loom_combat" }
+loom_events = { path = "../loom_events" }
+serde_json = "1"
+
+[lints.clippy]
+float_arithmetic = "deny"
