@@ -1,0 +1,43 @@
+{
+  "meta": {
+    "engine_version": "2.3.0",
+    "note": "Cross-language golden vectors. INTEGER-only inputs so TS (float feet), Python (float feet), and the Rust core (integer feet) all agree byte-for-byte. Every language harness (tests/golden-vectors.test.ts, python/tests/test_golden_vectors.py, and a future Rust runner) loads THIS file and must produce identical outputs - the parity gate."
+  },
+  "range_bands.band_from_distance_ft": [
+    { "args": [0],   "expect": "engaged" },
+    { "args": [5],   "expect": "engaged" },
+    { "args": [6],   "expect": "near" },
+    { "args": [30],  "expect": "near" },
+    { "args": [31],  "expect": "far" },
+    { "args": [-10], "expect": "near" }
+  ],
+  "range_bands.band_within": [
+    { "args": ["engaged", "near"], "expect": true },
+    { "args": ["far", "near"],     "expect": false },
+    { "args": ["near", "engaged"], "expect": false }
+  ],
+  "narration.find_invented_number": [
+    { "args": ["Your blade bites for 7 damage.", [7]],  "expect": null },
+    { "args": ["Your blade bites for 9 damage.", [7]],  "expect": 9 },
+    { "args": ["You take seven damage.", [7]],          "expect": null },
+    { "args": ["You take eight damage.", [7]],          "expect": 8 },
+    { "args": ["Two guards block the door.", []],        "expect": null }
+  ],
+  "ruleset.initiative_order_ids": [
+    {
+      "entries": [
+        { "id": "c", "total": 18, "modifier": 2, "d20": 16 },
+        { "id": "a", "total": 18, "modifier": 5, "d20": 13 },
+        { "id": "b", "total": 12, "modifier": 1, "d20": 11 },
+        { "id": "d", "total": 18, "modifier": 2, "d20": 16 }
+      ],
+      "expect": ["a", "c", "d", "b"]
+    }
+  ],
+  "reaction.scripted": [
+    {
+      "ops": [["spend", "pc"], ["can_react", "pc"], ["spend", "pc"], ["advance"], ["can_react", "pc"]],
+      "expect": [true, false, false, 2, true]
+    }
+  ]
+}
