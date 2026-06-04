@@ -1,0 +1,25 @@
+[project]
+name = "loom-engine"
+version = "2.3.0"  # pinned to track the npm loom-engine version
+description = "Deterministic TTRPG simulation core for AI-run games - the Python surface of loom-engine. Engine-is-truth: seeded, replay-safe rules the AI narrates but cannot invent."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "See LICENSE / COMMERCIAL_LICENSE_TERMS.md in the repo root" }
+keywords = ["ttrpg", "rpg", "deterministic", "ai-game-master", "5e", "pathfinder", "simulation"]
+dependencies = []  # ZERO runtime deps - the deterministic core is pure stdlib
+
+[project.optional-dependencies]
+test = ["pytest>=7.0.0"]
+
+[project.urls]
+Homepage = "https://www.npmjs.com/package/loom-engine"
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["loom_engine"]
+
+[tool.setuptools.package-data]
+loom_engine = ["py.typed"]
