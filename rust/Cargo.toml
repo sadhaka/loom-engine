@@ -1,0 +1,27 @@
+# Loom Engine - Rust deterministic core (Phase 3 / v3.0).
+#
+# One workspace, compiled to many surfaces (WASM for TS, UniFFI/PyO3 for Python,
+# a C ABI for C#/Unity + Godot + Go). The SAME compiled core on every surface ->
+# byte-identical results for a given seed (the cross-language determinism the
+# whole engine-is-truth guarantee depends on). See ../LOOM-RUST-EXTRACTION-SPEC.md.
+#
+# Phase 1 (this commit): loom_math - the PRNG + integer math. Crates added as the
+# migration's strangler-fig phases land (loom_events, loom_ecs, loom_combat,
+# then the binding crates loom_wasm / loom_py / loom_c_abi).
+
+[workspace]
+resolver = "2"
+members = ["loom_math"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/sadhaka/loom-engine"
+
+[profile.release]
+# Deterministic + small: no platform-specific fast-math, overflow checks off in
+# release (the core uses explicit wrapping arithmetic, never relies on overflow).
+opt-level = 3
+lto = true
+codegen-units = 1

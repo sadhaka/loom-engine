@@ -1,0 +1,15 @@
+[package]
+name = "loom_math"
+description = "Deterministic integer math + RNG for the Loom Engine core - byte-identical across platforms."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+# ZERO dependencies - the deterministic core is pure, no_std-friendly arithmetic.
+
+[lints.clippy]
+# Determinism guardrail: floats are banned in the deterministic core. A stray
+# f32/f64 fails the build (matches the spec's #![deny(clippy::float_arithmetic)]).
+float_arithmetic = "deny"
