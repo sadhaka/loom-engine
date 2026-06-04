@@ -1,0 +1,23 @@
+[package]
+name = "loom_events"
+description = "Tamper-evident HMAC-SHA256 event chain for the Loom Engine - the Rust core of the server-authoritative event tape, byte-compatible with the TS EventChain."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+# Standard, audited HMAC-SHA256. The ALGORITHM is FIPS/RFC-standardized, so for
+# identical (key, message) bytes these produce byte-identical output to the
+# engine's hand-rolled TS hmacSha256 (verified by the shared golden vectors).
+hmac = "0.12"
+sha2 = "0.10"
+# serde_json::Value is the payload AST. We do NOT use its serializer for the
+# canonical form (we hand-write one that matches JS JSON.stringify exactly) -
+# Value is only the typed input + parse path.
+serde_json = "1"
+
+[lints.clippy]
+# This crate does integer + byte work only; floats in a signed payload are
+# rejected fail-closed (determinism rule), never computed on.
+float_arithmetic = "deny"

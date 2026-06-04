@@ -11,7 +11,7 @@
 
 [workspace]
 resolver = "2"
-members = ["loom_math", "loom_combat", "loom_wasm"]
+members = ["loom_math", "loom_combat", "loom_events", "loom_wasm"]
 
 [workspace.package]
 version = "0.1.0"
