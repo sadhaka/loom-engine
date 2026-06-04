@@ -1,4 +1,7 @@
-/target
+# cargo build output - workspace target/ AND the excluded loom_py crate's target/
+**/target/
 **/*.rs.bk
 # wasm-pack output (generated JS/TS glue + wasm)
 **/pkg/
+# maturin wheel output
+**/*.whl

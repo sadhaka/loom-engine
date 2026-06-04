@@ -1,0 +1,27 @@
+# loom_py - the PyO3/maturin surface of the Loom Engine deterministic core.
+#
+# EXCLUDED from the workspace (see ../Cargo.toml [workspace.exclude]): the
+# `extension-module` feature tells PyO3 not to link libpython for a normal build,
+# which breaks `cargo test` under the workspace. It is built with maturin instead
+# (`maturin build` / `maturin develop`), which supplies the interpreter. Its path
+# deps still point at the workspace core crates - one core, every surface.
+
+[package]
+name = "loom_py"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/sadhaka/loom-engine"
+description = "Native (Rust) Python bindings for the Loom Engine deterministic core, via PyO3 + maturin."
+
+[lib]
+# The Python import name. The #[pymodule] fn MUST share this name.
+name = "loom_engine_native"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.22", features = ["extension-module"] }
+serde_json = "1"
+loom_math = { path = "../loom_math" }
+loom_combat = { path = "../loom_combat" }
+loom_events = { path = "../loom_events" }

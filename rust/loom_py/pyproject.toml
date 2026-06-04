@@ -1,0 +1,20 @@
+[build-system]
+requires = ["maturin>=1,<2"]
+build-backend = "maturin"
+
+[project]
+name = "loom-engine-native"
+version = "0.1.0"
+description = "Native (Rust) Python bindings for the Loom Engine deterministic core - the same Rust core the WASM and C-ABI surfaces use, so a Python-server result is byte-identical to a browser-client one."
+requires-python = ">=3.8"
+license = { text = "MIT OR Apache-2.0" }
+classifiers = [
+  "Programming Language :: Rust",
+  "Programming Language :: Python :: Implementation :: CPython",
+]
+
+[tool.maturin]
+# The compiled module imports as `loom_engine_native` (matches the lib name +
+# the #[pymodule] fn). The pure-Python `loom_engine` package is the portable
+# fallback; this is the native acceleration / single-core path.
+module-name = "loom_engine_native"
