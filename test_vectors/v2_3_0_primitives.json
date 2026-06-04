@@ -1,7 +1,7 @@
 {
   "meta": {
     "engine_version": "2.3.0",
-    "note": "Cross-language golden vectors. INTEGER-only inputs so TS (float feet), Python (float feet), and the Rust core (integer feet) all agree byte-for-byte. Every language harness (tests/golden-vectors.test.ts, python/tests/test_golden_vectors.py, and a future Rust runner) loads THIS file and must produce identical outputs - the parity gate."
+    "note": "Cross-language golden vectors. INTEGER-only inputs so TS (float feet), Python (float feet), and the Rust core (integer feet) all agree byte-for-byte. All three language harnesses (tests/golden-vectors.test.ts, python/tests/test_golden_vectors.py, rust/loom_combat/tests/golden_vectors.rs) load THIS file and must produce identical outputs - the parity gate. The Rust runner covers the numeric core only (range bands, initiative, reaction ceiling); narration.find_invented_number is server-side prose validation with no native/WASM client, so it stays TS+Python."
   },
   "range_bands.band_from_distance_ft": [
     { "args": [0],   "expect": "engaged" },
