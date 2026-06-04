@@ -369,6 +369,15 @@ export {
   RESOURCE_REACTION_ECONOMY,
 } from './runtime/reaction-economy.js';
 export type { ReactionLedger } from './runtime/reaction-economy.js';
+// 2.3.0 - Narration Contract: the engine-owns-outcomes (no-invented-number) gate.
+export {
+  parseNumberWord,
+  extractCandidateNumbers,
+  findInventedNumber,
+  isNarrationGrounded,
+  RESOURCE_NARRATION_CONTRACT,
+} from './runtime/narration-contract.js';
+export type { NarrationContractOptions } from './runtime/narration-contract.js';
 // 0.55.0 - A* pathfinder on a grid (grid-agnostic via isWalkable callback).
 export { findPath, RESOURCE_PATHFINDER } from './runtime/pathfinder.js';
 export type {
