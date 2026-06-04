@@ -9,7 +9,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '2.2.5';
+export const LOOM_ENGINE_VERSION = '2.3.0';
 
 // Math + util
 export type { Vec2, Vec3, Rect } from './util/math.js';
@@ -332,6 +332,28 @@ export {
   RESOURCE_AABB,
 } from './runtime/aabb.js';
 export type { AABB } from './runtime/aabb.js';
+// 2.3.0 - Range Bands: grid-free relative positioning (Engaged/Near/Far).
+export {
+  bandFromDistanceFt,
+  normalizeBand,
+  bandWithin,
+  compareBands,
+  createRangeBandField,
+  rangeBandSet,
+  rangeBandGet,
+  rangeBandIsEngaged,
+  rangeBandTargetsWithin,
+  rangeBandEngagedWith,
+  rangeBandClear,
+  rangeBandSnapshot,
+  RANGE_BAND_ENGAGED,
+  RANGE_BAND_NEAR,
+  RANGE_BAND_FAR,
+  ENGAGED_MAX_FT,
+  NEAR_MAX_FT,
+  RESOURCE_RANGE_BANDS,
+} from './runtime/range-bands.js';
+export type { RangeBand, RangeBandField, SetPairOptions } from './runtime/range-bands.js';
 // 0.55.0 - A* pathfinder on a grid (grid-agnostic via isWalkable callback).
 export { findPath, RESOURCE_PATHFINDER } from './runtime/pathfinder.js';
 export type {
