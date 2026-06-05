@@ -32,7 +32,23 @@ cargo add loom_frame               # Rust — the deterministic crates
 
 Live playground: [theworldtable.ai/engine](https://theworldtable.ai/engine/) ·
 API docs: [loom-engine.pages.dev](https://loom-engine.pages.dev/) ·
-Repo: [sadhaka/loom-engine](https://github.com/sadhaka/loom-engine)
+Repo: [sadhaka/loom-engine](https://github.com/sadhaka/loom-engine) ·
+Reproduce the proof: [`examples/same-seed`](examples/same-seed)
+
+## One core, five surfaces
+
+```mermaid
+flowchart TD
+  CORE["One deterministic Rust core<br/>loom_math · loom_events · loom_snapshot<br/>loom_ruleset (AST) · loom_epoch · loom_session · loom_frame"]
+  TS["loom-engine (npm)<br/>TypeScript reference"]
+  CORE -->|wasm-bindgen| WASM["WASM"] --> B["Browser client"]
+  CORE -->|PyO3 / maturin| PY["loom-engine-native (PyPI)"] --> SV["Python game server"]
+  CORE -->|C ABI| CA["C ABI .dll/.so/.a"] --> NT["Unity · Godot · Go"]
+  TS -. "byte-identical, pinned by golden vectors" .- CORE
+  B --> AI["AI narrates — never authors the dice or the state"]
+  SV --> AI
+  NT --> AI
+```
 
 ## License
 
