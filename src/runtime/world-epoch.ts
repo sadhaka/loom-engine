@@ -336,9 +336,9 @@ export interface CatchUpInput {
   ruleset: Ruleset;
   // Optional per-epoch proposals, keyed by String(epochNumber). Missing -> {} (the
   // world ticks with no actor actions for that epoch).
-  proposalsByEpoch?: Record<string, ProposalMap>;
-  actorTags?: string[];
-  maxActions?: number;
+  proposalsByEpoch?: Record<string, ProposalMap> | undefined;
+  actorTags?: string[] | undefined;
+  maxActions?: number | undefined;
 }
 
 export interface CatchUpResult {

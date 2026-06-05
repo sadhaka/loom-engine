@@ -675,6 +675,17 @@ export type {
   EpochActionEntry, EpochResolvedEvent, TickEpochInput, TickEpochResult,
   CatchUpInput, CatchUpResult,
 } from './runtime/world-epoch.js';
+// 3.0 Phase 4 - the WorldSession suspend/resume lifecycle. Ties the event-chain,
+// snapshot, and Epoch tick into one fail-closed flow: pack a world into a
+// verifiable bundle (suspend), then verify it, replay the HMAC chain tail via a
+// recorded-mutation reducer, and fast-forward offline epochs (resume) - byte-
+// identical on every surface. Pinned by test_vectors/v3_4_world_session.json.
+export {
+  suspend, resume, replayEpochEvent, RESOURCE_WORLD_SESSION,
+} from './runtime/world-session.js';
+export type {
+  WorldBundle, SuspendInput, ResumeInput, ResumeResult,
+} from './runtime/world-session.js';
 // 0.84.0 - declarative asset list + dependency graph.
 export { AssetManifest, RESOURCE_ASSET_MANIFEST } from './runtime/asset-manifest.js';
 export type {
