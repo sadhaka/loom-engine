@@ -7,6 +7,28 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 3.0.1 - 2026-06-05 (multiplayer + C-ABI hardening - Codex 4th-audit cross-language parity)
+
+Closes byte-parity divergences in the v5 multiplayer core found in a post-3.0.0
+external audit. 3.0.0 (the v5 API debut) is superseded - do not use it for shared-world
+play; it can disagree on a frame outcome across surfaces.
+
+- **Frame PRNG, structured + injective**: the frame seed is now
+  `SHA-256( field('loom.frame/1') || field(worldId) || LE64(frameNumber) )` -
+  length-prefixed fields, so no crafted world id can re-segment into another world's
+  stream (the old `worldId + '|loom.frame/1'` concat could). v5_1 golden vector
+  regenerated; reproduced byte-for-byte on TS, Rust, WASM, PyO3, and the C ABI.
+- **Fail-closed command + frame validation**: every command's `playerId` (string) and
+  `seq` (JS-safe integer) is validated before the sort - a malformed `seq` is rejected,
+  never coerced (JS coerced numerically, the strict-parse surfaces to 0, silently
+  re-ordering commands). The reconcile anchor (`correctedState.frame`/`toFrame`) must be
+  a non-negative safe integer and the rollback window is hard-capped (anti-DoS). Same
+  rejection on every surface.
+- **C ABI bounded hash variants**: added `loom_world_state_hash_n` +
+  `loom_global_region_hash_n` (ptr+len); the C-string JSON exports are marked
+  DEPRECATED - the panic guard cannot catch the UB of an unbounded `CStr` scan past a
+  non-terminated buffer, so the `_n` forms are the supported ABI.
+
 ## 3.0.0 - 2026-06-05 (Living Persistent World + cross-language surfaces + real-time multiplayer core)
 
 The engine becomes a deterministic, server-authoritative world engine: the same logic
@@ -36,13 +58,7 @@ the same seed on every surface - proven by shared golden vectors.
   id, resolved through the AST, fail-closed + rate-capped), client-side rollback
   reconciliation (replay unconfirmed commands over the corrected server frame), and
   region hashing (a 2-level Merkle so a partial-sync client verifies only its own
-  region + the root). The client can predict but can never forge an outcome. The
-  frame PRNG is derived from structured length-prefixed fields
-  (`field('loom.frame/1') || field(worldId) || LE64(frameNumber)`), injective across
-  world ids; every command's `playerId`/`seq` and the reconcile anchor
-  (`correctedState.frame`/`toFrame`) are validated fail-closed at the boundary and the
-  rollback window is bounded, so the ordering and replay are byte-identical on every
-  surface (no silent seq coercion, no unbounded replay).
+  region + the root). The client can predict but can never forge an outcome.
 - **Four binding surfaces**: a Rust workspace (`loom_math`, `loom_events`,
   `loom_snapshot`, `loom_ruleset`, `loom_epoch`, `loom_session`, `loom_frame`) bound to
   WASM (`loom_wasm`), a PyO3 wheel (`loom_py`), and a panic-guarded C ABI
