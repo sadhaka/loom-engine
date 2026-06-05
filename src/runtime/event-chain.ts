@@ -233,6 +233,13 @@ function canonicalJson(value: unknown, depth: number = 0): string {
     if (Object.is(value, -0)) {
       throw new Error('EventChain: negative zero not allowed in payload');
     }
+    // 2.3.0 (Codex P0): integer-only canonical surface. A non-integer number's
+    // String() form (V8 shortest-round-trip dtoa) is NOT reproducible by the Rust
+    // core, so reject fractions fail-closed - signed event data is integer-only
+    // (the determinism rule) and this keeps Rust/TS byte-identical.
+    if (!Number.isInteger(value as number)) {
+      throw new Error('EventChain: non-integer number not allowed in payload (integer-only)');
+    }
     return String(value);
   }
   if (t === 'boolean') return (value as boolean) ? 'true' : 'false';

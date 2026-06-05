@@ -75,15 +75,18 @@ uint32_t loom_pcg32_next(uint64_t seed);
 int loom_floor_div(int64_t a, int64_t b, int64_t *out);
 
 /**
- * Order `n` entries; write the ordered ids into `out_ids` (length >= n). Returns
- * 0 on success, -1 on a null pointer. Tiebreak: total/modifier/d20 DESC, then
- * id ASC (string compare in the core - numeric ids round-trip here).
+ * Order `n` entries; write the ordered ids into `out_ids` (capacity `out_cap`,
+ * which MUST be >= n). Returns 0 on success, -1 on a null pointer / out_cap < n.
+ * Tiebreak: total/modifier/d20 DESC, then a numeric-aware id compare.
  *
  * # Safety
  * `entries` must point to `n` initialized `LoomInitiativeEntry`; `out_ids` must
- * point to writable storage for `n` `i64`.
+ * point to writable storage for at least `out_cap` `i64`, with `out_cap >= n`.
  */
-int loom_initiative_order(const struct LoomInitiativeEntry *entries, uintptr_t n, int64_t *out_ids);
+int loom_initiative_order(const struct LoomInitiativeEntry *entries,
+                          uintptr_t n,
+                          int64_t *out_ids,
+                          uintptr_t out_cap);
 
 /**
  * HMAC-SHA256 of `message` under `key` -> 64-char lowercase hex written to `out`

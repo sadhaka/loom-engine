@@ -100,20 +100,23 @@ pub struct LoomInitiativeEntry {
     pub d20: i64,
 }
 
-/// Order `n` entries; write the ordered ids into `out_ids` (length >= n). Returns
-/// 0 on success, -1 on a null pointer. Tiebreak: total/modifier/d20 DESC, then
-/// id ASC (string compare in the core - numeric ids round-trip here).
+/// Order `n` entries; write the ordered ids into `out_ids` (capacity `out_cap`,
+/// which MUST be >= n). Returns 0 on success, -1 on a null pointer / out_cap < n.
+/// Tiebreak: total/modifier/d20 DESC, then a numeric-aware id compare.
 ///
 /// # Safety
 /// `entries` must point to `n` initialized `LoomInitiativeEntry`; `out_ids` must
-/// point to writable storage for `n` `i64`.
+/// point to writable storage for at least `out_cap` `i64`, with `out_cap >= n`.
 #[no_mangle]
 pub unsafe extern "C" fn loom_initiative_order(
     entries: *const LoomInitiativeEntry,
     n: usize,
     out_ids: *mut i64,
+    out_cap: usize,
 ) -> c_int {
-    if entries.is_null() || out_ids.is_null() {
+    // Codex P0: never write past the caller buffer. Require out_cap >= n; a sane
+    // upper bound also stops a hostile n from a giant from_raw_parts.
+    if entries.is_null() || out_ids.is_null() || out_cap < n || n > 1_000_000 {
         return -1;
     }
     let slice = std::slice::from_raw_parts(entries, n);
@@ -260,12 +263,22 @@ mod tests {
         let mut out = [0i64; 3];
         unsafe {
             assert_eq!(
-                loom_initiative_order(entries.as_ptr(), 3, out.as_mut_ptr()),
+                loom_initiative_order(entries.as_ptr(), 3, out.as_mut_ptr(), 3),
                 0
             );
         }
         // 4 (total 21) first, then 3 (mod 5 > 2), then 7.
         assert_eq!(out, [4, 3, 7]);
+
+        // Codex P0: out_cap < n must be refused, never write past the buffer.
+        let mut small = [0i64; 1];
+        unsafe {
+            assert_eq!(
+                loom_initiative_order(entries.as_ptr(), 3, small.as_mut_ptr(), 1),
+                -1
+            );
+        }
+        assert_eq!(small, [0]); // untouched
     }
 
     #[test]

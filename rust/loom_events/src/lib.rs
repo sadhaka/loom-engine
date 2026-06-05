@@ -55,6 +55,12 @@ const MAX_CANONICAL_DEPTH: usize = 256;
 pub enum CanonError {
     /// A number with a real fractional part (see the FLOAT BOUNDARY note).
     NonIntegerNumber,
+    /// Negative zero (-0.0). TS rejects it fail-closed; we match (a signed 0 must
+    /// not be mutable to -0 and still verify).
+    NegativeZero,
+    /// An own "__proto__" data key. TS rejects it (a JSON-parsed __proto__ cannot
+    /// round-trip through a normal-prototype clone); we match for parity.
+    ForbiddenKey,
     /// Payload nesting exceeds MAX_CANONICAL_DEPTH.
     DepthExceeded,
 }
@@ -128,6 +134,10 @@ fn canonical_number(n: &serde_json::Number) -> Result<String, CanonError> {
     }
     if let Some(f) = n.as_f64() {
         if f.is_finite() {
+            // Codex P0: reject -0.0 to match the TS surface (Object.is(v, -0)).
+            if f == 0.0 && f.is_sign_negative() {
+                return Err(CanonError::NegativeZero);
+            }
             // Round-trip through an integer cast (no float arithmetic): if the
             // value survives, it is an exact integer and stringifies like one,
             // matching JS where 7.0 and 7 are the same number -> "7".
@@ -165,6 +175,10 @@ fn canonical_json(value: &Value, depth: usize) -> Result<String, CanonError> {
             Ok(format!("[{}]", items.join(",")))
         }
         Value::Object(map) => {
+            // Codex P0: reject an own "__proto__" data key to match TS.
+            if map.contains_key("__proto__") {
+                return Err(CanonError::ForbiddenKey);
+            }
             // Sort by UTF-16 code-unit sequence to match JS Object.keys().sort().
             let mut keys: Vec<&String> = map.keys().collect();
             keys.sort_by(|a, b| a.encode_utf16().cmp(b.encode_utf16()));
@@ -390,6 +404,19 @@ mod tests {
         assert_eq!(canonical_json(&json!(7.0), 0).unwrap(), "7");
         // A real fraction is rejected fail-closed.
         assert_eq!(canonical_json(&json!(7.5), 0), Err(CanonError::NonIntegerNumber));
+    }
+
+    #[test]
+    fn rejects_ts_forbidden_shapes() {
+        // Codex P0 parity: -0.0 and an own __proto__ key are rejected, matching TS.
+        assert_eq!(
+            canonical_json(&json!(-0.0), 0),
+            Err(CanonError::NegativeZero)
+        );
+        let proto = serde_json::from_str::<Value>("{\"__proto__\":{\"x\":1}}").unwrap();
+        assert_eq!(canonical_json(&proto, 0), Err(CanonError::ForbiddenKey));
+        // sign_record surfaces the rejection (no signature for a forbidden payload).
+        assert!(sign_record(b"k", 1, "t", &json!(-0.0), "").is_err());
     }
 
     #[test]
