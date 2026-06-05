@@ -42,6 +42,17 @@ pub const DEFAULT_ACTOR_TAG: &str = "acts_offline";
 const REASON_UNKNOWN_ACTION: &str = "unknown_action";
 const REASON_INVALID_ACTION: &str = "invalid_action";
 const REASON_EVAL_ERROR: &str = "eval_error";
+const REASON_MALFORMED_PROPOSAL: &str = "malformed_proposal";
+
+/// The JS-safe integer bound (2^53 - 1). Epoch / catch-up / cap inputs beyond this
+/// are rejected at the JSON boundary, matching the TS/Python guards (and keeping the
+/// emitted event JSON hashable). Codex P1.
+pub const MAX_SAFE_INT: i64 = 9007199254740991;
+
+/// True iff `n` is a JS-safe integer epoch (|n| <= 2^53 - 1).
+pub fn is_safe_epoch(n: i64) -> bool {
+    n >= -MAX_SAFE_INT && n <= MAX_SAFE_INT
+}
 
 // ---- Epoch PRNG derivation -------------------------------------------------
 
@@ -216,8 +227,15 @@ pub fn tick_epoch(input: TickEpochInput) -> TickEpochResult {
             _ => continue, // no proposal -> the actor idles (not counted, not listed)
         };
         let action_id = match proposal.get("actionId").and_then(|x| x.as_str()) {
-            Some(s) => s.to_string(),
-            None => continue, // malformed proposal w/o an action id idles
+            Some(s) if !s.is_empty() => s.to_string(),
+            _ => {
+                // malformed proposal (missing / non-string / empty actionId) - a fixed
+                // schema rejection + zero prng (matches TS/Python), NOT a silent idle
+                // and NOT a crash (Codex P1).
+                entries.push(json!({ "action_id": "", "actor_id": actor_id, "reason": REASON_MALFORMED_PROPOSAL }));
+                rejected += 1;
+                continue;
+            }
         };
         let target_id = proposal.get("targetId").and_then(|x| x.as_str());
 
@@ -352,7 +370,9 @@ pub fn catch_up_epochs(input: CatchUpInput) -> CatchUpResult {
             epochs_voided: 0,
         };
     }
-    let capped = if target > input.max_catchup { input.max_catchup } else { target };
+    // Defense-in-depth: clamp a negative max_catchup to 0 (the JSON boundary already
+    // rejects it; a direct caller gets "no catch-up" instead of garbage counts). Codex P1.
+    let capped = if target > input.max_catchup { input.max_catchup.max(0) } else { target };
 
     let mut work = input.state.clone();
     let mut events: Vec<Value> = Vec::new();
@@ -385,6 +405,84 @@ pub fn catch_up_epochs(input: CatchUpInput) -> CatchUpResult {
         epochs_resolved: capped,
         epochs_voided: target - capped,
     }
+}
+
+// ---- validating JSON boundary (the WASM + PyO3 surfaces call THESE) ---------
+
+fn parse_actor_tags(v: &Value) -> Vec<String> {
+    v.get("actorTags")
+        .and_then(|t| t.as_array())
+        .map(|a| a.iter().filter_map(|x| x.as_str().map(|s| s.to_string())).collect())
+        .unwrap_or_default()
+}
+
+// maxActions: absent/null -> no cap; present -> MUST be a non-negative JS-safe integer
+// (as_u64 already rejects negatives + fractions; we additionally bound it). Codex P1.
+fn parse_max_actions(v: &Value) -> Result<Option<u64>, String> {
+    match v.get("maxActions") {
+        None | Some(Value::Null) => Ok(None),
+        Some(m) => {
+            let n = m
+                .as_u64()
+                .filter(|n| *n <= MAX_SAFE_INT as u64)
+                .ok_or("world-epoch: maxActions must be a non-negative JS-safe integer")?;
+            Ok(Some(n))
+        }
+    }
+}
+
+/// JSON-in / JSON-out tick_epoch WITH full input validation - the boundary the WASM
+/// + PyO3 surfaces call, so every surface rejects the same epoch / maxActions inputs
+/// TS + Python reject. Input: {worldId, state, epochNumber, proposals, ruleset,
+/// actorTags?, maxActions?}. Returns {state, event, resolved, rejected}.
+pub fn tick_epoch_from_json(input_json: &str) -> Result<String, String> {
+    let v: Value = serde_json::from_str(input_json).map_err(|e| format!("world-epoch: bad tick input json: {}", e))?;
+    let world_id = v.get("worldId").and_then(|x| x.as_str()).ok_or("world-epoch: worldId must be a string")?;
+    let epoch_number = v.get("epochNumber").and_then(|x| x.as_i64()).ok_or("world-epoch: epochNumber must be an integer")?;
+    if !is_safe_epoch(epoch_number) {
+        return Err("world-epoch: epoch_number must be a JS-safe integer".to_string());
+    }
+    let max_actions = parse_max_actions(&v)?;
+    let r = tick_epoch(TickEpochInput {
+        world_id,
+        state: &v["state"],
+        epoch_number,
+        proposals: &v["proposals"],
+        ruleset: &v["ruleset"],
+        actor_tags: parse_actor_tags(&v),
+        max_actions,
+    });
+    let out = json!({ "state": r.state, "event": r.event, "resolved": r.resolved, "rejected": r.rejected });
+    serde_json::to_string(&out).map_err(|e| format!("world-epoch: serialize: {}", e))
+}
+
+/// JSON-in / JSON-out catch_up_epochs WITH full input validation. Input: {worldId,
+/// state, currentEpoch, maxCatchup, ruleset, proposalsByEpoch?, actorTags?,
+/// maxActions?}. Returns {state, events, epochsResolved, epochsVoided}.
+pub fn catch_up_epochs_from_json(input_json: &str) -> Result<String, String> {
+    let v: Value = serde_json::from_str(input_json).map_err(|e| format!("world-epoch: bad catchup input json: {}", e))?;
+    let world_id = v.get("worldId").and_then(|x| x.as_str()).ok_or("world-epoch: worldId must be a string")?;
+    let current_epoch = v.get("currentEpoch").and_then(|x| x.as_i64()).ok_or("world-epoch: currentEpoch must be an integer")?;
+    if !is_safe_epoch(current_epoch) {
+        return Err("world-epoch: currentEpoch must be a JS-safe integer".to_string());
+    }
+    let max_catchup = v.get("maxCatchup").and_then(|x| x.as_i64()).ok_or("world-epoch: maxCatchup must be an integer")?;
+    if max_catchup < 0 || !is_safe_epoch(max_catchup) {
+        return Err("world-epoch: maxCatchup must be a non-negative JS-safe integer".to_string());
+    }
+    let max_actions = parse_max_actions(&v)?;
+    let r = catch_up_epochs(CatchUpInput {
+        world_id,
+        state: &v["state"],
+        current_epoch,
+        max_catchup,
+        ruleset: &v["ruleset"],
+        proposals_by_epoch: &v["proposalsByEpoch"],
+        actor_tags: parse_actor_tags(&v),
+        max_actions,
+    });
+    let out = json!({ "state": r.state, "events": r.events, "epochsResolved": r.epochs_resolved, "epochsVoided": r.epochs_voided });
+    serde_json::to_string(&out).map_err(|e| format!("world-epoch: serialize: {}", e))
 }
 
 /// Resource key for the world's resource registry (matches the TS constant).

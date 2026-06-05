@@ -78,6 +78,32 @@ def test_golden_vector_byte_parity():
     assert passed == 7
 
 
+def test_p1_fail_closed_edges():
+    from loom_engine.world_epoch import tick_epoch
+    rs = {
+        "ok": {"kind": "mutations", "mutations": [{"type": "add_prop", "target": "self", "property": "p", "value": {"type": "literal", "value": 1}}]},
+        "bogus": {"kind": "bogus", "mutations": [{"type": "add_prop", "target": "self", "property": "p", "value": {"type": "literal", "value": 1}}]},
+    }
+    st = {"epoch": 0, "worldSeed": 0, "entities": {"a": {"properties": {"p": 0}, "tags": ["faction"]}}}
+    # F3: a fractional maxActions is rejected.
+    raised = False
+    try:
+        tick_epoch("w", st, 1, {"a": {"actionId": "ok"}}, rs, ["faction"], 0.5)
+    except ValueError:
+        raised = True
+    assert raised, "fractional maxActions must be rejected"
+    # F4: an unknown action KIND is rejected (invalid_action), not executed.
+    r4 = tick_epoch("w", st, 1, {"a": {"actionId": "bogus"}}, rs, ["faction"])
+    assert r4["rejected"] == 1 and r4["event"]["actions_processed"][0]["reason"] == "invalid_action"
+    assert r4["state"]["entities"]["a"]["properties"]["p"] == 0, "unknown kind did not mutate"
+    # F5: a proposal with no actionId -> fixed-schema rejection (no KeyError crash).
+    r5 = tick_epoch("w", st, 1, {"a": {"targetId": "b"}}, rs, ["faction"])
+    assert r5["rejected"] == 1
+    assert r5["event"]["actions_processed"][0]["action_id"] == ""
+    assert r5["event"]["actions_processed"][0]["reason"] == "malformed_proposal"
+
+
 if __name__ == "__main__":
     test_golden_vector_byte_parity()
+    test_p1_fail_closed_edges()
     print("world_epoch Python parity: all 7 cases pass")

@@ -128,3 +128,25 @@ test('catch-up: nothing to do when already current', function () {
   assert.strictEqual(r.epochsVoided, 0);
   assert.strictEqual(r.state, state, 'returns the same state untouched');
 });
+
+test('Codex P1: invalid/edge inputs are fail-closed (maxActions, unknown kind, malformed proposal)', function () {
+  var RS = {
+    ok: { kind: 'mutations', mutations: [{ type: 'add_prop', target: 'self', property: 'p', value: { type: 'literal', value: 1 } }] },
+    bogus: { kind: 'bogus', mutations: [{ type: 'add_prop', target: 'self', property: 'p', value: { type: 'literal', value: 1 } }] },
+  };
+  var st = { epoch: 0, worldSeed: 0, entities: { a: { properties: { p: 0 }, tags: ['faction'] } } };
+  // F3: a fractional maxActions is rejected (not silently accepted).
+  assert.throws(function () {
+    tickEpoch({ worldId: 'w', state: st as never, epochNumber: 1, proposals: { a: { actionId: 'ok' } }, ruleset: RS as never, actorTags: ['faction'], maxActions: 0.5 });
+  }, /maxActions/);
+  // F4: an unknown action KIND is rejected (invalid_action), never executed.
+  var r4 = tickEpoch({ worldId: 'w', state: st as never, epochNumber: 1, proposals: { a: { actionId: 'bogus' } }, ruleset: RS as never, actorTags: ['faction'] });
+  assert.strictEqual(r4.rejected, 1, 'bogus kind rejected');
+  assert.strictEqual((r4.event.actions_processed[0] as { reason: string }).reason, 'invalid_action');
+  assert.strictEqual(r4.state.entities.a.properties.p, 0, 'unknown kind did not mutate');
+  // F5: a proposal with no actionId -> fixed-schema rejection (action_id '').
+  var r5 = tickEpoch({ worldId: 'w', state: st as never, epochNumber: 1, proposals: { a: { targetId: 'b' } as never }, ruleset: RS as never, actorTags: ['faction'] });
+  assert.strictEqual(r5.rejected, 1, 'malformed proposal rejected');
+  assert.strictEqual((r5.event.actions_processed[0] as { action_id: string }).action_id, '');
+  assert.strictEqual((r5.event.actions_processed[0] as { reason: string }).reason, 'malformed_proposal');
+});

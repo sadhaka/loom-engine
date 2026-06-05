@@ -130,30 +130,10 @@ pub fn apply_triggered_mutations_js(state_json: &str, mutations_json: &str, acto
 
 // ---- Epoch world-tick (the Living Persistent World) ----
 
-fn epoch_actor_tags(v: &Value) -> Vec<String> {
-    v.get("actorTags")
-        .and_then(|t| t.as_array())
-        .map(|a| a.iter().filter_map(|x| x.as_str().map(|s| s.to_string())).collect())
-        .unwrap_or_default()
-}
-
+// Delegate to the VALIDATING JSON boundary in loom_epoch (one core, one validation -
+// so the browser rejects the same epoch / maxActions inputs TS + Python reject).
 fn tick_epoch_inner(input_json: &str) -> Result<String, String> {
-    let v = parse_value(input_json, "tick input")?;
-    let world_id = v["worldId"].as_str().ok_or("loom_wasm: worldId must be a string")?;
-    let epoch_number = v["epochNumber"].as_i64().ok_or("loom_wasm: epochNumber must be an integer")?;
-    let r = loom_epoch::tick_epoch(loom_epoch::TickEpochInput {
-        world_id,
-        state: &v["state"],
-        epoch_number,
-        proposals: &v["proposals"],
-        ruleset: &v["ruleset"],
-        actor_tags: epoch_actor_tags(&v),
-        max_actions: v.get("maxActions").and_then(|m| m.as_u64()),
-    });
-    let out = serde_json::json!({
-        "state": r.state, "event": r.event, "resolved": r.resolved, "rejected": r.rejected,
-    });
-    serde_json::to_string(&out).map_err(|e| format!("loom_wasm: serialize: {}", e))
+    loom_epoch::tick_epoch_from_json(input_json)
 }
 
 /// Resolve one offline epoch. Input: {worldId, state, epochNumber, proposals,
@@ -164,25 +144,7 @@ pub fn tick_epoch_js(input_json: &str) -> Result<String, JsError> {
 }
 
 fn catch_up_epochs_inner(input_json: &str) -> Result<String, String> {
-    let v = parse_value(input_json, "catchup input")?;
-    let world_id = v["worldId"].as_str().ok_or("loom_wasm: worldId must be a string")?;
-    let current_epoch = v["currentEpoch"].as_i64().ok_or("loom_wasm: currentEpoch must be an integer")?;
-    let max_catchup = v["maxCatchup"].as_i64().ok_or("loom_wasm: maxCatchup must be an integer")?;
-    let r = loom_epoch::catch_up_epochs(loom_epoch::CatchUpInput {
-        world_id,
-        state: &v["state"],
-        current_epoch,
-        max_catchup,
-        ruleset: &v["ruleset"],
-        proposals_by_epoch: &v["proposalsByEpoch"],
-        actor_tags: epoch_actor_tags(&v),
-        max_actions: v.get("maxActions").and_then(|m| m.as_u64()),
-    });
-    let out = serde_json::json!({
-        "state": r.state, "events": r.events,
-        "epochsResolved": r.epochs_resolved, "epochsVoided": r.epochs_voided,
-    });
-    serde_json::to_string(&out).map_err(|e| format!("loom_wasm: serialize: {}", e))
+    loom_epoch::catch_up_epochs_from_json(input_json)
 }
 
 /// Replay offline epochs up to currentEpoch, bounded by maxCatchup (excess voided).

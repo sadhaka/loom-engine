@@ -124,13 +124,6 @@ fn py_parse(s: &str, what: &str) -> PyResult<serde_json::Value> {
     serde_json::from_str(s).map_err(|e| PyValueError::new_err(format!("bad {} json: {}", what, e)))
 }
 
-fn epoch_actor_tags(v: &serde_json::Value) -> Vec<String> {
-    v.get("actorTags")
-        .and_then(|t| t.as_array())
-        .map(|a| a.iter().filter_map(|x| x.as_str().map(|s| s.to_string())).collect())
-        .unwrap_or_default()
-}
-
 /// HMAC-SHA-256 of the canonical world state (byte-identical to TS/Python worldStateHash).
 #[pyfunction]
 fn world_state_hash(key: &str, state_json: &str) -> PyResult<String> {
@@ -168,24 +161,11 @@ fn apply_triggered_mutations(state_json: &str, mutations_json: &str, actor: &str
 
 /// Resolve one offline epoch. Input JSON: {worldId, state, epochNumber, proposals,
 /// ruleset, actorTags?, maxActions?}. Returns {state, event, resolved, rejected}.
+// Delegates to the VALIDATING JSON boundary in loom_epoch (one core, one validation -
+// so the Python server rejects the same epoch / maxActions inputs TS + the pure port do).
 #[pyfunction]
 fn tick_epoch(input_json: &str) -> PyResult<String> {
-    let v = py_parse(input_json, "tick input")?;
-    let world_id = v["worldId"].as_str().ok_or_else(|| PyValueError::new_err("worldId must be a string"))?;
-    let epoch_number = v["epochNumber"].as_i64().ok_or_else(|| PyValueError::new_err("epochNumber must be an integer"))?;
-    let r = loom_epoch::tick_epoch(loom_epoch::TickEpochInput {
-        world_id,
-        state: &v["state"],
-        epoch_number,
-        proposals: &v["proposals"],
-        ruleset: &v["ruleset"],
-        actor_tags: epoch_actor_tags(&v),
-        max_actions: v.get("maxActions").and_then(|m| m.as_u64()),
-    });
-    let out = serde_json::json!({
-        "state": r.state, "event": r.event, "resolved": r.resolved, "rejected": r.rejected,
-    });
-    serde_json::to_string(&out).map_err(|e| PyValueError::new_err(format!("serialize: {}", e)))
+    loom_epoch::tick_epoch_from_json(input_json).map_err(PyValueError::new_err)
 }
 
 /// Replay offline epochs up to currentEpoch, bounded by maxCatchup (excess voided).
@@ -193,25 +173,7 @@ fn tick_epoch(input_json: &str) -> PyResult<String> {
 /// actorTags?, maxActions?}. Returns {state, events, epochsResolved, epochsVoided}.
 #[pyfunction]
 fn catch_up_epochs(input_json: &str) -> PyResult<String> {
-    let v = py_parse(input_json, "catchup input")?;
-    let world_id = v["worldId"].as_str().ok_or_else(|| PyValueError::new_err("worldId must be a string"))?;
-    let current_epoch = v["currentEpoch"].as_i64().ok_or_else(|| PyValueError::new_err("currentEpoch must be an integer"))?;
-    let max_catchup = v["maxCatchup"].as_i64().ok_or_else(|| PyValueError::new_err("maxCatchup must be an integer"))?;
-    let r = loom_epoch::catch_up_epochs(loom_epoch::CatchUpInput {
-        world_id,
-        state: &v["state"],
-        current_epoch,
-        max_catchup,
-        ruleset: &v["ruleset"],
-        proposals_by_epoch: &v["proposalsByEpoch"],
-        actor_tags: epoch_actor_tags(&v),
-        max_actions: v.get("maxActions").and_then(|m| m.as_u64()),
-    });
-    let out = serde_json::json!({
-        "state": r.state, "events": r.events,
-        "epochsResolved": r.epochs_resolved, "epochsVoided": r.epochs_voided,
-    });
-    serde_json::to_string(&out).map_err(|e| PyValueError::new_err(format!("serialize: {}", e)))
+    loom_epoch::catch_up_epochs_from_json(input_json).map_err(PyValueError::new_err)
 }
 
 /// Reconstruct + verify + fast-forward a world from a bundle (Phase 4, fail-closed).

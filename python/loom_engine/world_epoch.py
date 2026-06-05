@@ -52,6 +52,7 @@ _MAX_SAFE_INT = 9007199254740991
 REASON_UNKNOWN_ACTION = "unknown_action"
 REASON_INVALID_ACTION = "invalid_action"
 REASON_EVAL_ERROR = "eval_error"
+REASON_MALFORMED_PROPOSAL = "malformed_proposal"
 
 # Resource key for the world's resource registry.
 RESOURCE_WORLD_EPOCH = "world_epoch"
@@ -147,10 +148,14 @@ def tick_epoch(world_id, state, epoch_number, proposals, ruleset,
         tags_set = actor_tags
     else:
         tags_set = [DEFAULT_ACTOR_TAG]
-    if isinstance(max_actions, int) and not isinstance(max_actions, bool) and max_actions >= 0:
+    # max_actions: None -> no cap; present -> MUST be a non-negative JS-safe integer
+    # (a fractional / negative / out-of-range cap must not be silently accepted - Codex P1).
+    if max_actions is None:
+        cap = _MAX_SAFE_INT
+    elif isinstance(max_actions, int) and not isinstance(max_actions, bool) and 0 <= max_actions <= _MAX_SAFE_INT:
         cap = max_actions
     else:
-        cap = _MAX_SAFE_INT
+        raise ValueError("world-epoch: maxActions must be a non-negative JS-safe integer")
 
     prng = derive_epoch_prng(world_id, epoch_number)
 
@@ -177,12 +182,26 @@ def tick_epoch(world_id, state, epoch_number, proposals, ruleset,
         if not proposal:
             continue  # no proposal -> the actor idles (not counted, not listed)
 
-        action_id = proposal["actionId"]
+        # Malformed proposal (missing / non-string / empty actionId): a FIXED-schema
+        # rejection with action_id "" + zero prng - NOT a KeyError that aborts the whole
+        # tick (Codex P1). Distinct from "no proposal" above (which idles silently).
+        action_id = proposal.get("actionId")
+        if not isinstance(action_id, str) or action_id == "":
+            entries.append({"action_id": "", "actor_id": actor_id, "reason": REASON_MALFORMED_PROPOSAL})
+            rejected += 1
+            continue
         action = ruleset.get(action_id)
 
         # (1) unknown action - no prng, no state change.
         if not action:
             entries.append({"action_id": action_id, "actor_id": actor_id, "reason": REASON_UNKNOWN_ACTION})
+            rejected += 1
+            continue
+
+        # (1b) unknown action KIND - only 'check' / 'mutations' execute. A typo'd kind
+        # must NOT be silently run as a mutation action (Codex P1, fail-closed).
+        if action.get("kind") not in ("check", "mutations"):
+            entries.append({"action_id": action_id, "actor_id": actor_id, "reason": REASON_INVALID_ACTION})
             rejected += 1
             continue
 

@@ -82,3 +82,20 @@ fn golden_epoch_byte_parity_with_ts() {
         }
     }
 }
+
+// Codex P1: the validating JSON boundary rejects the same inputs TS/Python reject.
+#[test]
+fn from_json_boundary_is_fail_closed() {
+    // F1: epoch beyond the JS-safe range.
+    let bad_epoch = serde_json::json!({"worldId":"w","epochNumber":9007199254740992i64,"state":{"epoch":0,"worldSeed":0,"entities":{}},"proposals":{},"ruleset":{}});
+    assert!(loom_epoch::tick_epoch_from_json(&bad_epoch.to_string()).is_err(), "unsafe epoch must be rejected");
+    // F3: a fractional maxActions.
+    let bad_cap = serde_json::json!({"worldId":"w","epochNumber":1,"state":{"epoch":0,"worldSeed":0,"entities":{}},"proposals":{},"ruleset":{},"maxActions":0.5});
+    assert!(loom_epoch::tick_epoch_from_json(&bad_cap.to_string()).is_err(), "fractional maxActions must be rejected");
+    // F2: a negative maxCatchup.
+    let bad_catchup = serde_json::json!({"worldId":"w","currentEpoch":2,"maxCatchup":-1,"state":{"epoch":0,"worldSeed":0,"entities":{}},"ruleset":{}});
+    assert!(loom_epoch::catch_up_epochs_from_json(&bad_catchup.to_string()).is_err(), "negative maxCatchup must be rejected");
+    // sanity: a valid tick still succeeds through the boundary.
+    let ok = serde_json::json!({"worldId":"w","epochNumber":1,"state":{"epoch":0,"worldSeed":0,"entities":{}},"proposals":{},"ruleset":{}});
+    assert!(loom_epoch::tick_epoch_from_json(&ok.to_string()).is_ok(), "valid tick must pass");
+}

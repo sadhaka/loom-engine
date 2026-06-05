@@ -119,6 +119,8 @@ export interface EpochResolvedEvent {
 var REASON_UNKNOWN_ACTION = 'unknown_action';
 var REASON_INVALID_ACTION = 'invalid_action';
 var REASON_EVAL_ERROR = 'eval_error';
+//   malformed_proposal - the proposal object lacks a non-empty string actionId
+var REASON_MALFORMED_PROPOSAL = 'malformed_proposal';
 
 // ---- Epoch PRNG derivation -------------------------------------------------
 
@@ -239,8 +241,13 @@ export function tickEpoch(input: TickEpochInput): TickEpochResult {
     throw new Error('world-epoch: epoch_number must be a JS-safe integer');
   }
   var actorTags = (input.actorTags && input.actorTags.length > 0) ? input.actorTags : [DEFAULT_ACTOR_TAG];
-  var maxActions = (typeof input.maxActions === 'number' && input.maxActions >= 0)
-    ? input.maxActions : Number.MAX_SAFE_INTEGER;
+  // maxActions: absent -> no cap; present -> MUST be a non-negative JS-safe integer
+  // (a fractional / negative cap must not be silently accepted - Codex P1).
+  if (input.maxActions !== undefined
+    && (!Number.isSafeInteger(input.maxActions) || input.maxActions < 0)) {
+    throw new Error('world-epoch: maxActions must be a non-negative JS-safe integer');
+  }
+  var maxActions = input.maxActions === undefined ? Number.MAX_SAFE_INTEGER : input.maxActions;
 
   var prng = deriveEpochPrng(input.worldId, input.epochNumber);
 
@@ -266,12 +273,29 @@ export function tickEpoch(input: TickEpochInput): TickEpochResult {
     var proposal = input.proposals[actorId];
     if (!proposal) continue; // no proposal -> the actor idles (not counted, not listed)
 
+    // Malformed proposal (missing / non-string / empty actionId): a FIXED-schema
+    // rejection with action_id '' + zero prng - NOT an undefined action_id (which
+    // drops from canonical JSON) and NOT a crash (Codex P1). Distinct from "no
+    // proposal" above (which idles silently).
     var actionId = proposal.actionId;
+    if (typeof actionId !== 'string' || actionId.length === 0) {
+      entries.push({ action_id: '', actor_id: actorId, reason: REASON_MALFORMED_PROPOSAL });
+      rejected = rejected + 1;
+      continue;
+    }
     var action = input.ruleset[actionId];
 
     // (1) unknown action - no prng, no state change.
     if (!action) {
       entries.push({ action_id: actionId, actor_id: actorId, reason: REASON_UNKNOWN_ACTION });
+      rejected = rejected + 1;
+      continue;
+    }
+
+    // (1b) unknown action KIND - only 'check' / 'mutations' execute. A typo'd kind
+    // must NOT be silently run as a mutation action (Codex P1, fail-closed).
+    if (action.kind !== 'check' && action.kind !== 'mutations') {
+      entries.push({ action_id: actionId, actor_id: actorId, reason: REASON_INVALID_ACTION });
       rejected = rejected + 1;
       continue;
     }

@@ -189,7 +189,13 @@ pub fn resume_from_json(input_json: &str) -> Result<String, String> {
     let key = v.get("key").and_then(|x| x.as_str()).ok_or("world-session: missing key")?;
     let bundle = v.get("bundle").ok_or("world-session: missing bundle")?;
     let current_epoch = v.get("currentEpoch").and_then(|x| x.as_i64()).ok_or("world-session: missing currentEpoch")?;
+    if !loom_epoch::is_safe_epoch(current_epoch) {
+        return Err("world-session: currentEpoch must be a JS-safe integer".to_string());
+    }
     let max_catchup = v.get("maxCatchup").and_then(|x| x.as_i64()).ok_or("world-session: missing maxCatchup")?;
+    if max_catchup < 0 || !loom_epoch::is_safe_epoch(max_catchup) {
+        return Err("world-session: maxCatchup must be a non-negative JS-safe integer".to_string());
+    }
     let ruleset = v.get("ruleset").cloned().unwrap_or_else(|| json!({}));
     let proposals_by_epoch = v.get("proposalsByEpoch").cloned().unwrap_or_else(|| json!({}));
     let actor_tags: Vec<String> = v
@@ -197,7 +203,15 @@ pub fn resume_from_json(input_json: &str) -> Result<String, String> {
         .and_then(|t| t.as_array())
         .map(|a| a.iter().filter_map(|x| x.as_str().map(|s| s.to_string())).collect())
         .unwrap_or_default();
-    let max_actions = v.get("maxActions").and_then(|m| m.as_u64());
+    // maxActions: absent/null -> no cap; present -> must be a non-negative JS-safe integer.
+    let max_actions = match v.get("maxActions") {
+        None | Some(Value::Null) => None,
+        Some(m) => Some(
+            m.as_u64()
+                .filter(|n| *n <= loom_epoch::MAX_SAFE_INT as u64)
+                .ok_or("world-session: maxActions must be a non-negative JS-safe integer")?,
+        ),
+    };
 
     let out = resume(key.as_bytes(), bundle, current_epoch, max_catchup, &ruleset, &proposals_by_epoch, actor_tags, max_actions)?;
     let j = json!({
