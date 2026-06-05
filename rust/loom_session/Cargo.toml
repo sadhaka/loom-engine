@@ -1,0 +1,20 @@
+# loom_session - the WorldSession suspend/resume lifecycle (Rust core, v3.0 Phase 4).
+# The native sibling of the TS src/runtime/world-session.ts. Ties loom_events
+# (HMAC chain verify), loom_snapshot (state hash), and loom_epoch (catch-up) into
+# one fail-closed resume flow. Phase 4 is Rust-core-only for non-TS surfaces: the
+# browser (loom_wasm) and the Python server (loom_py) consume THIS crate, rather
+# than a hand-ported event-chain verify. Pinned by test_vectors/v3_4_world_session.json.
+
+[package]
+name = "loom_session"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Deterministic WorldSession suspend/resume lifecycle for the Loom Engine (the Living Persistent World capstone)."
+
+[dependencies]
+serde_json = "1"
+loom_events = { path = "../loom_events" }
+loom_snapshot = { path = "../loom_snapshot" }
+loom_epoch = { path = "../loom_epoch" }

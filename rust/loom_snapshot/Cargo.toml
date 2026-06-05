@@ -1,0 +1,17 @@
+# loom_snapshot - deterministic, cross-language world-state snapshot + replay
+# anchor (v3.0 Phase 1). The native sibling of the TS world-state-snapshot.ts.
+# Builds entirely on loom_events' audited canonical encoder + HMAC, so the
+# state_hash is byte-identical to the TS reference (pinned by the shared golden
+# vector test_vectors/v3_0_snapshot_canonical.json).
+
+[package]
+name = "loom_snapshot"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Deterministic, cross-language world-state snapshot + replay anchor for the Loom Engine."
+
+[dependencies]
+loom_events = { path = "../loom_events" }
+serde_json = "1"

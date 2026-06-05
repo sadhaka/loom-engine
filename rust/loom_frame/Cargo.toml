@@ -1,0 +1,23 @@
+# loom_frame - the deterministic command-frame tick (Rust core, v5 Phase 1).
+# The native sibling of the TS src/runtime/world-frame.ts and the server-authoritative
+# core of shared-world multiplayer: resolve N players' commands for one frame in a
+# canonical order through the ruleset AST, fail-closed + byte-identical. Reuses
+# loom_epoch (derive_epoch_prng + is_safe_epoch), loom_ruleset (AST + compare_ids),
+# loom_snapshot. Pinned by test_vectors/v5_1_command_frame.json.
+
+[package]
+name = "loom_frame"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Deterministic command-frame tick for the Loom Engine (the real-time shared-world multiplayer core)."
+
+[dependencies]
+serde_json = "1"
+sha2 = "0.10"
+loom_math = { path = "../loom_math" }
+loom_ruleset = { path = "../loom_ruleset" }
+loom_snapshot = { path = "../loom_snapshot" }
+loom_epoch = { path = "../loom_epoch" }
+loom_events = { path = "../loom_events" }

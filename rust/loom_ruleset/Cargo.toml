@@ -1,0 +1,18 @@
+# loom_ruleset - the deterministic data-driven ruleset AST interpreter (Rust core).
+# The native sibling of the TS ruleset-ast.ts and the Python ruleset_ast.py.
+# Builds on loom_math (Pcg32 + floor_div) + loom_snapshot (normalize_tags +
+# world_state_hash), so it resolves the same AST + seed to the same mutations and
+# the same world-state hash. Pinned by test_vectors/v3_ast_bleed.json.
+
+[package]
+name = "loom_ruleset"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Deterministic data-driven ruleset AST interpreter for the Loom Engine (the Any-System core)."
+
+[dependencies]
+serde_json = "1"
+loom_math = { path = "../loom_math" }
+loom_snapshot = { path = "../loom_snapshot" }

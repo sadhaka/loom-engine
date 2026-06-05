@@ -21,6 +21,22 @@
 pub struct Pcg32 {
     state: u64,
     inc: u64,
+    // 3.0 Phase 3: count of next_u32() draws since construction (or since from_raw
+    // / restore last reset it). PURE metadata - never affects any output - reported
+    // as pcg_steps_consumed by the Epoch world-tick. Mirrors the TS Pcg32.draws +
+    // the Python port. The existing v3_pcg32 golden is unaffected.
+    draws: u64,
+}
+
+/// A captured PRNG position: the LCG state, the (odd) increment, and the running
+/// draw count. Used by the Epoch world-tick to snapshot/restore the PRNG so a
+/// rejected faction proposal consumes ZERO randomness, byte-identically on every
+/// surface (TS / Python / Rust). Mirrors the TS `Pcg32State`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Pcg32State {
+    pub state: u64,
+    pub inc: u64,
+    pub draws: u64,
 }
 
 impl Pcg32 {
@@ -35,6 +51,7 @@ impl Pcg32 {
         let mut rng = Pcg32 {
             state: 0,
             inc: (seq << 1) | 1,
+            draws: 0,
         };
         let _ = rng.next_u32();
         rng.state = rng.state.wrapping_add(seed);
@@ -47,8 +64,45 @@ impl Pcg32 {
         Pcg32::new(seed, Self::DEFAULT_STREAM)
     }
 
+    /// 3.0 Phase 3: construct directly from a RAW `(state, inc)` pair - NO seeding
+    /// steps - and reset the draw counter to 0. The Epoch world-tick derives these
+    /// from SHA-256(world_id || LE64(epoch)), so the offline PRNG is reproducible by
+    /// any surface from PUBLIC inputs alone. `inc` is forced odd (a PCG requirement).
+    /// Matches the TS `Pcg32.fromRaw` / Python `from_raw`.
+    pub fn from_raw(raw_state: u64, raw_inc: u64) -> Self {
+        Pcg32 {
+            state: raw_state,
+            inc: raw_inc | 1,
+            draws: 0,
+        }
+    }
+
+    /// Draws (next_u32 calls) since construction or the last from_raw / restore.
+    pub fn get_draws(&self) -> u64 {
+        self.draws
+    }
+
+    /// Capture the full PRNG position. The Epoch tick captures before resolving a
+    /// proposal and restores on rejection, so a rejected proposal advances the PRNG
+    /// by exactly zero. Mirrors the TS `snapshot()`.
+    pub fn snapshot(&self) -> Pcg32State {
+        Pcg32State {
+            state: self.state,
+            inc: self.inc,
+            draws: self.draws,
+        }
+    }
+
+    /// Restore a previously captured PRNG position (state, inc, and draw count).
+    pub fn restore(&mut self, snap: Pcg32State) {
+        self.state = snap.state;
+        self.inc = snap.inc;
+        self.draws = snap.draws;
+    }
+
     /// The next 32-bit output + advance the state.
     pub fn next_u32(&mut self) -> u32 {
+        self.draws = self.draws.wrapping_add(1);
         let old = self.state;
         self.state = old.wrapping_mul(Self::MULT).wrapping_add(self.inc);
         // XSH RR: xorshift high bits, then a data-dependent rotate.
@@ -189,5 +243,67 @@ mod tests {
         for &(a, b) in &[(7i64, 3i64), (-7, 3), (7, -3), (-7, -3), (10, 4)] {
             assert_eq!(floor_div(a, b) * b + floor_mod(a, b), a);
         }
+    }
+
+    #[test]
+    fn draws_counter_is_pure_metadata() {
+        // draws counts next_u32 calls and never affects output (the v3_pcg32 golden
+        // is unchanged): a fresh seeded(42) yields the same first u32 as before.
+        // seeded() runs new(), which draws twice during seeding -> draws == 2.
+        let mut a = Pcg32::seeded(42);
+        assert_eq!(a.get_draws(), 2);
+        let first = a.next_u32();
+        assert_eq!(a.get_draws(), 3);
+        // The number itself must match a plain seeded(42).next_u32() - draws metadata
+        // never changes the output stream.
+        let mut b = Pcg32::seeded(42);
+        assert_eq!(first, b.next_u32());
+    }
+
+    #[test]
+    fn snapshot_restore_round_trips_to_zero_draws() {
+        let mut r = Pcg32::from_raw(0x2ff46a5272fbd950, 0xd1593f315b366667);
+        assert_eq!(r.get_draws(), 0);
+        let snap = r.snapshot();
+        let a = r.next_u32();
+        let b = r.next_u32();
+        assert_eq!(r.get_draws(), 2);
+        r.restore(snap);
+        assert_eq!(r.get_draws(), 0);
+        // After restore the SAME sequence replays (zero prng consumed on rollback).
+        assert_eq!(r.next_u32(), a);
+        assert_eq!(r.next_u32(), b);
+    }
+
+    #[test]
+    fn from_raw_forces_odd_inc() {
+        let r = Pcg32::from_raw(123, 0xAAAA_AAAA_AAAA_AAAA); // even inc
+        let snap = r.snapshot();
+        assert_eq!(snap.inc & 1, 1);
+        assert_eq!(snap.state, 123);
+        assert_eq!(snap.draws, 0);
+    }
+
+    #[test]
+    fn emit_pcg32_golden() {
+        // Emits the cross-language PCG32 reference (run with --nocapture). The TS +
+        // Python ports must reproduce it; captured into test_vectors/v3_pcg32.json.
+        fn seq(seed: u64, n: usize) -> Vec<u32> {
+            let mut r = Pcg32::seeded(seed);
+            (0..n).map(|_| r.next_u32()).collect()
+        }
+        let mut r7 = Pcg32::seeded(7);
+        let dice = r7.roll_dice(3, 6);
+        let mut r7b = Pcg32::seeded(7);
+        let dies: Vec<u32> = (0..5).map(|_| r7b.roll_die(20)).collect();
+        println!("PCG32_VECTOR_BEGIN");
+        println!(
+            "{{\"seed42_next8\":{:?},\"seed1_next4\":{:?},\"seed7_roll3d6\":{},\"seed7_die20x5\":{:?}}}",
+            seq(42, 8),
+            seq(1, 4),
+            dice,
+            dies
+        );
+        println!("PCG32_VECTOR_END");
     }
 }

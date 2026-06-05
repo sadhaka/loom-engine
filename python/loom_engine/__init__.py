@@ -7,14 +7,18 @@ same inputs, so a Python-server resolution equals a TS-client one: the basis for
 server-authoritative anti-cheat + honest AI-narrated play.
 
 DETERMINISM NOTE: these modules use ordered dicts + explicit sorts for all LOGIC,
-so they never depend on hash() ordering. For any cross-language HASHING, serialize
-with json.dumps(obj, sort_keys=True, separators=(',', ':')) and run with
-PYTHONHASHSEED=0. Ban floats in deterministic paths; use an explicit floor-div
-helper if negative-operand division is ever needed (JS truncates toward zero,
-Python // floors).
+so they never depend on hash() ordering. Ban floats in deterministic paths; use an
+explicit floor-div helper if negative-operand division is ever needed (JS truncates
+toward zero, Python // floors).
+
+For cross-language HASHING use the world_snapshot module (canonical_world_state /
+world_state_hash). Do NOT use json.dumps(sort_keys=True): it sorts object keys by
+Unicode code point and escapes non-ASCII, both of which DIVERGE from the engine's
+canonical encoder (JS UTF-16 key sort + literal non-ASCII). The snapshot encoder
+matches the TS/Rust core byte-for-byte (pinned by v3_0_snapshot_canonical.json).
 """
 
-__version__ = "2.3.0"
+__version__ = "3.0.0"
 
 from .range_bands import (  # noqa: F401
     RANGE_BAND_ENGAGED, RANGE_BAND_NEAR, RANGE_BAND_FAR, ENGAGED_MAX_FT,
@@ -36,4 +40,18 @@ from .ruleset import (  # noqa: F401
     initiative_order, create_condition_track, apply_condition,
     remove_condition, has_condition, condition_remaining, tick_conditions,
     active_conditions, DURATION_UNTIL_REMOVED, RESOURCE_RULESET,
+)
+from .world_snapshot import (  # noqa: F401
+    SNAPSHOT_DOMAIN, canonical_world_state, world_state_hash,
+    verify_world_snapshot, normalize_tags,
+)
+from .pcg32 import Pcg32, floor_div, floor_mod  # noqa: F401
+from .ruleset_ast import (  # noqa: F401
+    parse_dice, eval_expression, evaluate_action, apply_triggered_mutations,
+    make_context, validate_check, validate_triggered_mutations,
+)
+from .world_epoch import (  # noqa: F401
+    derive_epoch_prng, tick_epoch, catch_up_epochs,
+    DEFAULT_ACTOR_TAG, RESOURCE_WORLD_EPOCH,
+    REASON_UNKNOWN_ACTION, REASON_INVALID_ACTION, REASON_EVAL_ERROR,
 )
