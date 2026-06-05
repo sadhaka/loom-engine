@@ -384,6 +384,7 @@ export {
   canSpend,
   spend,
   initiativeOrder,
+  compareIds,
   createConditionTrack,
   applyCondition,
   removeCondition,

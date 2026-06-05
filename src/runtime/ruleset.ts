@@ -58,9 +58,69 @@ export interface InitiativeEntry {
   d20?: number;        // the natural roll, for tiebreaks
 }
 
+// UTF-8 byte comparison - matches Rust's `&[u8]` cmp + Python's encode('utf-8')
+// compare (and codepoint order, which JS `<` does NOT give for astral chars).
+function utf8Compare(a: string, b: string): number {
+  var ba = new TextEncoder().encode(a);
+  var bb = new TextEncoder().encode(b);
+  var n = ba.length < bb.length ? ba.length : bb.length;
+  for (var i = 0; i < n; i++) {
+    var x = ba[i] as number;
+    var y = bb[i] as number;
+    if (x !== y) return x < y ? -1 : 1;
+  }
+  return ba.length === bb.length ? 0 : (ba.length < bb.length ? -1 : 1);
+}
+
+// A "pure numeric" id: optional '-' then >=1 ASCII digit.
+function isPureNumeric(s: string): boolean {
+  var rest = s.charCodeAt(0) === 45 ? s.slice(1) : s; // 45 = '-'
+  if (rest.length === 0) return false;
+  for (var i = 0; i < rest.length; i++) {
+    var c = rest.charCodeAt(i);
+    if (c < 48 || c > 57) return false; // not 0-9
+  }
+  return true;
+}
+
+function normalizeNumeric(s: string): { neg: boolean; mag: string } {
+  var neg = s.charCodeAt(0) === 45;
+  var digits = neg ? s.slice(1) : s;
+  var i = 0;
+  while (i < digits.length - 1 && digits.charCodeAt(i) === 48) i++; // strip leading zeros, keep >=1
+  var mag = digits.slice(i);
+  if (mag === '') mag = '0';
+  return { neg: neg && mag !== '0', mag: mag }; // -0 is +0
+}
+
+// Numeric-aware id comparison (Codex P1 / the shadow-wire finding). Numeric ids
+// sort by VALUE (2 < 10), strings lexicographically, numbers before strings. No
+// integer parsing - sign + digit-length + UTF-8 bytes, so ids beyond 2^53 / i64
+// (uuids, huge numbers) are correct. Byte-identical across TS / Rust / Python.
+export function compareIds(a: string, b: string): number {
+  var na = isPureNumeric(a);
+  var nb = isPureNumeric(b);
+  if (na && !nb) return -1; // numbers before strings
+  if (!na && nb) return 1;
+  if (!na && !nb) return utf8Compare(a, b);
+  var an = normalizeNumeric(a);
+  var bn = normalizeNumeric(b);
+  if (!an.neg && bn.neg) return 1; // +a > -b
+  if (an.neg && !bn.neg) return -1;
+  var mag: number;
+  if (an.mag.length !== bn.mag.length) {
+    mag = an.mag.length < bn.mag.length ? -1 : 1;
+  } else {
+    mag = utf8Compare(an.mag, bn.mag);
+  }
+  var byValue = an.neg ? -mag : mag; // both negative: larger magnitude is smaller
+  if (byValue !== 0) return byValue;
+  return utf8Compare(a, b); // math-equal (e.g. "02" vs "2"): raw bytes, total order
+}
+
 // Deterministic initiative order: total DESC, then modifier DESC, then natural
-// d20 DESC, then id ASC (stable). One tiebreak for BOTH 5e and PF2e (both break
-// initiative ties by the modifier). Returns a NEW sorted array; input untouched.
+// d20 DESC, then a NUMERIC-AWARE id tiebreak (compareIds). One tiebreak for BOTH
+// 5e and PF2e and for integer ids AND string entity ids. Returns a NEW array.
 export function initiativeOrder(entries: ReadonlyArray<InitiativeEntry>): InitiativeEntry[] {
   var copy = entries.slice();
   copy.sort(function (a, b) {
@@ -71,7 +131,7 @@ export function initiativeOrder(entries: ReadonlyArray<InitiativeEntry>): Initia
     var ad = a.d20 || 0;
     var bd = b.d20 || 0;
     if (bd !== ad) return bd - ad;
-    return a.id < b.id ? -1 : (a.id > b.id ? 1 : 0);
+    return compareIds(a.id, b.id);
   });
   return copy;
 }

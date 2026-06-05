@@ -39,5 +39,13 @@
       "ops": [["spend", "pc"], ["can_react", "pc"], ["spend", "pc"], ["advance"], ["can_react", "pc"]],
       "expect": [true, false, false, 2, true]
     }
+  ],
+  "ruleset.compare_ids": [
+    { "input": ["10", "2"], "expect_asc": ["2", "10"] },
+    { "input": ["goblin_3", "10", "2"], "expect_asc": ["2", "10", "goblin_3"] },
+    { "input": ["-2", "10", "-10", "0"], "expect_asc": ["-10", "-2", "0", "10"] },
+    { "input": ["100000000000000000000", "9999999999999999999"], "expect_asc": ["9999999999999999999", "100000000000000000000"] },
+    { "input": ["2", "007", "02"], "expect_asc": ["02", "2", "007"] },
+    { "input": ["b-uuid", "a-uuid", "c-uuid"], "expect_asc": ["a-uuid", "b-uuid", "c-uuid"] }
   ]
 }

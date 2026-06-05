@@ -18,7 +18,7 @@
 
 use loom_combat::range_bands;
 use loom_combat::reaction::ReactionLedger;
-use loom_combat::ruleset::{initiative_order, InitiativeEntry};
+use loom_combat::ruleset::{compare_ids, initiative_order, InitiativeEntry};
 use serde_json::Value;
 
 /// Path to the shared vectors, relative to THIS crate's manifest dir.
@@ -134,6 +134,31 @@ fn golden_vectors_numeric_core() {
                 "initiative_order_ids = {:?}, expected {:?}",
                 got, expect
             ));
+        }
+    }
+
+    // -- ruleset.compare_ids (numeric-aware id tiebreak) --
+    for case in v["ruleset.compare_ids"]
+        .as_array()
+        .expect("missing compare_ids section")
+    {
+        let mut ids: Vec<String> = case["input"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|x| x.as_str().unwrap().to_string())
+            .collect();
+        ids.sort_by(|a, b| compare_ids(a, b));
+        let expect: Vec<String> = case["expect_asc"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|x| x.as_str().unwrap().to_string())
+            .collect();
+        if ids == expect {
+            passed += 1;
+        } else {
+            failures.push(format!("compare_ids sort = {:?}, expected {:?}", ids, expect));
         }
     }
 

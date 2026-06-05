@@ -9,6 +9,7 @@ rolled by the engine PRNG - this does the ruleset-correct ORDERING).
 
 from __future__ import annotations
 
+import functools
 from typing import Dict, List, Optional
 
 RULESET_5E = "5e"
@@ -42,17 +43,68 @@ def spend(budget: dict, resource: str, n: int = 1) -> bool:
 
 # ---- initiative ordering ----
 
+def _is_pure_numeric(s: str) -> bool:
+    """An optional '-' then >=1 ASCII digit."""
+    rest = s[1:] if s[:1] == "-" else s
+    return len(rest) > 0 and all("0" <= c <= "9" for c in rest)
+
+
+def _normalize_numeric(s: str):
+    neg = s[:1] == "-"
+    digits = s[1:] if neg else s
+    mag = digits.lstrip("0") or "0"
+    return (neg and mag != "0", mag)  # -0 is +0
+
+
+def _byte_cmp(a: str, b: str) -> int:
+    ba = a.encode("utf-8")
+    bb = b.encode("utf-8")
+    return -1 if ba < bb else (1 if ba > bb else 0)
+
+
+def compare_ids(a: str, b: str) -> int:
+    """Numeric-aware id comparison (Codex P1 / the shadow-wire finding). Numeric
+    ids sort by VALUE (2 < 10), strings lexicographically, numbers before strings.
+    No int parsing - sign + digit-length + UTF-8 bytes, so ids beyond i64 (uuids,
+    huge numbers) are correct. Byte-identical to the TS + Rust comparators."""
+    na = _is_pure_numeric(a)
+    nb = _is_pure_numeric(b)
+    if na and not nb:
+        return -1  # numbers before strings
+    if not na and nb:
+        return 1
+    if not na and not nb:
+        return _byte_cmp(a, b)
+    a_neg, a_mag = _normalize_numeric(a)
+    b_neg, b_mag = _normalize_numeric(b)
+    if not a_neg and b_neg:
+        return 1  # +a > -b
+    if a_neg and not b_neg:
+        return -1
+    if len(a_mag) != len(b_mag):
+        mag = -1 if len(a_mag) < len(b_mag) else 1
+    else:
+        mag = _byte_cmp(a_mag, b_mag)
+    by_value = -mag if a_neg else mag  # both negative: larger magnitude is smaller
+    if by_value != 0:
+        return by_value
+    return _byte_cmp(a, b)  # math-equal (e.g. "02" vs "2"): raw bytes, total order
+
+
+def _initiative_cmp(a: dict, b: dict) -> int:
+    for key in ("total", "modifier", "d20"):
+        av = int(a.get(key, 0) or 0)
+        bv = int(b.get(key, 0) or 0)
+        if av != bv:
+            return -1 if av > bv else 1  # DESC
+    return compare_ids(str(a.get("id", "")), str(b.get("id", "")))
+
+
 def initiative_order(entries: List[dict]) -> List[dict]:
     """Deterministic order: total DESC, then modifier DESC, then natural d20 DESC,
-    then id ASC. One tiebreak correct for BOTH 5e and PF2e. New list; input
-    untouched. Each entry: {id, total, modifier?, d20?}."""
-    return sorted(
-        list(entries),
-        key=lambda e: (-int(e.get("total", 0)),
-                       -int(e.get("modifier", 0) or 0),
-                       -int(e.get("d20", 0) or 0),
-                       str(e.get("id", ""))),
-    )
+    then a NUMERIC-AWARE id tiebreak (compare_ids). Correct for BOTH 5e and PF2e
+    and for integer ids AND string entity ids. New list; input untouched."""
+    return sorted(list(entries), key=functools.cmp_to_key(_initiative_cmp))
 
 
 # ---- conditions (content-agnostic duration tracker) ----

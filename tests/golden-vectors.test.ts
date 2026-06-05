@@ -16,6 +16,7 @@ import {
   bandWithin,
   findInventedNumber,
   initiativeOrder,
+  compareIds,
   createReactionLedger,
   canReact,
   spendReaction,
@@ -51,6 +52,13 @@ test('golden: ruleset.initiative_order_ids', () => {
   for (const c of vectors['ruleset.initiative_order_ids']) {
     const ids = initiativeOrder(c.entries).map((e: { id: string }) => e.id);
     assert.deepEqual(ids, c.expect);
+  }
+});
+
+test('golden: ruleset.compare_ids', () => {
+  for (const c of vectors['ruleset.compare_ids']) {
+    const sorted = (c.input as string[]).slice().sort(compareIds);
+    assert.deepEqual(sorted, c.expect_asc, JSON.stringify(c.input));
   }
 });
 

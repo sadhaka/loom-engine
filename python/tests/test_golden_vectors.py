@@ -7,6 +7,7 @@ byte-identical for those cases. This is the parity gate.
 
 Run: python python/tests/test_golden_vectors.py
 """
+import functools
 import json
 import os
 import sys
@@ -17,7 +18,7 @@ VECTOR_DIR = os.path.join(HERE, "..", "..", "test_vectors")
 
 from loom_engine.range_bands import band_from_distance_ft, band_within  # noqa: E402
 from loom_engine.narration_contract import find_invented_number  # noqa: E402
-from loom_engine.ruleset import initiative_order  # noqa: E402
+from loom_engine.ruleset import initiative_order, compare_ids  # noqa: E402
 from loom_engine.reaction_economy import (  # noqa: E402
     create_reaction_ledger, can_react, spend_reaction, advance_reaction_round,
 )
@@ -74,6 +75,11 @@ def main():
     for case in vectors["ruleset.initiative_order_ids"]:
         got = [e["id"] for e in initiative_order(case["entries"])]
         ck("initiative_order_ids -> %s" % case["expect"], got == case["expect"])
+
+    for case in vectors["ruleset.compare_ids"]:
+        got = sorted(case["input"], key=functools.cmp_to_key(compare_ids))
+        ck("compare_ids %s -> %s" % (case["input"], case["expect_asc"]),
+           got == case["expect_asc"])
 
     for case in vectors["reaction.scripted"]:
         got = run_reaction_script(case["ops"])

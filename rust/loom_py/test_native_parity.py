@@ -28,9 +28,10 @@ def ck(label, cond):
 
 
 def ref_initiative(entries):
-    """The core's documented tiebreak: total/modifier/d20 DESC, str(id) ASC."""
+    """The core's tiebreak: total/modifier/d20 DESC, then NUMERIC-aware id ASC.
+    These ids are integers, so the id tiebreak is numeric (2 before 10)."""
     return [e[0] for e in sorted(
-        entries, key=lambda e: (-e[1], -e[2], -e[3], str(e[0])))]
+        entries, key=lambda e: (-e[1], -e[2], -e[3], e[0]))]
 
 
 def main():
@@ -44,7 +45,7 @@ def main():
         ck("band_within%s" % c["args"],
            ln.band_within(c["args"][0], c["args"][1]) == c["expect"])
 
-    # initiative i64 API vs the core's str(id) tiebreak reference (incl 2-vs-10).
+    # initiative i64 API vs the core's numeric-aware tiebreak (2 before 10).
     for es in ([(7, 18, 2, 16), (3, 18, 5, 13), (9, 12, 1, 11), (4, 21, 3, 18)],
                [(10, 15, 2, 12), (2, 15, 2, 12)],
                [(1, 20, 0, 10), (2, 20, 0, 10), (3, 5, 9, 2)]):

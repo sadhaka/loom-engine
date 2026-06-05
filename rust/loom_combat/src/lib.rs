@@ -147,15 +147,66 @@ pub mod ruleset {
         pub d20: i64,
     }
 
-    /// Deterministic order: total DESC, modifier DESC, natural d20 DESC, id ASC.
-    /// One tiebreak correct for both 5e and PF2e. Returns a new sorted Vec.
+    /// True iff `s` is a "pure numeric" id: an optional '-' then >=1 ASCII digit.
+    fn is_pure_numeric(s: &str) -> bool {
+        let b = s.as_bytes();
+        let rest = if !b.is_empty() && b[0] == b'-' { &b[1..] } else { b };
+        !rest.is_empty() && rest.iter().all(|c| c.is_ascii_digit())
+    }
+
+    /// (is_negative_nonzero, magnitude_digits_without_leading_zeros).
+    fn normalize_numeric(s: &str) -> (bool, &str) {
+        let neg = s.as_bytes().first() == Some(&b'-');
+        let digits = if neg { &s[1..] } else { s };
+        let trimmed = digits.trim_start_matches('0');
+        let norm = if trimmed.is_empty() { "0" } else { trimmed };
+        (neg && norm != "0", norm) // -0 is +0
+    }
+
+    /// Numeric-aware id comparison (Codex P1 / the shadow-wire finding). Numeric
+    /// ids sort by VALUE (so 2 < 10, not "10" < "2"), strings lexicographically,
+    /// numbers before strings. NO integer parsing - compares sign + digit-length +
+    /// bytes, so ids beyond i64 (uuids, "9999...") are handled without overflow.
+    /// Byte-for-byte identical across Rust / TS / Python (UTF-8 byte compares).
+    pub fn compare_ids(a: &str, b: &str) -> core::cmp::Ordering {
+        use core::cmp::Ordering;
+        match (is_pure_numeric(a), is_pure_numeric(b)) {
+            (true, false) => Ordering::Less,    // numbers sort before strings
+            (false, true) => Ordering::Greater,
+            (false, false) => a.as_bytes().cmp(b.as_bytes()), // lexicographic (UTF-8)
+            (true, true) => {
+                let (a_neg, a_mag) = normalize_numeric(a);
+                let (b_neg, b_mag) = normalize_numeric(b);
+                match (a_neg, b_neg) {
+                    (false, true) => return Ordering::Greater, // +a > -b
+                    (true, false) => return Ordering::Less,
+                    _ => {}
+                }
+                let mag = a_mag
+                    .len()
+                    .cmp(&b_mag.len())
+                    .then_with(|| a_mag.as_bytes().cmp(b_mag.as_bytes()));
+                let by_value = if a_neg { mag.reverse() } else { mag }; // -100 < -9
+                if by_value != Ordering::Equal {
+                    by_value
+                } else {
+                    // math-equal (e.g. "02" vs "2"): raw bytes for a total order
+                    a.as_bytes().cmp(b.as_bytes())
+                }
+            }
+        }
+    }
+
+    /// Deterministic order: total DESC, modifier DESC, natural d20 DESC, then a
+    /// NUMERIC-AWARE id tiebreak (compare_ids). One tiebreak correct for both 5e
+    /// and PF2e and for integer ids AND string entity ids. Returns a new Vec.
     pub fn initiative_order(mut entries: Vec<InitiativeEntry>) -> Vec<InitiativeEntry> {
         entries.sort_by(|a, b| {
             b.total
                 .cmp(&a.total)
                 .then(b.modifier.cmp(&a.modifier))
                 .then(b.d20.cmp(&a.d20))
-                .then(a.id.cmp(&b.id))
+                .then_with(|| compare_ids(&a.id, &b.id))
         });
         entries
     }
