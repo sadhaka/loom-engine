@@ -248,6 +248,139 @@ pub unsafe extern "C" fn loom_sign_record(
     }
 }
 
+// ---- v3.0 surface (JSON-in / JSON-out over the C ABI) -----------------------
+//
+// Variable-length JSON results use the standard two-call buffer protocol: the
+// function returns the JSON byte length N (excluding NUL). If out_cap >= N + 1 it
+// wrote N bytes + a NUL into `out` (success); otherwise it wrote nothing and the
+// caller should allocate >= N + 1 and call again. Negative returns are errors. The
+// library never allocates memory the caller must free.
+
+// Write `s` + NUL into a caller buffer using the two-call protocol above.
+unsafe fn write_str_out(s: &str, out: *mut c_char, out_cap: usize) -> c_int {
+    let needed = s.len();
+    if needed > (c_int::MAX as usize) - 1 {
+        return -10; // absurdly large result
+    }
+    if out.is_null() || out_cap < needed + 1 {
+        return needed as c_int; // length query / buffer too small - no write
+    }
+    std::ptr::copy_nonoverlapping(s.as_ptr(), out as *mut u8, needed);
+    *out.add(needed) = 0;
+    needed as c_int
+}
+
+/// HMAC-SHA-256 of the canonical world state -> 64-char hex into `out` (cap >= 65).
+/// Returns 64; -1 bad arg / non-UTF-8; -2 invalid JSON; -3 non-canonicalizable state.
+///
+/// # Safety
+/// `key` points to `key_len` bytes; `state_json` is a NUL-terminated C string;
+/// `out` is writable for `out_cap` bytes.
+#[no_mangle]
+pub unsafe extern "C" fn loom_world_state_hash(
+    key: *const u8,
+    key_len: usize,
+    state_json: *const c_char,
+    out: *mut c_char,
+    out_cap: usize,
+) -> c_int {
+    if key.is_null() || state_json.is_null() {
+        return -1;
+    }
+    let key_slice = std::slice::from_raw_parts(key, key_len);
+    let sj = match CStr::from_ptr(state_json).to_str() {
+        Ok(s) => s,
+        Err(_) => return -1,
+    };
+    let state: serde_json::Value = match serde_json::from_str(sj) {
+        Ok(v) => v,
+        Err(_) => return -2,
+    };
+    match loom_snapshot::world_state_hash(key_slice, &state) {
+        Ok(hex) => write_hex64(&hex, out, out_cap),
+        Err(_) => -3,
+    }
+}
+
+/// Resolve one offline epoch. `input_json` = {worldId, state, epochNumber, proposals,
+/// ruleset, actorTags?, maxActions?}. Writes {state, event, resolved, rejected} JSON
+/// to `out` (two-call protocol). Returns the length; -1 bad arg / non-UTF-8; -2 on a
+/// rejected/invalid input (e.g. unsafe epoch, invalid cap).
+///
+/// # Safety
+/// `input_json` is a NUL-terminated C string; `out` is writable for `out_cap` bytes
+/// (or null for a length query).
+#[no_mangle]
+pub unsafe extern "C" fn loom_tick_epoch(
+    input_json: *const c_char,
+    out: *mut c_char,
+    out_cap: usize,
+) -> c_int {
+    if input_json.is_null() {
+        return -1;
+    }
+    let ij = match CStr::from_ptr(input_json).to_str() {
+        Ok(s) => s,
+        Err(_) => return -1,
+    };
+    match loom_epoch::tick_epoch_from_json(ij) {
+        Ok(s) => write_str_out(&s, out, out_cap),
+        Err(_) => -2,
+    }
+}
+
+/// Replay offline epochs (bounded). `input_json` = {worldId, state, currentEpoch,
+/// maxCatchup, ruleset, proposalsByEpoch?, actorTags?, maxActions?}. Writes {state,
+/// events, epochsResolved, epochsVoided} JSON. Returns the length; -1/-2 as above.
+///
+/// # Safety
+/// As `loom_tick_epoch`.
+#[no_mangle]
+pub unsafe extern "C" fn loom_catch_up_epochs(
+    input_json: *const c_char,
+    out: *mut c_char,
+    out_cap: usize,
+) -> c_int {
+    if input_json.is_null() {
+        return -1;
+    }
+    let ij = match CStr::from_ptr(input_json).to_str() {
+        Ok(s) => s,
+        Err(_) => return -1,
+    };
+    match loom_epoch::catch_up_epochs_from_json(ij) {
+        Ok(s) => write_str_out(&s, out, out_cap),
+        Err(_) => -2,
+    }
+}
+
+/// Resume a WorldSession (fail-closed). `input_json` = {key, bundle, currentEpoch,
+/// maxCatchup, ruleset, proposalsByEpoch?, actorTags?, maxActions?}. Writes {worldId,
+/// state, newEvents, epochsResolved, epochsVoided} JSON. Returns the length; -1 bad
+/// arg / non-UTF-8; -2 on a corrupted snapshot, tampered chain tail, time-travel, or
+/// invalid input.
+///
+/// # Safety
+/// As `loom_tick_epoch`.
+#[no_mangle]
+pub unsafe extern "C" fn loom_resume_session(
+    input_json: *const c_char,
+    out: *mut c_char,
+    out_cap: usize,
+) -> c_int {
+    if input_json.is_null() {
+        return -1;
+    }
+    let ij = match CStr::from_ptr(input_json).to_str() {
+        Ok(s) => s,
+        Err(_) => return -1,
+    };
+    match loom_session::resume_from_json(ij) {
+        Ok(s) => write_str_out(&s, out, out_cap),
+        Err(_) => -2,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -349,5 +482,55 @@ mod tests {
             )
         };
         assert_eq!(bad, -3);
+    }
+
+    // Drive a JSON-in/JSON-out FFI fn through the two-call buffer protocol.
+    fn call_json(
+        f: unsafe extern "C" fn(*const c_char, *mut c_char, usize) -> c_int,
+        input: &str,
+    ) -> Result<String, c_int> {
+        let cin = CString::new(input).unwrap();
+        let needed = unsafe { f(cin.as_ptr(), std::ptr::null_mut(), 0) };
+        if needed < 0 {
+            return Err(needed);
+        }
+        let cap = needed as usize + 1;
+        let mut buf = vec![0 as c_char; cap];
+        let n = unsafe { f(cin.as_ptr(), buf.as_mut_ptr(), cap) };
+        if n < 0 {
+            return Err(n);
+        }
+        Ok(unsafe { CStr::from_ptr(buf.as_ptr()) }.to_str().unwrap().to_string())
+    }
+
+    fn read_vec(name: &str) -> serde_json::Value {
+        let path = format!("{}/../../test_vectors/{}", env!("CARGO_MANIFEST_DIR"), name);
+        serde_json::from_str(&std::fs::read_to_string(path).unwrap()).unwrap()
+    }
+
+    #[test]
+    fn v3_surface_matches_golden() {
+        // Epoch tick through the C ABI reproduces the golden state hash.
+        let ev = read_vec("v3_3_epoch_tick.json");
+        let tick = ev["cases"].as_array().unwrap().iter().find(|c| c["kind"] == "tick").unwrap();
+        let out = call_json(loom_tick_epoch, &tick.to_string()).unwrap();
+        let r: serde_json::Value = serde_json::from_str(&out).unwrap();
+        let h = loom_snapshot::world_state_hash(tick["key"].as_str().unwrap().as_bytes(), &r["state"]).unwrap();
+        assert_eq!(h, tick["expect"]["state_hash"].as_str().unwrap());
+
+        // WorldSession resume through the C ABI reproduces the golden final hash.
+        let sv = read_vec("v3_4_world_session.json");
+        let inputs = &sv["inputs"];
+        let out2 = call_json(loom_resume_session, &inputs.to_string()).unwrap();
+        let r2: serde_json::Value = serde_json::from_str(&out2).unwrap();
+        let sh = loom_snapshot::world_state_hash(inputs["key"].as_str().unwrap().as_bytes(), &r2["state"]).unwrap();
+        assert_eq!(sh, sv["expect"]["final_state_hash"].as_str().unwrap());
+    }
+
+    #[test]
+    fn v3_surface_is_fail_closed() {
+        // an unsafe epoch is rejected (-2), matching every other surface.
+        let bad = serde_json::json!({"worldId":"w","epochNumber":9007199254740992i64,"state":{"epoch":0,"worldSeed":0,"entities":{}},"proposals":{},"ruleset":{}});
+        assert_eq!(call_json(loom_tick_epoch, &bad.to_string()).unwrap_err(), -2);
     }
 }

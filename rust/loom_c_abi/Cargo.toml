@@ -17,6 +17,11 @@ loom_math = { path = "../loom_math" }
 loom_combat = { path = "../loom_combat" }
 loom_events = { path = "../loom_events" }
 serde_json = "1"
+# v3.0 surface: a Unity/Godot/Go client runs the SAME compiled Rust core as the
+# browser (WASM) and the Python server (PyO3).
+loom_snapshot = { path = "../loom_snapshot" }
+loom_epoch = { path = "../loom_epoch" }
+loom_session = { path = "../loom_session" }
 
 [lints.clippy]
 float_arithmetic = "deny"
