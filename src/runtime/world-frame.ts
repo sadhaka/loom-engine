@@ -266,5 +266,64 @@ export function tickFrame(input: TickFrameInput): TickFrameResult {
   return { state: outState, event: event, resolved: resolved, rejected: rejected };
 }
 
+// ---- reconcile (client-side rollback + replay) -----------------------------
+//
+// The deterministic half of client-side prediction (Gemini's netcode blueprint).
+// When the server's authoritative FrameResolved for frame M disagrees with the
+// client's prediction, the client overwrites its state at M with the server's, then
+// REPLAYS its own still-unconfirmed commands for frames M+1..N to re-derive the
+// present. Because every frame re-seeds its PRNG from (worldId, frameNumber), the
+// replay is byte-identical to a fresh prediction - the rollback leaves no trace.
+
+export interface FrameReconcileInput {
+  worldId: string;
+  // The server-authoritative state at frame M (its `frame` field is M).
+  correctedState: WorldState;
+  // The client's unconfirmed local commands, keyed by String(frameNumber).
+  commandsByFrame: Record<string, PlayerCommand[]>;
+  // Replay up to AND INCLUDING this frame (the client's present frame N).
+  toFrame: number;
+  ruleset: Ruleset;
+  playerEntities: PlayerEntityMap;
+  maxCommandsPerPlayer?: number | undefined;
+  maxCommands?: number | undefined;
+}
+
+export interface FrameReconcileResult {
+  state: WorldState;
+  events: FrameResolvedEvent[];
+  framesReplayed: number;
+}
+
+// Replay frames (correctedState.frame + 1) .. toFrame over the corrected state,
+// applying each frame's local commands. Pure: does not mutate the input.
+export function reconcileFrames(input: FrameReconcileInput): FrameReconcileResult {
+  if (!Number.isSafeInteger(input.toFrame)) {
+    throw new Error('world-frame: toFrame must be a JS-safe integer');
+  }
+  var startRaw = (input.correctedState as unknown as { frame?: number }).frame;
+  var fromFrame = (typeof startRaw === 'number' && Number.isSafeInteger(startRaw)) ? startRaw : 0;
+  var work = input.correctedState;
+  var events: FrameResolvedEvent[] = [];
+  var replayed = 0;
+  for (var f = fromFrame + 1; f <= input.toFrame; f++) {
+    var cmds = input.commandsByFrame[String(f)] || [];
+    var r = tickFrame({
+      worldId: input.worldId,
+      state: work,
+      frameNumber: f,
+      commands: cmds,
+      ruleset: input.ruleset,
+      playerEntities: input.playerEntities,
+      maxCommandsPerPlayer: input.maxCommandsPerPlayer,
+      maxCommands: input.maxCommands,
+    });
+    work = r.state;
+    events.push(r.event);
+    replayed = replayed + 1;
+  }
+  return { state: work, events: events, framesReplayed: replayed };
+}
+
 // Resource key for the world's resource registry.
 export var RESOURCE_WORLD_FRAME = 'world_frame';

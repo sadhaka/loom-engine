@@ -693,11 +693,11 @@ export type {
 // netcode (prediction / reconciliation) rides on. Pinned by
 // test_vectors/v5_1_command_frame.json.
 export {
-  tickFrame, RESOURCE_WORLD_FRAME,
+  tickFrame, reconcileFrames, RESOURCE_WORLD_FRAME,
 } from './runtime/world-frame.js';
 export type {
   PlayerCommand, PlayerEntityMap, FrameActionEntry, FrameResolvedEvent,
-  TickFrameInput, TickFrameResult,
+  TickFrameInput, TickFrameResult, FrameReconcileInput, FrameReconcileResult,
 } from './runtime/world-frame.js';
 // 0.84.0 - declarative asset list + dependency graph.
 export { AssetManifest, RESOURCE_ASSET_MANIFEST } from './runtime/asset-manifest.js';
