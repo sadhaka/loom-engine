@@ -699,6 +699,12 @@ export type {
   PlayerCommand, PlayerEntityMap, FrameActionEntry, FrameResolvedEvent,
   TickFrameInput, TickFrameResult, FrameReconcileInput, FrameReconcileResult,
 } from './runtime/world-frame.js';
+// 5.0 - region hashing for interest management: a 2-level Merkle over per-region
+// world-state hashes, so a partial-sync client verifies only its own region's leaf
+// plus the root. Pinned by test_vectors/v5_3_region_hash.json.
+export {
+  regionHash, regionLeaves, globalRegionHash, verifyRegion, RESOURCE_REGION_HASH,
+} from './runtime/region-hash.js';
 // 0.84.0 - declarative asset list + dependency graph.
 export { AssetManifest, RESOURCE_ASSET_MANIFEST } from './runtime/asset-manifest.js';
 export type {

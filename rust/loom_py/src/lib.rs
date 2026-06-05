@@ -132,6 +132,15 @@ fn world_state_hash(key: &str, state_json: &str) -> PyResult<String> {
         .map_err(|e| PyValueError::new_err(format!("hash: {:?}", e)))
 }
 
+/// The global region hash (interest-management Merkle root). `regions_json` is
+/// { regionId: regionState, ... }. Byte-identical to TS globalRegionHash.
+#[pyfunction]
+fn global_region_hash(key: &str, regions_json: &str) -> PyResult<String> {
+    let regions = py_parse(regions_json, "regions")?;
+    loom_snapshot::global_region_hash(key.as_bytes(), &regions)
+        .map_err(|e| PyValueError::new_err(format!("region hash: {:?}", e)))
+}
+
 /// Resolve a check action (roll vs DC -> degree -> mutations). Returns
 /// {state, degree, roll, natural, dc, delta} as a JSON string.
 #[pyfunction]
@@ -217,6 +226,7 @@ fn loom_engine_native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(sign_record, m)?)?;
     // v3.0 surface
     m.add_function(wrap_pyfunction!(world_state_hash, m)?)?;
+    m.add_function(wrap_pyfunction!(global_region_hash, m)?)?;
     m.add_function(wrap_pyfunction!(evaluate_action, m)?)?;
     m.add_function(wrap_pyfunction!(apply_triggered_mutations, m)?)?;
     m.add_function(wrap_pyfunction!(tick_epoch, m)?)?;

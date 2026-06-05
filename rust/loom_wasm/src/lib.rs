@@ -108,6 +108,18 @@ fn evaluate_action_inner(state_json: &str, check_json: &str, actor: &str, target
     serde_json::to_string(&out).map_err(|e| format!("loom_wasm: serialize: {}", e))
 }
 
+fn global_region_hash_inner(key: &str, regions_json: &str) -> Result<String, String> {
+    let regions = parse_value(regions_json, "regions")?;
+    loom_snapshot::global_region_hash(key.as_bytes(), &regions).map_err(|e| format!("loom_wasm: region hash: {:?}", e))
+}
+
+/// The global region hash (interest-management Merkle root) over a map of regions.
+/// `regions_json` is { regionId: regionState, ... }. Byte-identical to TS globalRegionHash.
+#[wasm_bindgen(js_name = globalRegionHash)]
+pub fn global_region_hash_js(key: &str, regions_json: &str) -> Result<String, JsError> {
+    global_region_hash_inner(key, regions_json).map_err(|e| JsError::new(&e))
+}
+
 /// Resolve a check action (roll vs DC -> degree -> mutations). Returns
 /// {state, degree, roll, natural, dc, delta} as JSON.
 #[wasm_bindgen(js_name = evaluateAction)]
@@ -285,5 +297,14 @@ mod v3_surface_tests {
         let out: Value = serde_json::from_str(&loom_frame::reconcile_frames_from_json(&req.to_string()).unwrap()).unwrap();
         let sh = loom_snapshot::world_state_hash(key.as_bytes(), &out["state"]).unwrap();
         assert_eq!(sh, v["expect"]["reconciled_102_hash"].as_str().unwrap(), "reconciled");
+    }
+
+    #[test]
+    fn region_surface_matches_golden() {
+        let v = read_vector("v5_3_region_hash.json");
+        let i = &v["inputs"];
+        let key = i["key"].as_str().unwrap();
+        let g = global_region_hash_inner(key, &i["regions"].to_string()).unwrap();
+        assert_eq!(g, v["expect"]["global_before"].as_str().unwrap(), "global region hash");
     }
 }

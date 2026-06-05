@@ -400,6 +400,44 @@ pub unsafe extern "C" fn loom_world_state_hash(
     })
 }
 
+/// The global region hash (interest-management Merkle root) -> 64-char hex into `out`
+/// (cap >= 65). `regions_json` = { regionId: regionState, ... }. Returns 64; -1 bad
+/// arg / non-UTF-8; -2 invalid JSON; -3 non-canonicalizable region.
+///
+/// # Safety
+/// `key` points to `key_len` bytes; `regions_json` is a NUL-terminated C string;
+/// `out` is writable for `out_cap` bytes.
+#[no_mangle]
+pub unsafe extern "C" fn loom_global_region_hash(
+    key: *const u8,
+    key_len: usize,
+    regions_json: *const c_char,
+    out: *mut c_char,
+    out_cap: usize,
+) -> c_int {
+    ffi_guard(|| {
+        if regions_json.is_null() {
+            return -1;
+        }
+        let key_slice = match checked_u8_slice(key, key_len) {
+            Some(s) => s,
+            None => return -1,
+        };
+        let rj = match CStr::from_ptr(regions_json).to_str() {
+            Ok(s) => s,
+            Err(_) => return -1,
+        };
+        let regions: serde_json::Value = match serde_json::from_str(rj) {
+            Ok(v) => v,
+            Err(_) => return -2,
+        };
+        match loom_snapshot::global_region_hash(key_slice, &regions) {
+            Ok(hex) => write_hex64(&hex, out, out_cap),
+            Err(_) => -3,
+        }
+    })
+}
+
 /// Resolve one offline epoch. `input_json` = {worldId, state, epochNumber, proposals,
 /// ruleset, actorTags?, maxActions?}. Writes {state, event, resolved, rejected} JSON
 /// to `out` (two-call protocol). Returns the length; -1 bad arg / non-UTF-8; -2 on a
@@ -703,6 +741,17 @@ mod tests {
         let r3: serde_json::Value = serde_json::from_str(&out3).unwrap();
         let fh = loom_snapshot::world_state_hash(fc["key"].as_str().unwrap().as_bytes(), &r3["state"]).unwrap();
         assert_eq!(fh, fc["expect"]["state_hash"].as_str().unwrap());
+
+        // Global region hash through the C ABI (into a caller hex buffer).
+        let rv = read_vec("v5_3_region_hash.json");
+        let ri = &rv["inputs"];
+        let rkey = ri["key"].as_str().unwrap();
+        let regions = CString::new(ri["regions"].to_string()).unwrap();
+        let mut rout = [0 as c_char; 65];
+        let rn = unsafe { loom_global_region_hash(rkey.as_ptr(), rkey.len(), regions.as_ptr(), rout.as_mut_ptr(), 65) };
+        assert_eq!(rn, 64, "region hash writes 64");
+        let got = unsafe { CStr::from_ptr(rout.as_ptr()) }.to_str().unwrap();
+        assert_eq!(got, rv["expect"]["global_before"].as_str().unwrap(), "region hash matches");
     }
 
     #[test]

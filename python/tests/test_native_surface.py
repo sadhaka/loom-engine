@@ -89,10 +89,18 @@ def test_native_reconcile_surface_matches_golden():
     assert out["framesReplayed"] == v["expect"]["frames_replayed"], "frames replayed"
 
 
+def test_native_region_surface_matches_golden():
+    v = _load("v5_3_region_hash.json")
+    i = v["inputs"]
+    g = native.global_region_hash(i["key"], json.dumps(i["regions"]))
+    assert g == v["expect"]["global_before"], "global region hash"
+
+
 if __name__ == "__main__":
     test_native_ast_surface_matches_golden()
     test_native_epoch_surface_matches_golden()
     test_native_session_surface_matches_golden()
     test_native_frame_surface_matches_golden()
     test_native_reconcile_surface_matches_golden()
+    test_native_region_surface_matches_golden()
     print("loom_engine_native parity: all golden cases pass")

@@ -69,6 +69,28 @@ pub fn world_state_hash(key: &[u8], state: &Value) -> Result<String, CanonError>
     Ok(hmac_sha256_hex(key, &snapshot_message(state)?))
 }
 
+/// Per-region leaf hashes `{ regionId: regionHash }` (a region is a world-state-shaped
+/// partition). Byte-identical to the TS `regionLeaves`; the leaf order is irrelevant
+/// because the map is key-sorted by `canonical_json` when it is hashed.
+pub fn region_leaves(key: &[u8], regions: &Value) -> Result<Value, CanonError> {
+    let mut leaves = serde_json::Map::new();
+    if let Some(obj) = regions.as_object() {
+        for (id, state) in obj {
+            leaves.insert(id.clone(), Value::String(world_state_hash(key, state)?));
+        }
+    }
+    Ok(Value::Object(leaves))
+}
+
+/// The GLOBAL region hash: HMAC over the canonical map of region leaf hashes (the
+/// 2-level Merkle root). Byte-identical to the TS `globalRegionHash`. Interest
+/// management: a partial-sync client verifies its own region leaf + this root without
+/// the full world.
+pub fn global_region_hash(key: &[u8], regions: &Value) -> Result<String, CanonError> {
+    let leaves = region_leaves(key, regions)?;
+    world_state_hash(key, &leaves)
+}
+
 /// The max event index that survives a JSON round-trip into JS
 /// (Number.MAX_SAFE_INTEGER, 2^53-1). The TS `snapshotWorldState` rejects an
 /// unsafe event index at creation; Rust matches it (audit P1) - otherwise a
