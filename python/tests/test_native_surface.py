@@ -70,8 +70,17 @@ def test_native_session_surface_matches_golden():
     assert out["epochsVoided"] == v["expect"]["epochsVoided"], "voided"
 
 
+def test_native_frame_surface_matches_golden():
+    v = _load("v5_1_command_frame.json")
+    for c in v["cases"]:
+        out = json.loads(native.tick_frame(json.dumps(c)))
+        assert world_state_hash(c["key"], out["state"]) == c["expect"]["state_hash"], c["label"] + " state"
+        assert world_state_hash(c["key"], [out["event"]]) == c["expect"]["event_hash"], c["label"] + " event"
+
+
 if __name__ == "__main__":
     test_native_ast_surface_matches_golden()
     test_native_epoch_surface_matches_golden()
     test_native_session_surface_matches_golden()
+    test_native_frame_surface_matches_golden()
     print("loom_engine_native parity: all golden cases pass")

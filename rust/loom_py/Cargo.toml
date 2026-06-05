@@ -30,3 +30,4 @@ loom_snapshot = { path = "../loom_snapshot" }
 loom_ruleset = { path = "../loom_ruleset" }
 loom_epoch = { path = "../loom_epoch" }
 loom_session = { path = "../loom_session" }
+loom_frame = { path = "../loom_frame" }

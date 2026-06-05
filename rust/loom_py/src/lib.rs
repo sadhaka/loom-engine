@@ -185,6 +185,14 @@ fn resume_session(input_json: &str) -> PyResult<String> {
     loom_session::resume_from_json(input_json).map_err(PyValueError::new_err)
 }
 
+/// Resolve one server frame (real-time multiplayer). Input JSON: {worldId, state,
+/// frameNumber, commands, ruleset, playerEntities, maxCommandsPerPlayer?,
+/// maxCommands?}. Returns {state, event, resolved, rejected}.
+#[pyfunction]
+fn tick_frame(input_json: &str) -> PyResult<String> {
+    loom_frame::tick_frame_from_json(input_json).map_err(PyValueError::new_err)
+}
+
 /// The module name MUST equal the [lib] name (loom_engine_native).
 #[pymodule]
 fn loom_engine_native(m: &Bound<'_, PyModule>) -> PyResult<()> {
@@ -206,5 +214,6 @@ fn loom_engine_native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(tick_epoch, m)?)?;
     m.add_function(wrap_pyfunction!(catch_up_epochs, m)?)?;
     m.add_function(wrap_pyfunction!(resume_session, m)?)?;
+    m.add_function(wrap_pyfunction!(tick_frame, m)?)?;
     Ok(())
 }

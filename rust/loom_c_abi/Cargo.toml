@@ -22,6 +22,7 @@ serde_json = "1"
 loom_snapshot = { path = "../loom_snapshot" }
 loom_epoch = { path = "../loom_epoch" }
 loom_session = { path = "../loom_session" }
+loom_frame = { path = "../loom_frame" }
 
 [lints.clippy]
 float_arithmetic = "deny"

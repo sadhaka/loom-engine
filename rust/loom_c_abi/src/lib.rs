@@ -381,6 +381,32 @@ pub unsafe extern "C" fn loom_resume_session(
     }
 }
 
+/// Resolve one server frame (real-time multiplayer). `input_json` = {worldId, state,
+/// frameNumber, commands, ruleset, playerEntities, maxCommandsPerPlayer?,
+/// maxCommands?}. Writes {state, event, resolved, rejected} JSON. Returns the length;
+/// -1 bad arg / non-UTF-8; -2 on an unsafe frameNumber / invalid cap.
+///
+/// # Safety
+/// As `loom_tick_epoch`.
+#[no_mangle]
+pub unsafe extern "C" fn loom_tick_frame(
+    input_json: *const c_char,
+    out: *mut c_char,
+    out_cap: usize,
+) -> c_int {
+    if input_json.is_null() {
+        return -1;
+    }
+    let ij = match CStr::from_ptr(input_json).to_str() {
+        Ok(s) => s,
+        Err(_) => return -1,
+    };
+    match loom_frame::tick_frame_from_json(ij) {
+        Ok(s) => write_str_out(&s, out, out_cap),
+        Err(_) => -2,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -525,6 +551,14 @@ mod tests {
         let r2: serde_json::Value = serde_json::from_str(&out2).unwrap();
         let sh = loom_snapshot::world_state_hash(inputs["key"].as_str().unwrap().as_bytes(), &r2["state"]).unwrap();
         assert_eq!(sh, sv["expect"]["final_state_hash"].as_str().unwrap());
+
+        // Command-frame tick through the C ABI reproduces the golden state hash.
+        let fv = read_vec("v5_1_command_frame.json");
+        let fc = &fv["cases"][0];
+        let out3 = call_json(loom_tick_frame, &fc.to_string()).unwrap();
+        let r3: serde_json::Value = serde_json::from_str(&out3).unwrap();
+        let fh = loom_snapshot::world_state_hash(fc["key"].as_str().unwrap().as_bytes(), &r3["state"]).unwrap();
+        assert_eq!(fh, fc["expect"]["state_hash"].as_str().unwrap());
     }
 
     #[test]

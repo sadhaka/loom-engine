@@ -166,6 +166,16 @@ pub fn resume_session_js(input_json: &str) -> Result<String, JsError> {
     loom_session::resume_from_json(input_json).map_err(|e| JsError::new(&e))
 }
 
+// ---- command-frame tick (real-time multiplayer, Phase 5.1) ----
+
+/// Resolve one server frame. Input: {worldId, state, frameNumber, commands, ruleset,
+/// playerEntities, maxCommandsPerPlayer?, maxCommands?}. Returns {state, event,
+/// resolved, rejected}. Throws on an unsafe frameNumber / invalid cap.
+#[wasm_bindgen(js_name = tickFrame)]
+pub fn tick_frame_js(input_json: &str) -> Result<String, JsError> {
+    loom_frame::tick_frame_from_json(input_json).map_err(|e| JsError::new(&e))
+}
+
 #[cfg(test)]
 mod v3_surface_tests {
     use super::*;
@@ -240,5 +250,17 @@ mod v3_surface_tests {
         assert_eq!(sh, v["expect"]["final_state_hash"].as_str().unwrap(), "final state");
         let eh = loom_snapshot::world_state_hash(key.as_bytes(), &out["newEvents"]).unwrap();
         assert_eq!(eh, v["expect"]["newEvents_hash"].as_str().unwrap(), "newEvents");
+    }
+
+    #[test]
+    fn frame_surface_matches_golden() {
+        let v = read_vector("v5_1_command_frame.json");
+        for c in v["cases"].as_array().unwrap() {
+            let key = c["key"].as_str().unwrap();
+            let label = c["label"].as_str().unwrap_or("?");
+            let out: Value = serde_json::from_str(&loom_frame::tick_frame_from_json(&c.to_string()).unwrap()).unwrap();
+            let sh = loom_snapshot::world_state_hash(key.as_bytes(), &out["state"]).unwrap();
+            assert_eq!(sh, c["expect"]["state_hash"].as_str().unwrap(), "{} state", label);
+        }
     }
 }
