@@ -176,7 +176,9 @@ export class ChatChannel<TMeta = Record<string, unknown>> {
     if (!member) {
       return { ok: false, message: null, reason: 'not-member' };
     }
-    var trimmed = body.replace(/^\s+|\s+$/g, '');
+    // Built-in trim (linear) - the /^\s+|\s+$/g regex was quadratic (ReDoS) on
+    // a body with a long run of whitespace (CodeQL js/polynomial-redos).
+    var trimmed = body.trim();
     if (trimmed.length === 0) {
       return { ok: false, message: null, reason: 'empty' };
     }
