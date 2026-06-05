@@ -16,8 +16,8 @@ description = "Deterministic command-frame tick for the Loom Engine (the real-ti
 [dependencies]
 serde_json = "1"
 sha2 = "0.10"
-loom_math = { path = "../loom_math" }
-loom_ruleset = { path = "../loom_ruleset" }
-loom_snapshot = { path = "../loom_snapshot" }
-loom_epoch = { path = "../loom_epoch" }
-loom_events = { path = "../loom_events" }
+loom_math = { path = "../loom_math", version = "0.1.1" }
+loom_ruleset = { path = "../loom_ruleset", version = "0.1.1" }
+loom_snapshot = { path = "../loom_snapshot", version = "0.1.1" }
+loom_epoch = { path = "../loom_epoch", version = "0.1.1" }
+loom_events = { path = "../loom_events", version = "0.1.1" }

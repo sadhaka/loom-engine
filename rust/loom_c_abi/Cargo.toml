@@ -5,6 +5,8 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
+# Binding artifact (ships as compiled .dll/.so/.a via GitHub Releases), not crates.io.
+publish = false
 
 [lib]
 name = "loom_engine"
@@ -13,16 +15,16 @@ name = "loom_engine"
 crate-type = ["cdylib", "staticlib"]
 
 [dependencies]
-loom_math = { path = "../loom_math" }
-loom_combat = { path = "../loom_combat" }
-loom_events = { path = "../loom_events" }
+loom_math = { path = "../loom_math", version = "0.1.1" }
+loom_combat = { path = "../loom_combat", version = "0.1.1" }
+loom_events = { path = "../loom_events", version = "0.1.1" }
 serde_json = "1"
 # v3.0 surface: a Unity/Godot/Go client runs the SAME compiled Rust core as the
 # browser (WASM) and the Python server (PyO3).
-loom_snapshot = { path = "../loom_snapshot" }
-loom_epoch = { path = "../loom_epoch" }
-loom_session = { path = "../loom_session" }
-loom_frame = { path = "../loom_frame" }
+loom_snapshot = { path = "../loom_snapshot", version = "0.1.1" }
+loom_epoch = { path = "../loom_epoch", version = "0.1.1" }
+loom_session = { path = "../loom_session", version = "0.1.1" }
+loom_frame = { path = "../loom_frame", version = "0.1.1" }
 
 [lints.clippy]
 float_arithmetic = "deny"

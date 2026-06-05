@@ -15,6 +15,6 @@ description = "Deterministic WorldSession suspend/resume lifecycle for the Loom 
 
 [dependencies]
 serde_json = "1"
-loom_events = { path = "../loom_events" }
-loom_snapshot = { path = "../loom_snapshot" }
-loom_epoch = { path = "../loom_epoch" }
+loom_events = { path = "../loom_events", version = "0.1.1" }
+loom_snapshot = { path = "../loom_snapshot", version = "0.1.1" }
+loom_epoch = { path = "../loom_epoch", version = "0.1.1" }

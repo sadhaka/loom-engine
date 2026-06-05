@@ -14,5 +14,5 @@ description = "Deterministic data-driven ruleset AST interpreter for the Loom En
 
 [dependencies]
 serde_json = "1"
-loom_math = { path = "../loom_math" }
-loom_snapshot = { path = "../loom_snapshot" }
+loom_math = { path = "../loom_math", version = "0.1.1" }
+loom_snapshot = { path = "../loom_snapshot", version = "0.1.1" }

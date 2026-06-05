@@ -86,7 +86,7 @@ checksum = "68ab91017fe16c622486840e4c83c9a37afeff978bd239b5293d61ece587de66"
 
 [[package]]
 name = "loom_c_abi"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "loom_combat",
  "loom_epoch",
@@ -100,14 +100,14 @@ dependencies = [
 
 [[package]]
 name = "loom_combat"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "serde_json",
 ]
 
 [[package]]
 name = "loom_epoch"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "loom_math",
  "loom_ruleset",
@@ -118,7 +118,7 @@ dependencies = [
 
 [[package]]
 name = "loom_events"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "hmac",
  "serde_json",
@@ -127,7 +127,7 @@ dependencies = [
 
 [[package]]
 name = "loom_frame"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "loom_epoch",
  "loom_events",
@@ -140,11 +140,11 @@ dependencies = [
 
 [[package]]
 name = "loom_math"
-version = "0.1.0"
+version = "0.1.1"
 
 [[package]]
 name = "loom_ruleset"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "loom_math",
  "loom_snapshot",
@@ -153,7 +153,7 @@ dependencies = [
 
 [[package]]
 name = "loom_session"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "loom_epoch",
  "loom_events",
@@ -163,7 +163,7 @@ dependencies = [
 
 [[package]]
 name = "loom_snapshot"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "loom_events",
  "serde_json",
@@ -171,7 +171,7 @@ dependencies = [
 
 [[package]]
 name = "loom_wasm"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "loom_combat",
  "loom_epoch",

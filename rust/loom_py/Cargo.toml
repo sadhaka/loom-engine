@@ -8,9 +8,12 @@
 
 [package]
 name = "loom_py"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
-license = "MIT OR Apache-2.0"
+# BUSL-1.1 (matches the engine). Shipped to PyPI as a wheel (loom_engine_native),
+# never to crates.io.
+license = "BUSL-1.1"
+publish = false
 repository = "https://github.com/sadhaka/loom-engine"
 description = "Native (Rust) Python bindings for the Loom Engine deterministic core, via PyO3 + maturin."
 
@@ -22,12 +25,12 @@ crate-type = ["cdylib"]
 [dependencies]
 pyo3 = { version = "0.24", features = ["extension-module"] }
 serde_json = "1"
-loom_math = { path = "../loom_math" }
-loom_combat = { path = "../loom_combat" }
-loom_events = { path = "../loom_events" }
+loom_math = { path = "../loom_math", version = "0.1.1" }
+loom_combat = { path = "../loom_combat", version = "0.1.1" }
+loom_events = { path = "../loom_events", version = "0.1.1" }
 # v3.0 surface: the Python server runs the SAME compiled Rust core as the browser.
-loom_snapshot = { path = "../loom_snapshot" }
-loom_ruleset = { path = "../loom_ruleset" }
-loom_epoch = { path = "../loom_epoch" }
-loom_session = { path = "../loom_session" }
-loom_frame = { path = "../loom_frame" }
+loom_snapshot = { path = "../loom_snapshot", version = "0.1.1" }
+loom_ruleset = { path = "../loom_ruleset", version = "0.1.1" }
+loom_epoch = { path = "../loom_epoch", version = "0.1.1" }
+loom_session = { path = "../loom_session", version = "0.1.1" }
+loom_frame = { path = "../loom_frame", version = "0.1.1" }

@@ -20,6 +20,6 @@ serde_json = "1"
 # Raw SHA-256 for the PUBLIC epoch-seed derivation (NOT HMAC) - same crate +
 # version loom_events already depends on, so no new crypto surface is added.
 sha2 = "0.10"
-loom_math = { path = "../loom_math" }
-loom_snapshot = { path = "../loom_snapshot" }
-loom_ruleset = { path = "../loom_ruleset" }
+loom_math = { path = "../loom_math", version = "0.1.1" }
+loom_snapshot = { path = "../loom_snapshot", version = "0.1.1" }
+loom_ruleset = { path = "../loom_ruleset", version = "0.1.1" }
