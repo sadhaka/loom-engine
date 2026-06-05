@@ -11,7 +11,7 @@
 
 [workspace]
 resolver = "2"
-members = ["loom_math", "loom_combat", "loom_events", "loom_snapshot", "loom_wasm", "loom_c_abi"]
+members = ["loom_math", "loom_combat", "loom_events", "loom_snapshot", "loom_ruleset", "loom_wasm", "loom_c_abi"]
 # loom_py is built by maturin, not cargo: its PyO3 `extension-module` feature
 # does not link libpython for a plain build, which breaks `cargo test --workspace`.
 # It still path-deps the core crates above.
