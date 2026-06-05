@@ -3,7 +3,9 @@ name = "loom_combat"
 description = "Deterministic combat primitives for the Loom Engine - reaction economy, ruleset adapters (5e/PF2e), range bands."
 version.workspace = true
 edition.workspace = true
-license.workspace = true
+# Commodity primitive (generic combat ordering + open-content 5e/PF2e rule adapters);
+# first published at 0.1.0 under this permissive license, immutable on crates.io.
+license = "MIT OR Apache-2.0"
 repository.workspace = true
 
 [dependencies]

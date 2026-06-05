@@ -5,6 +5,8 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
+# Binding artifact (ships to npm as a wasm package), never to crates.io.
+publish = false
 
 [lib]
 crate-type = ["cdylib", "rlib"]
@@ -12,11 +14,11 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 wasm-bindgen = "0.2"
 serde_json = "1"
-loom_math = { path = "../loom_math" }
-loom_combat = { path = "../loom_combat" }
+loom_math = { path = "../loom_math", version = "0.1.1" }
+loom_combat = { path = "../loom_combat", version = "0.1.1" }
 # v3.0 surface: the browser runs the SAME compiled Rust core as the server.
-loom_snapshot = { path = "../loom_snapshot" }
-loom_ruleset = { path = "../loom_ruleset" }
-loom_epoch = { path = "../loom_epoch" }
-loom_session = { path = "../loom_session" }
-loom_frame = { path = "../loom_frame" }
+loom_snapshot = { path = "../loom_snapshot", version = "0.1.1" }
+loom_ruleset = { path = "../loom_ruleset", version = "0.1.1" }
+loom_epoch = { path = "../loom_epoch", version = "0.1.1" }
+loom_session = { path = "../loom_session", version = "0.1.1" }
+loom_frame = { path = "../loom_frame", version = "0.1.1" }

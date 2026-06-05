@@ -18,9 +18,17 @@ members = ["loom_math", "loom_combat", "loom_events", "loom_snapshot", "loom_rul
 exclude = ["loom_py"]
 
 [workspace.package]
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
-license = "MIT OR Apache-2.0"
+# BUSL-1.1 (source-available, NOT open-source) - matches the npm package + the
+# engine's IP boundary. The deterministic world-logic crates (ruleset/epoch/session/
+# frame/snapshot) carry this. EXCEPTION: loom_math / loom_events / loom_combat
+# pin themselves to "MIT OR Apache-2.0" below - they were first published at 0.1.0
+# under that permissive license (commodity primitives: a PCG32 PRNG, an HMAC chain,
+# and open-content 5e/PF2e rule adapters - reimplementations of public algorithms),
+# and crates.io versions are immutable. They stay permissive for honesty; the
+# value-bearing crates are BUSL.
+license = "BUSL-1.1"
 repository = "https://github.com/sadhaka/loom-engine"
 
 [profile.release]

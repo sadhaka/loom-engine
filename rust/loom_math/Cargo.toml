@@ -3,7 +3,9 @@ name = "loom_math"
 description = "Deterministic integer math + RNG for the Loom Engine core - byte-identical across platforms."
 version.workspace = true
 edition.workspace = true
-license.workspace = true
+# Commodity primitive (PCG32 + integer math = public algorithms); first published
+# at 0.1.0 under this permissive license, which is immutable on crates.io.
+license = "MIT OR Apache-2.0"
 repository.workspace = true
 
 [dependencies]
