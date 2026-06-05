@@ -361,7 +361,9 @@ pub struct CatchUpResult {
 /// (state, capped, proposals) - never on the wall clock directly.
 pub fn catch_up_epochs(input: CatchUpInput) -> CatchUpResult {
     let client_epoch = input.state.get("epoch").and_then(|e| e.as_i64()).unwrap_or(0);
-    let target = input.current_epoch - client_epoch;
+    // Codex P1: checked arithmetic - a hostile state.epoch (e.g. i64::MIN) must not
+    // overflow/panic; an un-subtractable epoch yields no catch-up.
+    let target = input.current_epoch.checked_sub(client_epoch).unwrap_or(0);
     if target <= 0 {
         return CatchUpResult {
             state: input.state.clone(),
@@ -379,7 +381,10 @@ pub fn catch_up_epochs(input: CatchUpInput) -> CatchUpResult {
     let empty = json!({});
     let mut i = 1;
     while i <= capped {
-        let epoch_n = client_epoch + i;
+        let epoch_n = match client_epoch.checked_add(i) {
+            Some(e) => e,
+            None => break, // epoch counter would overflow i64 - stop, deterministically
+        };
         let proposals = input
             .proposals_by_epoch
             .get(epoch_n.to_string())
@@ -469,6 +474,12 @@ pub fn catch_up_epochs_from_json(input_json: &str) -> Result<String, String> {
     let max_catchup = v.get("maxCatchup").and_then(|x| x.as_i64()).ok_or("world-epoch: maxCatchup must be an integer")?;
     if max_catchup < 0 || !is_safe_epoch(max_catchup) {
         return Err("world-epoch: maxCatchup must be a non-negative JS-safe integer".to_string());
+    }
+    // Codex P1: a state.epoch outside the JS-safe range is rejected at the boundary
+    // (it could never round-trip through the canonical hash anyway).
+    let client_epoch = v.get("state").and_then(|s| s.get("epoch")).and_then(|e| e.as_i64()).unwrap_or(0);
+    if !is_safe_epoch(client_epoch) {
+        return Err("world-epoch: state.epoch must be a JS-safe integer".to_string());
     }
     let max_actions = parse_max_actions(&v)?;
     let r = catch_up_epochs(CatchUpInput {

@@ -20,6 +20,29 @@ use loom_combat::{range_bands, ruleset};
 use loom_events as events;
 use loom_math::{floor_div as core_floor_div, Pcg32};
 
+// Codex P0: build a &[u8] from a caller (ptr, len) pair WITHOUT violating Rust's
+// slice preconditions. len == 0 -> empty slice (ptr may be null). A len exceeding
+// isize::MAX (e.g. SIZE_MAX) is rejected rather than passed to from_raw_parts,
+// which would be instant UB.
+unsafe fn checked_u8_slice<'a>(ptr: *const u8, len: usize) -> Option<&'a [u8]> {
+    if ptr.is_null() {
+        return None; // a null pointer is rejected (even with len 0)
+    }
+    if len == 0 {
+        return Some(&[]); // non-null + len 0 -> a valid empty slice (e.g. an empty key)
+    }
+    if len > (isize::MAX as usize) {
+        return None;
+    }
+    Some(std::slice::from_raw_parts(ptr, len))
+}
+
+// Codex P0: run an exported-function body so NO Rust panic can cross the extern "C"
+// boundary (a panic across the FFI is UB / abort). A panic is mapped to status -100.
+fn ffi_guard<F: FnOnce() -> c_int>(f: F) -> c_int {
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(f)).unwrap_or(-100)
+}
+
 /// Band codes (closeness ascending). Mirror loom_combat::range_bands.
 pub const LOOM_BAND_ENGAGED: c_int = 0;
 pub const LOOM_BAND_NEAR: c_int = 1;
@@ -163,16 +186,21 @@ pub unsafe extern "C" fn loom_hmac_sha256_hex(
     out: *mut c_char,
     out_cap: usize,
 ) -> c_int {
-    if key.is_null() || message.is_null() {
-        return -1;
-    }
-    let key_slice = std::slice::from_raw_parts(key, key_len);
-    let msg = match CStr::from_ptr(message).to_str() {
-        Ok(s) => s,
-        Err(_) => return -1,
-    };
-    let hex = events::hmac_sha256_hex(key_slice, msg);
-    write_hex64(&hex, out, out_cap)
+    ffi_guard(|| {
+        if message.is_null() {
+            return -1;
+        }
+        let key_slice = match checked_u8_slice(key, key_len) {
+            Some(s) => s,
+            None => return -1,
+        };
+        let msg = match CStr::from_ptr(message).to_str() {
+            Ok(s) => s,
+            Err(_) => return -1,
+        };
+        let hex = events::hmac_sha256_hex(key_slice, msg);
+        write_hex64(&hex, out, out_cap)
+    })
 }
 
 /// HMAC-SHA256 over RAW message bytes (ptr + len) -> 64-char hex into `out` (cap
@@ -191,17 +219,23 @@ pub unsafe extern "C" fn loom_hmac_sha256_hex_raw(
     out: *mut c_char,
     out_cap: usize,
 ) -> c_int {
-    if key.is_null() || (message.is_null() && message_len != 0) {
-        return -1;
-    }
-    let key_slice = std::slice::from_raw_parts(key, key_len);
-    let msg: &[u8] = if message_len == 0 {
-        &[]
-    } else {
-        std::slice::from_raw_parts(message, message_len)
-    };
-    let hex = events::hmac_sha256_hex_bytes(key_slice, msg);
-    write_hex64(&hex, out, out_cap)
+    ffi_guard(|| {
+        let key_slice = match checked_u8_slice(key, key_len) {
+            Some(s) => s,
+            None => return -1,
+        };
+        // message may be null ONLY when message_len == 0 (an empty message).
+        let msg: &[u8] = if message_len == 0 {
+            &[]
+        } else {
+            match checked_u8_slice(message, message_len) {
+                Some(s) => s,
+                None => return -1,
+            }
+        };
+        let hex = events::hmac_sha256_hex_bytes(key_slice, msg);
+        write_hex64(&hex, out, out_cap)
+    })
 }
 
 /// Sign one event record -> 64-char hex into `out` (cap >= 65). `payload_json` is
@@ -222,30 +256,35 @@ pub unsafe extern "C" fn loom_sign_record(
     out: *mut c_char,
     out_cap: usize,
 ) -> c_int {
-    if key.is_null() || type_.is_null() || payload_json.is_null() || prev_sig.is_null() {
-        return -1;
-    }
-    let key_slice = std::slice::from_raw_parts(key, key_len);
-    let t = match CStr::from_ptr(type_).to_str() {
-        Ok(s) => s,
-        Err(_) => return -1,
-    };
-    let pj = match CStr::from_ptr(payload_json).to_str() {
-        Ok(s) => s,
-        Err(_) => return -1,
-    };
-    let ps = match CStr::from_ptr(prev_sig).to_str() {
-        Ok(s) => s,
-        Err(_) => return -1,
-    };
-    let payload: serde_json::Value = match serde_json::from_str(pj) {
-        Ok(v) => v,
-        Err(_) => return -2,
-    };
-    match events::sign_record(key_slice, seq, t, &payload, ps) {
-        Ok(sig) => write_hex64(&sig, out, out_cap),
-        Err(_) => -3,
-    }
+    ffi_guard(|| {
+        if type_.is_null() || payload_json.is_null() || prev_sig.is_null() {
+            return -1;
+        }
+        let key_slice = match checked_u8_slice(key, key_len) {
+            Some(s) => s,
+            None => return -1,
+        };
+        let t = match CStr::from_ptr(type_).to_str() {
+            Ok(s) => s,
+            Err(_) => return -1,
+        };
+        let pj = match CStr::from_ptr(payload_json).to_str() {
+            Ok(s) => s,
+            Err(_) => return -1,
+        };
+        let ps = match CStr::from_ptr(prev_sig).to_str() {
+            Ok(s) => s,
+            Err(_) => return -1,
+        };
+        let payload: serde_json::Value = match serde_json::from_str(pj) {
+            Ok(v) => v,
+            Err(_) => return -2,
+        };
+        match events::sign_record(key_slice, seq, t, &payload, ps) {
+            Ok(sig) => write_hex64(&sig, out, out_cap),
+            Err(_) => -3,
+        }
+    })
 }
 
 // ---- v3.0 surface (JSON-in / JSON-out over the C ABI) -----------------------
@@ -262,12 +301,66 @@ unsafe fn write_str_out(s: &str, out: *mut c_char, out_cap: usize) -> c_int {
     if needed > (c_int::MAX as usize) - 1 {
         return -10; // absurdly large result
     }
-    if out.is_null() || out_cap < needed + 1 {
-        return needed as c_int; // length query / buffer too small - no write
+    if out.is_null() {
+        return needed as c_int; // length query
+    }
+    if out_cap < needed + 1 {
+        // Buffer too small: NUL-terminate (to empty) if there is any room, so a caller
+        // that ignores the returned length reads "" rather than uninitialized / stale
+        // memory (Codex P2). Still returns `needed` so a correct caller reallocs to
+        // >= needed + 1 and retries.
+        if out_cap > 0 {
+            *out = 0;
+        }
+        return needed as c_int;
     }
     std::ptr::copy_nonoverlapping(s.as_ptr(), out as *mut u8, needed);
     *out.add(needed) = 0;
     needed as c_int
+}
+
+// Run a JSON-in/JSON-out core over a NUL-terminated C string (convenience), panic-
+// guarded. The caller MUST guarantee `input_json` is NUL-terminated (CStr scans for
+// the NUL) - the _n variant below is the bounded-read alternative (Codex P1).
+unsafe fn run_json_cstr<F>(input_json: *const c_char, out: *mut c_char, out_cap: usize, f: F) -> c_int
+where
+    F: FnOnce(&str) -> Result<String, String>,
+{
+    ffi_guard(|| {
+        if input_json.is_null() {
+            return -1;
+        }
+        let ij = match CStr::from_ptr(input_json).to_str() {
+            Ok(s) => s,
+            Err(_) => return -1,
+        };
+        match f(ij) {
+            Ok(s) => write_str_out(&s, out, out_cap),
+            Err(_) => -2,
+        }
+    })
+}
+
+// Run a JSON-in/JSON-out core over an explicit (ptr, len) input - a BOUNDED read, so
+// the JSON need not be NUL-terminated (Codex P1). Panic-guarded.
+unsafe fn run_json_n<F>(input_ptr: *const u8, input_len: usize, out: *mut c_char, out_cap: usize, f: F) -> c_int
+where
+    F: FnOnce(&str) -> Result<String, String>,
+{
+    ffi_guard(|| {
+        let bytes = match checked_u8_slice(input_ptr, input_len) {
+            Some(b) => b,
+            None => return -1,
+        };
+        let ij = match std::str::from_utf8(bytes) {
+            Ok(s) => s,
+            Err(_) => return -1,
+        };
+        match f(ij) {
+            Ok(s) => write_str_out(&s, out, out_cap),
+            Err(_) => -2,
+        }
+    })
 }
 
 /// HMAC-SHA-256 of the canonical world state -> 64-char hex into `out` (cap >= 65).
@@ -284,22 +377,27 @@ pub unsafe extern "C" fn loom_world_state_hash(
     out: *mut c_char,
     out_cap: usize,
 ) -> c_int {
-    if key.is_null() || state_json.is_null() {
-        return -1;
-    }
-    let key_slice = std::slice::from_raw_parts(key, key_len);
-    let sj = match CStr::from_ptr(state_json).to_str() {
-        Ok(s) => s,
-        Err(_) => return -1,
-    };
-    let state: serde_json::Value = match serde_json::from_str(sj) {
-        Ok(v) => v,
-        Err(_) => return -2,
-    };
-    match loom_snapshot::world_state_hash(key_slice, &state) {
-        Ok(hex) => write_hex64(&hex, out, out_cap),
-        Err(_) => -3,
-    }
+    ffi_guard(|| {
+        if state_json.is_null() {
+            return -1;
+        }
+        let key_slice = match checked_u8_slice(key, key_len) {
+            Some(s) => s,
+            None => return -1,
+        };
+        let sj = match CStr::from_ptr(state_json).to_str() {
+            Ok(s) => s,
+            Err(_) => return -1,
+        };
+        let state: serde_json::Value = match serde_json::from_str(sj) {
+            Ok(v) => v,
+            Err(_) => return -2,
+        };
+        match loom_snapshot::world_state_hash(key_slice, &state) {
+            Ok(hex) => write_hex64(&hex, out, out_cap),
+            Err(_) => -3,
+        }
+    })
 }
 
 /// Resolve one offline epoch. `input_json` = {worldId, state, epochNumber, proposals,
@@ -316,17 +414,22 @@ pub unsafe extern "C" fn loom_tick_epoch(
     out: *mut c_char,
     out_cap: usize,
 ) -> c_int {
-    if input_json.is_null() {
-        return -1;
-    }
-    let ij = match CStr::from_ptr(input_json).to_str() {
-        Ok(s) => s,
-        Err(_) => return -1,
-    };
-    match loom_epoch::tick_epoch_from_json(ij) {
-        Ok(s) => write_str_out(&s, out, out_cap),
-        Err(_) => -2,
-    }
+    run_json_cstr(input_json, out, out_cap, loom_epoch::tick_epoch_from_json)
+}
+
+/// Bounded-read variant of `loom_tick_epoch` - `input_ptr` points to `input_len` JSON
+/// bytes (no NUL terminator required). Codex P1.
+///
+/// # Safety
+/// `input_ptr` points to `input_len` readable bytes; `out` is writable for `out_cap`.
+#[no_mangle]
+pub unsafe extern "C" fn loom_tick_epoch_n(
+    input_ptr: *const u8,
+    input_len: usize,
+    out: *mut c_char,
+    out_cap: usize,
+) -> c_int {
+    run_json_n(input_ptr, input_len, out, out_cap, loom_epoch::tick_epoch_from_json)
 }
 
 /// Replay offline epochs (bounded). `input_json` = {worldId, state, currentEpoch,
@@ -341,17 +444,21 @@ pub unsafe extern "C" fn loom_catch_up_epochs(
     out: *mut c_char,
     out_cap: usize,
 ) -> c_int {
-    if input_json.is_null() {
-        return -1;
-    }
-    let ij = match CStr::from_ptr(input_json).to_str() {
-        Ok(s) => s,
-        Err(_) => return -1,
-    };
-    match loom_epoch::catch_up_epochs_from_json(ij) {
-        Ok(s) => write_str_out(&s, out, out_cap),
-        Err(_) => -2,
-    }
+    run_json_cstr(input_json, out, out_cap, loom_epoch::catch_up_epochs_from_json)
+}
+
+/// Bounded-read variant of `loom_catch_up_epochs`. Codex P1.
+///
+/// # Safety
+/// `input_ptr` points to `input_len` readable bytes; `out` is writable for `out_cap`.
+#[no_mangle]
+pub unsafe extern "C" fn loom_catch_up_epochs_n(
+    input_ptr: *const u8,
+    input_len: usize,
+    out: *mut c_char,
+    out_cap: usize,
+) -> c_int {
+    run_json_n(input_ptr, input_len, out, out_cap, loom_epoch::catch_up_epochs_from_json)
 }
 
 /// Resume a WorldSession (fail-closed). `input_json` = {key, bundle, currentEpoch,
@@ -368,17 +475,21 @@ pub unsafe extern "C" fn loom_resume_session(
     out: *mut c_char,
     out_cap: usize,
 ) -> c_int {
-    if input_json.is_null() {
-        return -1;
-    }
-    let ij = match CStr::from_ptr(input_json).to_str() {
-        Ok(s) => s,
-        Err(_) => return -1,
-    };
-    match loom_session::resume_from_json(ij) {
-        Ok(s) => write_str_out(&s, out, out_cap),
-        Err(_) => -2,
-    }
+    run_json_cstr(input_json, out, out_cap, loom_session::resume_from_json)
+}
+
+/// Bounded-read variant of `loom_resume_session`. Codex P1.
+///
+/// # Safety
+/// `input_ptr` points to `input_len` readable bytes; `out` is writable for `out_cap`.
+#[no_mangle]
+pub unsafe extern "C" fn loom_resume_session_n(
+    input_ptr: *const u8,
+    input_len: usize,
+    out: *mut c_char,
+    out_cap: usize,
+) -> c_int {
+    run_json_n(input_ptr, input_len, out, out_cap, loom_session::resume_from_json)
 }
 
 /// Resolve one server frame (real-time multiplayer). `input_json` = {worldId, state,
@@ -394,17 +505,21 @@ pub unsafe extern "C" fn loom_tick_frame(
     out: *mut c_char,
     out_cap: usize,
 ) -> c_int {
-    if input_json.is_null() {
-        return -1;
-    }
-    let ij = match CStr::from_ptr(input_json).to_str() {
-        Ok(s) => s,
-        Err(_) => return -1,
-    };
-    match loom_frame::tick_frame_from_json(ij) {
-        Ok(s) => write_str_out(&s, out, out_cap),
-        Err(_) => -2,
-    }
+    run_json_cstr(input_json, out, out_cap, loom_frame::tick_frame_from_json)
+}
+
+/// Bounded-read variant of `loom_tick_frame`. Codex P1.
+///
+/// # Safety
+/// `input_ptr` points to `input_len` readable bytes; `out` is writable for `out_cap`.
+#[no_mangle]
+pub unsafe extern "C" fn loom_tick_frame_n(
+    input_ptr: *const u8,
+    input_len: usize,
+    out: *mut c_char,
+    out_cap: usize,
+) -> c_int {
+    run_json_n(input_ptr, input_len, out, out_cap, loom_frame::tick_frame_from_json)
 }
 
 #[cfg(test)]
@@ -566,5 +681,32 @@ mod tests {
         // an unsafe epoch is rejected (-2), matching every other surface.
         let bad = serde_json::json!({"worldId":"w","epochNumber":9007199254740992i64,"state":{"epoch":0,"worldSeed":0,"entities":{}},"proposals":{},"ruleset":{}});
         assert_eq!(call_json(loom_tick_epoch, &bad.to_string()).unwrap_err(), -2);
+    }
+
+    #[test]
+    fn ffi_hardening() {
+        // P0-2: a SIZE_MAX key_len is rejected (-1), never reaching from_raw_parts (UB).
+        let state = CString::new("{\"epoch\":0,\"worldSeed\":0,\"entities\":{}}").unwrap();
+        let key = [1u8; 4];
+        let mut out = [0 as c_char; 65];
+        let r = unsafe { loom_world_state_hash(key.as_ptr(), usize::MAX, state.as_ptr(), out.as_mut_ptr(), 65) };
+        assert_eq!(r, -1, "SIZE_MAX key_len rejected");
+        // a null key is rejected even with len 0.
+        let r2 = unsafe { loom_world_state_hash(std::ptr::null(), 0, state.as_ptr(), out.as_mut_ptr(), 65) };
+        assert_eq!(r2, -1, "null key rejected");
+
+        // P1-1: a state.epoch of i64::MIN is rejected (-2), no overflow panic.
+        let bad_epoch = serde_json::json!({"worldId":"w","state":{"epoch":-9223372036854775808i64,"worldSeed":0,"entities":{}},"currentEpoch":0,"maxCatchup":1,"ruleset":{},"proposalsByEpoch":{}});
+        assert_eq!(call_json(loom_catch_up_epochs, &bad_epoch.to_string()).unwrap_err(), -2);
+
+        // P1-2: the bounded _n variant resolves a non-NUL-terminated input.
+        let fin = serde_json::json!({"worldId":"w","frameNumber":1,"state":{"frame":0,"epoch":0,"worldSeed":0,"entities":{}},"commands":[],"ruleset":{},"playerEntities":{}}).to_string();
+        let b = fin.as_bytes();
+        let needed = unsafe { loom_tick_frame_n(b.as_ptr(), b.len(), std::ptr::null_mut(), 0) };
+        assert!(needed > 0, "_n length query returns needed length");
+        let cap = needed as usize + 1;
+        let mut buf = vec![0 as c_char; cap];
+        let n = unsafe { loom_tick_frame_n(b.as_ptr(), b.len(), buf.as_mut_ptr(), cap) };
+        assert_eq!(n, needed, "_n writes successfully");
     }
 }

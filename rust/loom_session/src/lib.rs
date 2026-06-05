@@ -18,14 +18,20 @@ use serde_json::{json, Map, Value};
 
 // ---- the reducer: replay a recorded EpochResolved event --------------------
 
-fn ensure_entity<'a>(state: &'a mut Value, id: &str) -> &'a mut Value {
-    let obj = state.as_object_mut().expect("state must be a JSON object");
+// Returns None (instead of panicking) if the state / entities value is not a JSON
+// object. A hostile bundle whose snapshot hash matches but whose state shape is
+// malformed (e.g. "entities": 0) must NOT panic - a panic across the C ABI is UB
+// (Codex P0). A malformed state simply receives no mutation, deterministically.
+fn ensure_entity<'a>(state: &'a mut Value, id: &str) -> Option<&'a mut Value> {
+    let obj = state.as_object_mut()?;
     let entities = obj
         .entry("entities")
         .or_insert_with(|| Value::Object(Map::new()));
-    let emap = entities.as_object_mut().expect("entities must be a JSON object");
-    emap.entry(id.to_string())
-        .or_insert_with(|| json!({ "properties": {}, "tags": [] }))
+    let emap = entities.as_object_mut()?;
+    Some(
+        emap.entry(id.to_string())
+            .or_insert_with(|| json!({ "properties": {}, "tags": [] })),
+    )
 }
 
 // Apply ONE recorded mutation. Mirrors the AST's applyMutation EXACTLY: a prop op
@@ -38,7 +44,10 @@ fn apply_serialized_mutation(state: &mut Value, m: &Value) {
         None => return,
     };
     let op = m.get("op").and_then(|x| x.as_str()).unwrap_or("").to_string();
-    let ent = ensure_entity(state, &target);
+    let ent = match ensure_entity(state, &target) {
+        Some(e) => e,
+        None => return,
+    };
     let emap = match ent.as_object_mut() {
         Some(e) => e,
         None => return,

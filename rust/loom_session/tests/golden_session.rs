@@ -45,6 +45,22 @@ fn corrupted_snapshot_is_rejected() {
 }
 
 #[test]
+fn reducer_does_not_panic_on_malformed_state() {
+    // Codex P0: a state whose `entities` is not a JSON object (a hostile bundle whose
+    // snapshot hash matched but whose shape is malformed) must NOT panic the reducer -
+    // a panic across the C ABI is UB. The mutation is simply skipped, deterministically.
+    let state = serde_json::json!({ "epoch": 0, "worldSeed": 0, "entities": 0 });
+    let event = serde_json::json!({
+        "event_type": "EpochResolved", "epoch_number": 1,
+        "actions_processed": [{ "action_id": "a", "actor_id": "x", "degree": "none",
+            "mutations_applied": [{ "op": "add_prop", "target": "x", "property": "hp", "next": 5 }] }],
+        "pcg_steps_consumed": 0
+    });
+    let out = loom_session::replay_epoch_event(&state, &event); // must not panic
+    assert_eq!(out["epoch"].as_i64(), Some(1), "epoch still advances; no panic");
+}
+
+#[test]
 fn tampered_tail_is_rejected() {
     let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../../test_vectors/v3_4_world_session.json");
     let v: Value = serde_json::from_str(&fs::read_to_string(path).expect("read")).expect("parse");
