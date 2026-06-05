@@ -69,12 +69,24 @@ pub fn world_state_hash(key: &[u8], state: &Value) -> Result<String, CanonError>
     Ok(hmac_sha256_hex(key, &snapshot_message(state)?))
 }
 
-/// Take a snapshot: the `(event_index, state_hash)` commitment.
+/// The max event index that survives a JSON round-trip into JS
+/// (Number.MAX_SAFE_INTEGER, 2^53-1). The TS `snapshotWorldState` rejects an
+/// unsafe event index at creation; Rust matches it (audit P1) - otherwise a
+/// Rust-made snapshot's index could silently round on the JS side and select the
+/// wrong replay tail even though state_hash itself is content-only.
+pub const MAX_SAFE_EVENT_INDEX: u64 = 9_007_199_254_740_991;
+
+/// Take a snapshot: the `(event_index, state_hash)` commitment. Fails closed if
+/// `event_index` exceeds the JS-safe range (so the metadata stays portable
+/// across the TS / Python / Rust surfaces).
 pub fn snapshot_world_state(
     key: &[u8],
     state: &Value,
     event_index: u64,
 ) -> Result<WorldStateSnapshot, CanonError> {
+    if event_index > MAX_SAFE_EVENT_INDEX {
+        return Err(CanonError::UnsafeInteger);
+    }
     Ok(WorldStateSnapshot {
         event_index,
         state_hash: world_state_hash(key, state)?,
@@ -155,6 +167,15 @@ mod tests {
     fn fail_closed_on_non_integer() {
         let key = b"k";
         assert!(world_state_hash(key, &json!({"x": 1.5})).is_err());
+    }
+
+    #[test]
+    fn rejects_unsafe_event_index() {
+        // Audit P1: a Rust event index past 2^53-1 would round on a JS round-trip.
+        let key = b"k";
+        let state = json!({"entities": {}});
+        assert!(snapshot_world_state(key, &state, MAX_SAFE_EVENT_INDEX).is_ok());
+        assert!(snapshot_world_state(key, &state, MAX_SAFE_EVENT_INDEX + 1).is_err());
     }
 
     #[test]

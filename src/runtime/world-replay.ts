@@ -10,19 +10,25 @@
 // event into a state change (in TheWorldTable this becomes the Phase-2 ruleset
 // AST interpreter). The engine guarantees the three things that make replay
 // trustworthy regardless of the reducer:
-//   1. ORDER - events are folded in strict array order (== chain sequence).
+//   1. ORDER + ABSOLUTE INDEX - events are folded in strict array order, and the
+//      reducer's `index` is the event's ABSOLUTE position in the full history,
+//      NOT its position within the replayed slice. This is what keeps
+//      snapshot+replay equivalent to full replay even for a reducer that uses
+//      the index (e.g. to derive a per-event sub-seed). A tail replay therefore
+//      starts numbering at `snapshotIndex`, never at 0. (Audit P1: an earlier
+//      cut passed the slice-local loop index and broke equivalence for any
+//      index-using reducer.)
 //   2. EQUIVALENCE - snapshot+replay yields the same head as full replay
 //      (verifyReplayEquivalence below proves it for a concrete history).
 //   3. A FAIL-CLOSED HASH GATE - worldStateHash() throws on any non-integer /
 //      non-canonical state, so a reducer that produces junk cannot silently
 //      publish a state hash.
 // The reducer's OWN determinism (no wall-clock, no Math.random, no float, no
-// unordered iteration) is the consumer's contract - the same determinism gates
-// the rest of the engine lives under.
+// unordered iteration) is the consumer's contract.
 //
-//   var head = replayEvents(genesis, events, reducer);
-//   // resume cheaply from a snapshot at index k:
-//   var r = replayFromSnapshot(key, snapshotAtK, events.slice(k), reducer);
+//   var head = replayEvents(genesis, events, reducer);           // from index 0
+//   // resume cheaply from a snapshot taken after `k` events:
+//   var r = replayFromSnapshot(key, snapshotAtK, k, events.slice(k), reducer);
 //   // r.headHash must equal worldStateHash(key, head)
 //
 // Code style: var-only in browser source (matches world-state-snapshot.ts).
@@ -31,8 +37,9 @@ import type { WorldState } from './world-state-snapshot.js';
 import { worldStateHash } from './world-state-snapshot.js';
 
 // A reducer applies ONE event to the world, returning the NEW state. Must be
-// pure + deterministic. `index` is the 0-based position in the replayed slice
-// (a reducer may use it, e.g. to derive a per-event sub-seed).
+// pure + deterministic. `index` is the event's ABSOLUTE 0-based position in the
+// full event history (NOT its position in the replayed slice), so a reducer may
+// use it to derive a stable per-event sub-seed.
 export type WorldEventReducer<E = unknown> =
   (state: WorldState, event: E, index: number) => WorldState;
 
@@ -43,29 +50,37 @@ export interface ReplayResult {
   headHash: string;
 }
 
-// Fold a sequence of events onto a base state, in array order. Pure given a
-// pure reducer. This is the single deterministic application point - every
-// replay path goes through it, so order can never vary by surface.
+// Fold a sequence of events onto a base state, in array order. Pure given a pure
+// reducer. `startIndex` is the ABSOLUTE index of `events[0]` in the full history
+// (0 for a replay from genesis, `snapshotIndex` for a replay of a tail after a
+// snapshot), so the reducer always sees the same absolute index for a given
+// event regardless of where replay started. This is the single deterministic
+// application point - every replay path goes through it.
 export function replayEvents<E>(
-  base: WorldState, events: E[], reducer: WorldEventReducer<E>): WorldState {
+  base: WorldState, events: E[], reducer: WorldEventReducer<E>,
+  startIndex: number = 0): WorldState {
   if (typeof reducer !== 'function') {
     throw new Error('WorldReplay: reducer must be a function');
   }
+  if (!Number.isInteger(startIndex) || startIndex < 0) {
+    throw new Error('WorldReplay: startIndex must be a non-negative integer');
+  }
   var state = base;
   for (var i = 0; i < events.length; i++) {
-    state = reducer(state, events[i] as E, i);
+    state = reducer(state, events[i] as E, startIndex + i);
   }
   return state;
 }
 
-// Reconstruct the head world from a snapshot taken at some index by replaying
-// ONLY the events after it. Returns the head state + its hash. The caller is
-// expected to have already VERIFIED the snapshotState against the chain
-// (verifyWorldSnapshot) before trusting it as the replay base.
+// Reconstruct the head world from a snapshot taken after `snapshotIndex` events,
+// by replaying ONLY the events after it. The tail is numbered from
+// `snapshotIndex` so reducers see absolute indexes. The caller is expected to
+// have already VERIFIED the snapshotState against the chain (verifyWorldSnapshot)
+// before trusting it as the replay base.
 export function replayFromSnapshot<E>(
-  key: string | Uint8Array, snapshotState: WorldState,
+  key: string | Uint8Array, snapshotState: WorldState, snapshotIndex: number,
   eventsAfter: E[], reducer: WorldEventReducer<E>): ReplayResult {
-  var headState = replayEvents(snapshotState, eventsAfter, reducer);
+  var headState = replayEvents(snapshotState, eventsAfter, reducer, snapshotIndex);
   return { headState: headState, headHash: worldStateHash(key, headState) };
 }
 
@@ -75,17 +90,18 @@ export function replayFromSnapshot<E>(
 // from genesis? Returns true iff equivalent.
 //
 // It holds for ANY pure reducer by fold associativity:
-//   fold(genesis, [e0..eN]) === fold(fold(genesis, [e0..ek]), [ek..eN])
+//   fold(genesis, [e0..eN], 0) === fold(fold(genesis, [e0..ek], 0), [ek..eN], k)
 // so a `false` here means the reducer is NOT pure (it depends on something
-// outside (state, event)) - exactly the bug class this catches in test.
+// outside (state, event, absoluteIndex)) - exactly the bug class this catches.
 export function verifyReplayEquivalence<E>(
   key: string | Uint8Array, genesisState: WorldState, allEvents: E[],
   snapshotIndex: number, reducer: WorldEventReducer<E>): boolean {
   if (!Number.isInteger(snapshotIndex) || snapshotIndex < 0 || snapshotIndex > allEvents.length) {
     throw new Error('WorldReplay: snapshotIndex out of range [0, allEvents.length]');
   }
-  var fullHead = replayEvents(genesisState, allEvents, reducer);
-  var snapAt = replayEvents(genesisState, allEvents.slice(0, snapshotIndex), reducer);
-  var fromSnap = replayEvents(snapAt, allEvents.slice(snapshotIndex), reducer);
+  var fullHead = replayEvents(genesisState, allEvents, reducer, 0);
+  var snapAt = replayEvents(genesisState, allEvents.slice(0, snapshotIndex), reducer, 0);
+  // tail numbered from snapshotIndex - the absolute-index fix.
+  var fromSnap = replayEvents(snapAt, allEvents.slice(snapshotIndex), reducer, snapshotIndex);
   return worldStateHash(key, fullHead) === worldStateHash(key, fromSnap);
 }
