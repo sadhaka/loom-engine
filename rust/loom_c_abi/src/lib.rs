@@ -522,6 +522,35 @@ pub unsafe extern "C" fn loom_tick_frame_n(
     run_json_n(input_ptr, input_len, out, out_cap, loom_frame::tick_frame_from_json)
 }
 
+/// Client-side rollback reconciliation. `input_json` = {worldId, correctedState,
+/// commandsByFrame, toFrame, ruleset, playerEntities, maxCommandsPerPlayer?,
+/// maxCommands?}. Writes {state, events, framesReplayed} JSON (two-call protocol).
+///
+/// # Safety
+/// As `loom_tick_epoch`.
+#[no_mangle]
+pub unsafe extern "C" fn loom_reconcile_frames(
+    input_json: *const c_char,
+    out: *mut c_char,
+    out_cap: usize,
+) -> c_int {
+    run_json_cstr(input_json, out, out_cap, loom_frame::reconcile_frames_from_json)
+}
+
+/// Bounded-read variant of `loom_reconcile_frames`. Codex P1.
+///
+/// # Safety
+/// `input_ptr` points to `input_len` readable bytes; `out` is writable for `out_cap`.
+#[no_mangle]
+pub unsafe extern "C" fn loom_reconcile_frames_n(
+    input_ptr: *const u8,
+    input_len: usize,
+    out: *mut c_char,
+    out_cap: usize,
+) -> c_int {
+    run_json_n(input_ptr, input_len, out, out_cap, loom_frame::reconcile_frames_from_json)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

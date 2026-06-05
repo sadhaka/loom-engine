@@ -275,5 +275,75 @@ pub fn tick_frame_from_json(input_json: &str) -> Result<String, String> {
     serde_json::to_string(&out).map_err(|e| format!("world-frame: serialize: {}", e))
 }
 
+// ---- reconcile (client-side rollback + replay) -----------------------------
+
+pub struct ReconcileResult {
+    pub state: Value,
+    pub events: Vec<Value>,
+    pub frames_replayed: i64,
+}
+
+/// Replay frames (corrected_state.frame + 1) ..= to_frame over the corrected state,
+/// applying each frame's local commands. Pure; checked arithmetic (Codex-style).
+#[allow(clippy::too_many_arguments)]
+pub fn reconcile_frames(
+    world_id: &str,
+    corrected_state: &Value,
+    commands_by_frame: &Value,
+    to_frame: i64,
+    ruleset: &Value,
+    player_entities: &Value,
+    max_per_player: Option<u64>,
+    max_commands: Option<u64>,
+) -> ReconcileResult {
+    let from_frame = corrected_state.get("frame").and_then(|f| f.as_i64()).unwrap_or(0);
+    let mut work = corrected_state.clone();
+    let mut events: Vec<Value> = Vec::new();
+    let mut replayed: i64 = 0;
+    let mut f = match from_frame.checked_add(1) {
+        Some(n) => n,
+        None => return ReconcileResult { state: work, events, frames_replayed: 0 },
+    };
+    while f <= to_frame {
+        let empty = Value::Array(Vec::new());
+        let cmds = commands_by_frame.get(f.to_string().as_str()).unwrap_or(&empty);
+        let r = tick_frame(world_id, &work, f, cmds, ruleset, player_entities, max_per_player, max_commands);
+        work = r.state;
+        events.push(r.event);
+        replayed += 1;
+        f = match f.checked_add(1) {
+            Some(n) => n,
+            None => break,
+        };
+    }
+    ReconcileResult { state: work, events, frames_replayed: replayed }
+}
+
+/// JSON-in / JSON-out reconcile. Input: {worldId, correctedState, commandsByFrame,
+/// toFrame, ruleset, playerEntities, maxCommandsPerPlayer?, maxCommands?}. Returns
+/// {state, events, framesReplayed}.
+pub fn reconcile_frames_from_json(input_json: &str) -> Result<String, String> {
+    let v: Value = serde_json::from_str(input_json).map_err(|e| format!("world-frame: bad reconcile input json: {}", e))?;
+    let world_id = v.get("worldId").and_then(|x| x.as_str()).ok_or("world-frame: worldId must be a string")?;
+    let to_frame = v.get("toFrame").and_then(|x| x.as_i64()).ok_or("world-frame: toFrame must be an integer")?;
+    if !loom_epoch::is_safe_epoch(to_frame) {
+        return Err("world-frame: toFrame must be a JS-safe integer".to_string());
+    }
+    let max_per_player = parse_cap(&v, "maxCommandsPerPlayer")?;
+    let max_commands = parse_cap(&v, "maxCommands")?;
+    let r = reconcile_frames(
+        world_id,
+        &v["correctedState"],
+        &v["commandsByFrame"],
+        to_frame,
+        &v["ruleset"],
+        &v["playerEntities"],
+        max_per_player,
+        max_commands,
+    );
+    let out = json!({ "state": r.state, "events": r.events, "framesReplayed": r.frames_replayed });
+    serde_json::to_string(&out).map_err(|e| format!("world-frame: serialize: {}", e))
+}
+
 /// Resource key for the world's resource registry (matches the TS constant).
 pub const RESOURCE_WORLD_FRAME: &str = "world_frame";

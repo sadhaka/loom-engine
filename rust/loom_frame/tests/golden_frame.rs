@@ -39,6 +39,28 @@ fn golden_frame_byte_parity_with_ts() {
 }
 
 #[test]
+fn reconcile_golden_byte_parity_with_ts() {
+    let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../../test_vectors/v5_2_reconciliation.json");
+    let v: Value = serde_json::from_str(&fs::read_to_string(path).expect("read")).expect("parse");
+    let inputs = &v["inputs"];
+    let key = inputs["key"].as_str().unwrap();
+    let req = serde_json::json!({
+        "worldId": inputs["worldId"],
+        "correctedState": inputs["server_corrected_state"],
+        "commandsByFrame": inputs["reconcile_commands_by_frame"],
+        "toFrame": inputs["to_frame"],
+        "ruleset": inputs["ruleset"],
+        "playerEntities": inputs["playerEntities"],
+    });
+    let out: Value = serde_json::from_str(&loom_frame::reconcile_frames_from_json(&req.to_string()).unwrap()).unwrap();
+    let sh = world_state_hash(key.as_bytes(), &out["state"]).unwrap();
+    assert_eq!(sh, v["expect"]["reconciled_102_hash"].as_str().unwrap(), "reconciled hash");
+    assert_eq!(out["framesReplayed"].as_i64().unwrap(), v["expect"]["frames_replayed"].as_i64().unwrap(), "frames replayed");
+    let eh = world_state_hash(key.as_bytes(), &out["events"]).unwrap();
+    assert_eq!(eh, v["expect"]["reconcile_events_hash"].as_str().unwrap(), "events hash");
+}
+
+#[test]
 fn frame_from_json_is_fail_closed() {
     // an unsafe frame number is rejected, matching every other surface.
     let bad = serde_json::json!({"worldId":"w","frameNumber":9007199254740992i64,"state":{"frame":0,"epoch":0,"worldSeed":0,"entities":{}},"commands":[],"ruleset":{},"playerEntities":{}});

@@ -193,6 +193,14 @@ fn tick_frame(input_json: &str) -> PyResult<String> {
     loom_frame::tick_frame_from_json(input_json).map_err(PyValueError::new_err)
 }
 
+/// Client-side rollback reconciliation. Input JSON: {worldId, correctedState,
+/// commandsByFrame, toFrame, ruleset, playerEntities, maxCommandsPerPlayer?,
+/// maxCommands?}. Returns {state, events, framesReplayed}.
+#[pyfunction]
+fn reconcile_frames(input_json: &str) -> PyResult<String> {
+    loom_frame::reconcile_frames_from_json(input_json).map_err(PyValueError::new_err)
+}
+
 /// The module name MUST equal the [lib] name (loom_engine_native).
 #[pymodule]
 fn loom_engine_native(m: &Bound<'_, PyModule>) -> PyResult<()> {
@@ -215,5 +223,6 @@ fn loom_engine_native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(catch_up_epochs, m)?)?;
     m.add_function(wrap_pyfunction!(resume_session, m)?)?;
     m.add_function(wrap_pyfunction!(tick_frame, m)?)?;
+    m.add_function(wrap_pyfunction!(reconcile_frames, m)?)?;
     Ok(())
 }

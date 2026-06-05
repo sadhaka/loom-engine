@@ -176,6 +176,14 @@ pub fn tick_frame_js(input_json: &str) -> Result<String, JsError> {
     loom_frame::tick_frame_from_json(input_json).map_err(|e| JsError::new(&e))
 }
 
+/// Client-side rollback reconciliation. Input: {worldId, correctedState,
+/// commandsByFrame, toFrame, ruleset, playerEntities, maxCommandsPerPlayer?,
+/// maxCommands?}. Returns {state, events, framesReplayed}.
+#[wasm_bindgen(js_name = reconcileFrames)]
+pub fn reconcile_frames_js(input_json: &str) -> Result<String, JsError> {
+    loom_frame::reconcile_frames_from_json(input_json).map_err(|e| JsError::new(&e))
+}
+
 #[cfg(test)]
 mod v3_surface_tests {
     use super::*;
@@ -262,5 +270,20 @@ mod v3_surface_tests {
             let sh = loom_snapshot::world_state_hash(key.as_bytes(), &out["state"]).unwrap();
             assert_eq!(sh, c["expect"]["state_hash"].as_str().unwrap(), "{} state", label);
         }
+    }
+
+    #[test]
+    fn reconcile_surface_matches_golden() {
+        let v = read_vector("v5_2_reconciliation.json");
+        let inputs = &v["inputs"];
+        let key = inputs["key"].as_str().unwrap();
+        let req = serde_json::json!({
+            "worldId": inputs["worldId"], "correctedState": inputs["server_corrected_state"],
+            "commandsByFrame": inputs["reconcile_commands_by_frame"], "toFrame": inputs["to_frame"],
+            "ruleset": inputs["ruleset"], "playerEntities": inputs["playerEntities"],
+        });
+        let out: Value = serde_json::from_str(&loom_frame::reconcile_frames_from_json(&req.to_string()).unwrap()).unwrap();
+        let sh = loom_snapshot::world_state_hash(key.as_bytes(), &out["state"]).unwrap();
+        assert_eq!(sh, v["expect"]["reconciled_102_hash"].as_str().unwrap(), "reconciled");
     }
 }

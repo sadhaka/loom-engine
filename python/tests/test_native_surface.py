@@ -78,9 +78,21 @@ def test_native_frame_surface_matches_golden():
         assert world_state_hash(c["key"], [out["event"]]) == c["expect"]["event_hash"], c["label"] + " event"
 
 
+def test_native_reconcile_surface_matches_golden():
+    v = _load("v5_2_reconciliation.json")
+    i = v["inputs"]
+    req = {"worldId": i["worldId"], "correctedState": i["server_corrected_state"],
+           "commandsByFrame": i["reconcile_commands_by_frame"], "toFrame": i["to_frame"],
+           "ruleset": i["ruleset"], "playerEntities": i["playerEntities"]}
+    out = json.loads(native.reconcile_frames(json.dumps(req)))
+    assert world_state_hash(i["key"], out["state"]) == v["expect"]["reconciled_102_hash"], "reconciled state"
+    assert out["framesReplayed"] == v["expect"]["frames_replayed"], "frames replayed"
+
+
 if __name__ == "__main__":
     test_native_ast_surface_matches_golden()
     test_native_epoch_surface_matches_golden()
     test_native_session_surface_matches_golden()
     test_native_frame_surface_matches_golden()
+    test_native_reconcile_surface_matches_golden()
     print("loom_engine_native parity: all golden cases pass")
