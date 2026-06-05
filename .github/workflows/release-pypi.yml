@@ -4,8 +4,8 @@
 #
 # Auth: PyPI Trusted Publishing (OIDC) - NO stored token. Each project must have a
 # trusted publisher registered on PyPI pointing at this repo + workflow + the job's
-# environment (one-time setup; see the publish jobs' `environment:` names below).
-# For the very first publish, register them as PyPI "pending publishers".
+# environment (one-time setup). For the first publish, register them as PyPI "pending
+# publishers".
 name: Publish to PyPI
 
 on:
@@ -17,12 +17,19 @@ on:
 permissions:
   contents: read
 
+env:
+  # Opt the Node-20 JS actions (checkout/setup-python/artifact) into Node 24 ahead of
+  # GitHub's forced migration (June 2026) - silences the deprecation warnings.
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   # ---- loom-engine-rpg (pure Python) ----------------------------------------
   build-rpg:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Trust workspace (git safe.directory)
+        run: git config --global --add safe.directory '*'
       - uses: actions/setup-python@v5
         with:
           python-version: '3.x'
@@ -43,12 +50,15 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+      - name: Trust workspace (git safe.directory)
+        run: git config --global --add safe.directory '*'
       - name: Build abi3 wheel
         uses: PyO3/maturin-action@v1
         with:
           command: build
           args: --release -m rust/loom_py/Cargo.toml --out dist
           manylinux: auto
+          before-script-linux: git config --global --add safe.directory '*'
       - uses: actions/upload-artifact@v4
         with:
           name: dist-native-${{ matrix.os }}
@@ -58,11 +68,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Trust workspace (git safe.directory)
+        run: git config --global --add safe.directory '*'
       - name: Build sdist
         uses: PyO3/maturin-action@v1
         with:
           command: sdist
           args: -m rust/loom_py/Cargo.toml --out dist
+          before-script-linux: git config --global --add safe.directory '*'
       - uses: actions/upload-artifact@v4
         with:
           name: dist-native-sdist
