@@ -275,6 +275,18 @@ test('event-chain: negative zero is rejected on append (no seq advance)', () => 
   assert.equal(chain.append('a', { v: 0 })!.seq, 1); // +0 is valid; seq not burned
 });
 
+test('event-chain: JS-unsafe integers are rejected on append (Codex P1)', () => {
+  const chain = EventChain.create({ key: KEY });
+  // 2^53-1 is the last safe value - signs fine.
+  assert.equal(chain.append('a', { n: Number.MAX_SAFE_INTEGER })!.seq, 1);
+  // Beyond 2^53 JSON.parse would round, so Rust (exact i64) and TS would
+  // diverge - reject fail-closed. These match the Rust rejection vectors.
+  assert.equal(chain.append('a', { n: Number.MAX_SAFE_INTEGER + 1 }), null); // 9007199254740992
+  assert.equal(chain.append('a', { n: 9007199254740993 }), null);
+  assert.equal(chain.append('a', { n: -9007199254740992 }), null);
+  assert.equal(chain.size(), 1); // only the safe one was stored; seq not burned
+});
+
 test('event-chain: 0 -> -0 tamper cannot pass verify', () => {
   const chain = EventChain.create({ key: KEY });
   chain.append('a', { v: 0 });

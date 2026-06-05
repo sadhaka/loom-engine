@@ -233,12 +233,14 @@ function canonicalJson(value: unknown, depth: number = 0): string {
     if (Object.is(value, -0)) {
       throw new Error('EventChain: negative zero not allowed in payload');
     }
-    // 2.3.0 (Codex P0): integer-only canonical surface. A non-integer number's
-    // String() form (V8 shortest-round-trip dtoa) is NOT reproducible by the Rust
-    // core, so reject fractions fail-closed - signed event data is integer-only
-    // (the determinism rule) and this keeps Rust/TS byte-identical.
-    if (!Number.isInteger(value as number)) {
-      throw new Error('EventChain: non-integer number not allowed in payload (integer-only)');
+    // 2.3.0 (Codex P0/P1): JS-SAFE-integer-only canonical surface. Two reasons:
+    // (1) a non-integer's String() form (V8 dtoa) is not reproducible by the Rust
+    // core; (2) an integer beyond 2^53 is not exact in JS - JSON.parse silently
+    // rounds 9007199254740993 -> ...992 - so accepting it here would diverge from
+    // a Rust/C signer that kept the exact i64. isSafeInteger rejects BOTH, keeping
+    // the accepted numeric surface byte-identical across Rust / TS / Python.
+    if (!Number.isSafeInteger(value as number)) {
+      throw new Error('EventChain: number must be a JS-safe integer (|n| <= 2^53-1)');
     }
     return String(value);
   }

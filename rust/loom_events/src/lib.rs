@@ -55,6 +55,11 @@ const MAX_CANONICAL_DEPTH: usize = 256;
 pub enum CanonError {
     /// A number with a real fractional part (see the FLOAT BOUNDARY note).
     NonIntegerNumber,
+    /// An integer outside JS's safe range [-(2^53-1), 2^53-1]. TS canonicalizes
+    /// via JSON.parse, which silently rounds beyond 2^53 (9007199254740993 ->
+    /// ...992), so signing such a value here would diverge from TS. Reject to
+    /// keep the accepted numeric surface JS-safe-integer-only (Codex P1).
+    UnsafeInteger,
     /// Negative zero (-0.0). TS rejects it fail-closed; we match (a signed 0 must
     /// not be mutable to -0 and still verify).
     NegativeZero,
@@ -129,14 +134,33 @@ fn js_json_string(s: &str) -> String {
     out
 }
 
-/// JS `String(n)` for a JSON number, restricted to integers. See FLOAT BOUNDARY.
+/// JS Number.MAX_SAFE_INTEGER (2^53 - 1). Beyond this JS integers are not exact,
+/// so the signed numeric surface is restricted to [-MAX_SAFE_INT, MAX_SAFE_INT].
+const MAX_SAFE_INT: i64 = 9_007_199_254_740_991;
+
+#[inline]
+fn safe_int(i: i64) -> Result<String, CanonError> {
+    if (-MAX_SAFE_INT..=MAX_SAFE_INT).contains(&i) {
+        Ok(i.to_string())
+    } else {
+        Err(CanonError::UnsafeInteger)
+    }
+}
+
+/// JS `String(n)` for a JSON number, restricted to JS-SAFE integers (Codex P1:
+/// TS canonicalizes through JSON.parse, which rounds past 2^53). See FLOAT BOUNDARY.
 #[allow(clippy::float_cmp)]
 fn canonical_number(n: &serde_json::Number) -> Result<String, CanonError> {
     if let Some(i) = n.as_i64() {
-        return Ok(i.to_string());
+        return safe_int(i);
     }
     if let Some(u) = n.as_u64() {
-        return Ok(u.to_string());
+        // u64 above i64::MAX is automatically > MAX_SAFE_INT -> rejected.
+        return if u <= MAX_SAFE_INT as u64 {
+            Ok(u.to_string())
+        } else {
+            Err(CanonError::UnsafeInteger)
+        };
     }
     if let Some(f) = n.as_f64() {
         if f.is_finite() {
@@ -146,15 +170,20 @@ fn canonical_number(n: &serde_json::Number) -> Result<String, CanonError> {
             }
             // Round-trip through an integer cast (no float arithmetic): if the
             // value survives, it is an exact integer and stringifies like one,
-            // matching JS where 7.0 and 7 are the same number -> "7".
+            // matching JS where 7.0 and 7 are the same number -> "7". The
+            // safe-integer bound then matches TS Number.isSafeInteger.
             let i = f as i64;
             if i as f64 == f {
-                return Ok(i.to_string());
+                return safe_int(i);
             }
             if f >= 0.0 {
                 let u = f as u64;
                 if u as f64 == f {
-                    return Ok(u.to_string());
+                    return if u <= MAX_SAFE_INT as u64 {
+                        Ok(u.to_string())
+                    } else {
+                        Err(CanonError::UnsafeInteger)
+                    };
                 }
             }
         }
@@ -423,6 +452,22 @@ mod tests {
         assert_eq!(canonical_json(&proto, 0), Err(CanonError::ForbiddenKey));
         // sign_record surfaces the rejection (no signature for a forbidden payload).
         assert!(sign_record(b"k", 1, "t", &json!(-0.0), "").is_err());
+    }
+
+    #[test]
+    fn rejects_unsafe_js_integers() {
+        // Codex P1: integers beyond JS's safe range would round in TS's JSON.parse,
+        // so signing them here would diverge. 2^53-1 is the last safe value.
+        assert_eq!(canonical_json(&json!(9007199254740991_i64), 0).unwrap(), "9007199254740991");
+        assert_eq!(canonical_json(&json!(-9007199254740991_i64), 0).unwrap(), "-9007199254740991");
+        for &bad in &[9007199254740992_i64, 9007199254740993_i64, -9007199254740992_i64] {
+            assert_eq!(
+                canonical_json(&json!(bad), 0),
+                Err(CanonError::UnsafeInteger),
+                "{} must be rejected as JS-unsafe",
+                bad
+            );
+        }
     }
 
     #[test]
