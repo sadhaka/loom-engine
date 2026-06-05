@@ -103,6 +103,14 @@ pub fn floor_div(a: i64, b: i64) -> i64 {
     if b == 0 {
         return 0;
     }
+    // Codex P1: i64::MIN / -1 overflows a fixed-width divide and would PANIC
+    // (UB across the C ABI). a / -1 == -a, and floor(-a) == -a for integers, so
+    // return the wrapping negation - no panic. (wrapping_neg(i64::MIN) ==
+    // i64::MIN; the true value 2^63 is unrepresentable, and the bindings reject
+    // this one input explicitly rather than return a wrong number.)
+    if b == -1 {
+        return a.wrapping_neg();
+    }
     let q = a / b;
     if (a % b != 0) && ((a < 0) != (b < 0)) {
         q - 1
@@ -117,7 +125,8 @@ pub fn floor_mod(a: i64, b: i64) -> i64 {
     if b == 0 {
         return 0;
     }
-    a - floor_div(a, b) * b
+    // wrapping so the i64::MIN / -1 edge (mod == 0) cannot panic on the multiply.
+    a.wrapping_sub(floor_div(a, b).wrapping_mul(b))
 }
 
 #[cfg(test)]
@@ -171,6 +180,11 @@ mod tests {
         assert_eq!(floor_div(-7, -3), 2);
         assert_eq!(floor_div(6, 3), 2);
         assert_eq!(floor_div(5, 0), 0); // defensive
+        // Codex P1: the i64::MIN / -1 overflow edge must NOT panic.
+        assert_eq!(floor_div(i64::MIN, -1), i64::MIN); // wrapping (true 2^63 unrepresentable)
+        assert_eq!(floor_mod(i64::MIN, -1), 0);
+        assert_eq!(floor_div(-9, -1), 9); // b == -1 general case stays exact
+        assert_eq!(floor_div(9, -1), -9);
         // floor_div * b + floor_mod == a
         for &(a, b) in &[(7i64, 3i64), (-7, 3), (7, -3), (-7, -3), (10, 4)] {
             assert_eq!(floor_div(a, b) * b + floor_mod(a, b), a);

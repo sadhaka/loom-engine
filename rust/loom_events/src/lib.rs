@@ -73,9 +73,15 @@ pub enum CanonError {
 /// so this is byte-identical to the engine's hand-rolled TS hmacSha256Hex for the
 /// same (key, message) bytes (proven by the RFC 4231 test vector below).
 pub fn hmac_sha256_hex(key: &[u8], message: &str) -> String {
+    hmac_sha256_hex_bytes(key, message.as_bytes())
+}
+
+/// HMAC-SHA256 over RAW message bytes (may contain interior NUL / non-UTF-8) ->
+/// 64-char lowercase hex. The &str form above is just this with message.as_bytes().
+pub fn hmac_sha256_hex_bytes(key: &[u8], message: &[u8]) -> String {
     let mut mac =
         <HmacSha256 as Mac>::new_from_slice(key).expect("HMAC accepts a key of any length");
-    mac.update(message.as_bytes());
+    mac.update(message);
     let out = mac.finalize().into_bytes();
     let mut hex = String::with_capacity(64);
     for b in out.iter() {

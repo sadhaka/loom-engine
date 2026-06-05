@@ -57,6 +57,11 @@ fn floor_div(a: i64, b: i64) -> PyResult<i64> {
     if b == 0 {
         return Err(PyValueError::new_err("floor_div by zero"));
     }
+    // Codex P1: the true result of i64::MIN / -1 is 2^63, not representable in
+    // i64. Reject rather than return a wrapped (wrong) value.
+    if a == i64::MIN && b == -1 {
+        return Err(PyValueError::new_err("floor_div overflow (i64::MIN / -1)"));
+    }
     Ok(core_floor_div(a, b))
 }
 

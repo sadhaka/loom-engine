@@ -77,14 +77,15 @@ pub extern "C" fn loom_pcg32_next(seed: u64) -> u32 {
     Pcg32::seeded(seed).next_u32()
 }
 
-/// Python-floor division into `*out`. Returns 0 on success, -1 on a null out or
-/// division by zero.
+/// Python-floor division into `*out`. Returns 0 on success, -1 on a null out,
+/// division by zero, or the i64::MIN / -1 overflow (true result 2^63 is not
+/// representable in i64).
 ///
 /// # Safety
 /// `out` must be a valid, writable `*mut i64` (or null, which returns -1).
 #[no_mangle]
 pub unsafe extern "C" fn loom_floor_div(a: i64, b: i64, out: *mut i64) -> c_int {
-    if b == 0 || out.is_null() {
+    if b == 0 || out.is_null() || (a == i64::MIN && b == -1) {
         return -1;
     }
     *out = core_floor_div(a, b);
@@ -171,6 +172,35 @@ pub unsafe extern "C" fn loom_hmac_sha256_hex(
         Err(_) => return -1,
     };
     let hex = events::hmac_sha256_hex(key_slice, msg);
+    write_hex64(&hex, out, out_cap)
+}
+
+/// HMAC-SHA256 over RAW message bytes (ptr + len) -> 64-char hex into `out` (cap
+/// >= 65). Unlike the C-string form above, this hashes interior NUL and non-UTF-8
+/// bytes faithfully (Codex P2). Returns 64, or -1 on a bad arg.
+///
+/// # Safety
+/// `key` points to `key_len` bytes; `message` points to `message_len` bytes (may
+/// be null only if message_len == 0); `out` is writable for `out_cap` bytes.
+#[no_mangle]
+pub unsafe extern "C" fn loom_hmac_sha256_hex_raw(
+    key: *const u8,
+    key_len: usize,
+    message: *const u8,
+    message_len: usize,
+    out: *mut c_char,
+    out_cap: usize,
+) -> c_int {
+    if key.is_null() || (message.is_null() && message_len != 0) {
+        return -1;
+    }
+    let key_slice = std::slice::from_raw_parts(key, key_len);
+    let msg: &[u8] = if message_len == 0 {
+        &[]
+    } else {
+        std::slice::from_raw_parts(message, message_len)
+    };
+    let hex = events::hmac_sha256_hex_bytes(key_slice, msg);
     write_hex64(&hex, out, out_cap)
 }
 

@@ -66,8 +66,9 @@ uint64_t loom_roll_dice(uint64_t seed, uint32_t count, uint32_t sides);
 uint32_t loom_pcg32_next(uint64_t seed);
 
 /**
- * Python-floor division into `*out`. Returns 0 on success, -1 on a null out or
- * division by zero.
+ * Python-floor division into `*out`. Returns 0 on success, -1 on a null out,
+ * division by zero, or the i64::MIN / -1 overflow (true result 2^63 is not
+ * representable in i64).
  *
  * # Safety
  * `out` must be a valid, writable `*mut i64` (or null, which returns -1).
@@ -102,6 +103,22 @@ int loom_hmac_sha256_hex(const uint8_t *key,
                          const char *message,
                          char *out,
                          uintptr_t out_cap);
+
+/**
+ * HMAC-SHA256 over RAW message bytes (ptr + len) -> 64-char hex into `out` (cap
+ * >= 65). Unlike the C-string form above, this hashes interior NUL and non-UTF-8
+ * bytes faithfully (Codex P2). Returns 64, or -1 on a bad arg.
+ *
+ * # Safety
+ * `key` points to `key_len` bytes; `message` points to `message_len` bytes (may
+ * be null only if message_len == 0); `out` is writable for `out_cap` bytes.
+ */
+int loom_hmac_sha256_hex_raw(const uint8_t *key,
+                             uintptr_t key_len,
+                             const uint8_t *message,
+                             uintptr_t message_len,
+                             char *out,
+                             uintptr_t out_cap);
 
 /**
  * Sign one event record -> 64-char hex into `out` (cap >= 65). `payload_json` is
