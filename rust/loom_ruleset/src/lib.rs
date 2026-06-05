@@ -375,7 +375,266 @@ pub fn validate_triggered_mutations(mutations: &Value) -> Result<(), String> {
     validate_mutation_list(mutations, &mut b)
 }
 
-// ---- public API ------------------------------------------------------------
+// ---- mutation serialization (Phase 3 Epoch world-tick) ----------------------
+
+/// One applied mutation, recorded with ONLY the present fields - mirrors the TS
+/// `SerializedMutation` so `canonical_json` encodes it identically on every
+/// surface. `previous`/`next` are present for prop ops, `tag` for tag ops.
+#[derive(Clone, Debug)]
+pub struct AppliedMutation {
+    pub op: String,
+    pub target: String,
+    pub property: Option<String>,
+    pub tag: Option<String>,
+    pub previous: Option<i64>,
+    pub next: Option<i64>,
+}
+
+/// Result of resolving a check action with a shared rng: the new state, the
+/// winning degree, and the applied mutations (for the Epoch event).
+pub struct CheckResolution {
+    pub state: Value,
+    pub degree: String,
+    pub mutations: Vec<AppliedMutation>,
+}
+
+/// Result of resolving a flat mutation action with a shared rng.
+pub struct MutationsResolution {
+    pub state: Value,
+    pub mutations: Vec<AppliedMutation>,
+}
+
+// apply_mutation, but also records the mutation in `applied` exactly as the TS
+// AppliedMutation (present fields only), for the Epoch event framing.
+fn apply_mutation_recorded(
+    state: &mut Value,
+    node: &Value,
+    ctx: &mut EvalCtx,
+    applied: &mut Vec<AppliedMutation>,
+) -> Result<(), String> {
+    let t = node.get("type").and_then(|x| x.as_str()).ok_or("AST: malformed mutation node")?.to_string();
+    let target = node.get("target").and_then(|x| x.as_str()).ok_or("AST: mutation target must be a string")?;
+    let id = resolve_target(target, ctx)?;
+    match t.as_str() {
+        "set_prop" | "add_prop" | "sub_prop" => {
+            let value = eval_expression(&node["value"], &*state, ctx, 0)?;
+            let prop = node.get("property").and_then(|x| x.as_str()).ok_or("AST: property must be a string")?.to_string();
+            let prev = read_prop(&*state, &id, &prop)?;
+            let nxt = match t.as_str() {
+                "set_prop" => value,
+                "add_prop" => assert_int128(prev as i128 + value as i128, "mutated property")?,
+                _ => assert_int128(prev as i128 - value as i128, "mutated property")?,
+            };
+            let ent = entity_mut(state, &id)?;
+            let props = ent.get_mut("properties").and_then(|p| p.as_object_mut()).ok_or("AST: entity.properties must be an object")?;
+            props.insert(prop.clone(), Value::from(nxt));
+            applied.push(AppliedMutation {
+                op: t.clone(),
+                target: id.clone(),
+                property: Some(prop),
+                tag: None,
+                previous: Some(prev),
+                next: Some(nxt),
+            });
+            Ok(())
+        }
+        "add_tag" => {
+            let tag = node.get("tag").and_then(|x| x.as_str()).ok_or("AST: tag must be a string")?.to_string();
+            let ent = entity_mut(state, &id)?;
+            let mut tags: Vec<String> = ent.get("tags").and_then(|t| t.as_array())
+                .map(|a| a.iter().filter_map(|v| v.as_str().map(String::from)).collect())
+                .unwrap_or_default();
+            tags.push(tag.clone());
+            let normalized = loom_snapshot::normalize_tags(&tags);
+            ent.insert("tags".to_string(), Value::from(normalized));
+            applied.push(AppliedMutation {
+                op: t.clone(),
+                target: id.clone(),
+                property: None,
+                tag: Some(tag),
+                previous: None,
+                next: None,
+            });
+            Ok(())
+        }
+        "remove_tag" => {
+            let tag = node.get("tag").and_then(|x| x.as_str()).ok_or("AST: tag must be a string")?.to_string();
+            let ent = entity_mut(state, &id)?;
+            let tags: Vec<String> = ent.get("tags").and_then(|t| t.as_array())
+                .map(|a| a.iter().filter_map(|v| v.as_str().map(String::from)).filter(|x| x != &tag).collect())
+                .unwrap_or_default();
+            ent.insert("tags".to_string(), Value::from(tags));
+            applied.push(AppliedMutation {
+                op: t.clone(),
+                target: id.clone(),
+                property: None,
+                tag: Some(tag),
+                previous: None,
+                next: None,
+            });
+            Ok(())
+        }
+        _ => Err(format!("AST: unknown mutation node type: {}", t)),
+    }
+}
+
+/// Resolve a flat mutation action threading a SHARED rng (the Epoch world-tick
+/// supplies the epoch PRNG). Validation is the caller's responsibility (the
+/// Epoch tick validates first, separately, to assign reason codes); this clones
+/// state and never mutates the input.
+pub fn apply_triggered_mutations_with_rng(
+    state: &Value,
+    mutations: &Value,
+    actor: &str,
+    target: Option<&str>,
+    rng: &mut Pcg32,
+) -> Result<MutationsResolution, String> {
+    let mut work = state.clone();
+    let mut applied: Vec<AppliedMutation> = Vec::new();
+    let arr = mutations.as_array().ok_or("AST: mutations must be an array")?;
+    {
+        let mut ctx = EvalCtx {
+            actor: actor.to_string(),
+            target: target.map(|s| s.to_string()),
+            rng: Pcg32::seeded(0), // placeholder; real rng threaded via take below
+            natural: None,
+        };
+        // Swap the shared rng into the ctx, run, swap it back out so the caller's
+        // draw count is preserved (no clone - the SAME stream advances).
+        std::mem::swap(&mut ctx.rng, rng);
+        let res = (|| -> Result<(), String> {
+            for m in arr {
+                apply_mutation_recorded(&mut work, m, &mut ctx, &mut applied)?;
+            }
+            Ok(())
+        })();
+        std::mem::swap(&mut ctx.rng, rng);
+        res?;
+    }
+    Ok(MutationsResolution { state: work, mutations: applied })
+}
+
+/// Resolve a check action threading a SHARED rng (the Epoch PRNG). Same contract
+/// as `apply_triggered_mutations_with_rng`.
+pub fn evaluate_action_with_rng(
+    state: &Value,
+    check: &Value,
+    actor: &str,
+    target: Option<&str>,
+    rng: &mut Pcg32,
+) -> Result<CheckResolution, String> {
+    let mut work = state.clone();
+    let mut applied: Vec<AppliedMutation> = Vec::new();
+    let mut degree = "none".to_string();
+    {
+        let mut ctx = EvalCtx {
+            actor: actor.to_string(),
+            target: target.map(|s| s.to_string()),
+            rng: Pcg32::seeded(0),
+            natural: None,
+        };
+        std::mem::swap(&mut ctx.rng, rng);
+        let res = (|| -> Result<(), String> {
+            let roll = eval_expression(&check["roll"], &work, &mut ctx, 0)?;
+            let natural = ctx.natural;
+            let dc = eval_expression(&check["dc"], &work, &mut ctx, 0)?;
+            let delta = roll - dc;
+            let degrees = check.get("degrees").and_then(|x| x.as_object()).ok_or("AST: check.degrees must be an object")?;
+            let mut chosen_muts: Vec<Value> = Vec::new();
+            for name in DEGREE_ORDER.iter() {
+                if let Some(branch) = degrees.get(*name) {
+                    if match_degree(&branch["condition"], delta, natural, 0)? {
+                        degree = (*name).to_string();
+                        chosen_muts = branch.get("mutations").and_then(|m| m.as_array()).cloned().unwrap_or_default();
+                        break;
+                    }
+                }
+            }
+            for m in &chosen_muts {
+                apply_mutation_recorded(&mut work, m, &mut ctx, &mut applied)?;
+            }
+            Ok(())
+        })();
+        std::mem::swap(&mut ctx.rng, rng);
+        res?;
+    }
+    Ok(CheckResolution { state: work, degree, mutations: applied })
+}
+
+// ---- compare_ids (numeric-aware id sort, Phase 3 Epoch actor order) ---------
+
+// UTF-8 byte comparison - matches the TS utf8Compare + Python encode('utf-8')
+// compare. (Rust &str Ord is already UTF-8 byte order, but we compare raw bytes
+// explicitly for clarity + exact parity with the ported algorithm.)
+fn utf8_compare(a: &str, b: &str) -> std::cmp::Ordering {
+    a.as_bytes().cmp(b.as_bytes())
+}
+
+// A "pure numeric" id: optional '-' then >=1 ASCII digit.
+fn is_pure_numeric(s: &str) -> bool {
+    let rest = if s.as_bytes().first() == Some(&b'-') { &s[1..] } else { s };
+    if rest.is_empty() {
+        return false;
+    }
+    rest.bytes().all(|c| (b'0'..=b'9').contains(&c))
+}
+
+// Split a pure-numeric id into (neg, magnitude-with-leading-zeros-stripped).
+// -0 is +0. Mirrors the TS normalizeNumeric.
+fn normalize_numeric(s: &str) -> (bool, String) {
+    let neg = s.as_bytes().first() == Some(&b'-');
+    let digits = if neg { &s[1..] } else { s };
+    let bytes = digits.as_bytes();
+    let mut i = 0;
+    while i < bytes.len() - 1 && bytes[i] == b'0' {
+        i += 1;
+    }
+    let mut mag = digits[i..].to_string();
+    if mag.is_empty() {
+        mag = "0".to_string();
+    }
+    let neg = neg && mag != "0";
+    (neg, mag)
+}
+
+/// Numeric-aware id comparison: pure-numeric ids sort by VALUE (2 < 10), strings
+/// lexicographically (UTF-8 bytes), numbers before strings. No integer parsing -
+/// sign + digit-length + UTF-8 bytes, so ids beyond i64 are correct. Byte-identical
+/// to the TS `compareIds` / Python `compare_ids`.
+pub fn compare_ids(a: &str, b: &str) -> std::cmp::Ordering {
+    use std::cmp::Ordering;
+    let na = is_pure_numeric(a);
+    let nb = is_pure_numeric(b);
+    if na && !nb {
+        return Ordering::Less; // numbers before strings
+    }
+    if !na && nb {
+        return Ordering::Greater;
+    }
+    if !na && !nb {
+        return utf8_compare(a, b);
+    }
+    let (an_neg, an_mag) = normalize_numeric(a);
+    let (bn_neg, bn_mag) = normalize_numeric(b);
+    if !an_neg && bn_neg {
+        return Ordering::Greater; // +a > -b
+    }
+    if an_neg && !bn_neg {
+        return Ordering::Less;
+    }
+    let mag = if an_mag.len() != bn_mag.len() {
+        if an_mag.len() < bn_mag.len() { Ordering::Less } else { Ordering::Greater }
+    } else {
+        utf8_compare(&an_mag, &bn_mag)
+    };
+    let by_value = if an_neg { mag.reverse() } else { mag }; // both negative: larger magnitude is smaller
+    if by_value != Ordering::Equal {
+        return by_value;
+    }
+    utf8_compare(a, b) // math-equal (e.g. "02" vs "2"): raw bytes, total order
+}
+
+// ---- public API (seed-constructed rng; back-compat with golden_ast) ---------
 
 pub fn apply_triggered_mutations(state: &Value, mutations: &Value, actor: &str, seed: u64) -> Result<Value, String> {
     validate_triggered_mutations(mutations)?; // fail-closed before any rng/mutation

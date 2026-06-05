@@ -50,3 +50,8 @@ from .ruleset_ast import (  # noqa: F401
     parse_dice, eval_expression, evaluate_action, apply_triggered_mutations,
     make_context, validate_check, validate_triggered_mutations,
 )
+from .world_epoch import (  # noqa: F401
+    derive_epoch_prng, tick_epoch, catch_up_epochs,
+    DEFAULT_ACTOR_TAG, RESOURCE_WORLD_EPOCH,
+    REASON_UNKNOWN_ACTION, REASON_INVALID_ACTION, REASON_EVAL_ERROR,
+)

@@ -27,13 +27,17 @@ var GAIN_POWER: WorldAction = {
   mutations: [{ type: 'add_prop', target: 'self', property: 'power', value: { type: 'dice', equation: '1d6' } }],
 };
 // gamble: a CHECK action - 1d20 vs DC 10; success power += 5, failure power -= 1.
+// The CheckNode is nested under `check` (the WorldAction { kind:'check', check } shape).
 var GAMBLE: WorldAction = {
   kind: 'check',
-  roll: { type: 'dice', equation: '1d20' },
-  dc: { type: 'literal', value: 10 },
-  degrees: {
-    success: { condition: { type: 'delta_gte', value: 0 }, mutations: [{ type: 'add_prop', target: 'self', property: 'power', value: { type: 'literal', value: 5 } }] },
-    failure: { condition: { type: 'delta_lte', value: -1 }, mutations: [{ type: 'sub_prop', target: 'self', property: 'power', value: { type: 'literal', value: 1 } }] },
+  check: {
+    type: 'check',
+    roll: { type: 'dice', equation: '1d20' },
+    dc: { type: 'literal', value: 10 },
+    degrees: {
+      success: { condition: { type: 'delta_gte', value: 0 }, mutations: [{ type: 'add_prop', target: 'self', property: 'power', value: { type: 'literal', value: 5 } }] },
+      failure: { condition: { type: 'delta_lte', value: -1 }, mutations: [{ type: 'sub_prop', target: 'self', property: 'power', value: { type: 'literal', value: 1 } }] },
+    },
   },
 };
 var RULESET: Ruleset = { gain_power: GAIN_POWER, gamble: GAMBLE };

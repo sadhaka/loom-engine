@@ -1,0 +1,25 @@
+# loom_epoch - the deterministic between-session Epoch world-tick (v3.0 Phase 3).
+# The native sibling of the TS src/runtime/world-epoch.ts. While a player is
+# offline the world keeps moving (factions act, regions shift) WITHOUT the
+# session PRNG and WITHOUT non-determinism, so the browser client and the
+# authoritative server reach the BYTE-IDENTICAL world-state hash for the same
+# epoch. Builds on loom_math (Pcg32 + from_raw/snapshot), loom_snapshot
+# (world_state_hash) and loom_ruleset (the Phase 2 AST + compare_ids).
+# Pinned by test_vectors/v3_3_epoch_tick.json.
+
+[package]
+name = "loom_epoch"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Deterministic between-session Epoch world-tick for the Loom Engine (the Living Persistent World core)."
+
+[dependencies]
+serde_json = "1"
+# Raw SHA-256 for the PUBLIC epoch-seed derivation (NOT HMAC) - same crate +
+# version loom_events already depends on, so no new crypto surface is added.
+sha2 = "0.10"
+loom_math = { path = "../loom_math" }
+loom_snapshot = { path = "../loom_snapshot" }
+loom_ruleset = { path = "../loom_ruleset" }

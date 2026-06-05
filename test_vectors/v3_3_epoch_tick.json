@@ -30,48 +30,51 @@
         },
         "gamble": {
           "kind": "check",
-          "roll": {
-            "type": "dice",
-            "equation": "1d20"
-          },
-          "dc": {
-            "type": "literal",
-            "value": 10
-          },
-          "degrees": {
-            "success": {
-              "condition": {
-                "type": "delta_gte",
-                "value": 0
-              },
-              "mutations": [
-                {
-                  "type": "add_prop",
-                  "target": "self",
-                  "property": "power",
-                  "value": {
-                    "type": "literal",
-                    "value": 5
-                  }
-                }
-              ]
+          "check": {
+            "type": "check",
+            "roll": {
+              "type": "dice",
+              "equation": "1d20"
             },
-            "failure": {
-              "condition": {
-                "type": "delta_lte",
-                "value": -1
-              },
-              "mutations": [
-                {
-                  "type": "sub_prop",
-                  "target": "self",
-                  "property": "power",
-                  "value": {
-                    "type": "literal",
-                    "value": 1
+            "dc": {
+              "type": "literal",
+              "value": 10
+            },
+            "degrees": {
+              "success": {
+                "condition": {
+                  "type": "delta_gte",
+                  "value": 0
+                },
+                "mutations": [
+                  {
+                    "type": "add_prop",
+                    "target": "self",
+                    "property": "power",
+                    "value": {
+                      "type": "literal",
+                      "value": 5
+                    }
                   }
-                }
-              ]
+                ]
+              },
+              "failure": {
+                "condition": {
+                  "type": "delta_lte",
+                  "value": -1
+                },
+                "mutations": [
+                  {
+                    "type": "sub_prop",
+                    "target": "self",
+                    "property": "power",
+                    "value": {
+                      "type": "literal",
+                      "value": 1
+                    }
+                  }
+                ]
+              }
             }
           }
         }
@@ -181,48 +184,51 @@
         },
         "gamble": {
           "kind": "check",
-          "roll": {
-            "type": "dice",
-            "equation": "1d20"
-          },
-          "dc": {
-            "type": "literal",
-            "value": 10
-          },
-          "degrees": {
-            "success": {
-              "condition": {
-                "type": "delta_gte",
-                "value": 0
-              },
-              "mutations": [
-                {
-                  "type": "add_prop",
-                  "target": "self",
-                  "property": "power",
-                  "value": {
-                    "type": "literal",
-                    "value": 5
-                  }
-                }
-              ]
+          "check": {
+            "type": "check",
+            "roll": {
+              "type": "dice",
+              "equation": "1d20"
             },
-            "failure": {
-              "condition": {
-                "type": "delta_lte",
-                "value": -1
-              },
-              "mutations": [
-                {
-                  "type": "sub_prop",
-                  "target": "self",
-                  "property": "power",
-                  "value": {
-                    "type": "literal",
-                    "value": 1
+            "dc": {
+              "type": "literal",
+              "value": 10
+            },
+            "degrees": {
+              "success": {
+                "condition": {
+                  "type": "delta_gte",
+                  "value": 0
+                },
+                "mutations": [
+                  {
+                    "type": "add_prop",
+                    "target": "self",
+                    "property": "power",
+                    "value": {
+                      "type": "literal",
+                      "value": 5
+                    }
                   }
-                }
-              ]
+                ]
+              },
+              "failure": {
+                "condition": {
+                  "type": "delta_lte",
+                  "value": -1
+                },
+                "mutations": [
+                  {
+                    "type": "sub_prop",
+                    "target": "self",
+                    "property": "power",
+                    "value": {
+                      "type": "literal",
+                      "value": 1
+                    }
+                  }
+                ]
+              }
             }
           }
         }
@@ -349,48 +355,51 @@
         },
         "gamble": {
           "kind": "check",
-          "roll": {
-            "type": "dice",
-            "equation": "1d20"
-          },
-          "dc": {
-            "type": "literal",
-            "value": 10
-          },
-          "degrees": {
-            "success": {
-              "condition": {
-                "type": "delta_gte",
-                "value": 0
-              },
-              "mutations": [
-                {
-                  "type": "add_prop",
-                  "target": "self",
-                  "property": "power",
-                  "value": {
-                    "type": "literal",
-                    "value": 5
-                  }
-                }
-              ]
+          "check": {
+            "type": "check",
+            "roll": {
+              "type": "dice",
+              "equation": "1d20"
             },
-            "failure": {
-              "condition": {
-                "type": "delta_lte",
-                "value": -1
-              },
-              "mutations": [
-                {
-                  "type": "sub_prop",
-                  "target": "self",
-                  "property": "power",
-                  "value": {
-                    "type": "literal",
-                    "value": 1
+            "dc": {
+              "type": "literal",
+              "value": 10
+            },
+            "degrees": {
+              "success": {
+                "condition": {
+                  "type": "delta_gte",
+                  "value": 0
+                },
+                "mutations": [
+                  {
+                    "type": "add_prop",
+                    "target": "self",
+                    "property": "power",
+                    "value": {
+                      "type": "literal",
+                      "value": 5
+                    }
                   }
-                }
-              ]
+                ]
+              },
+              "failure": {
+                "condition": {
+                  "type": "delta_lte",
+                  "value": -1
+                },
+                "mutations": [
+                  {
+                    "type": "sub_prop",
+                    "target": "self",
+                    "property": "power",
+                    "value": {
+                      "type": "literal",
+                      "value": 1
+                    }
+                  }
+                ]
+              }
             }
           }
         }
@@ -441,9 +450,9 @@
           "faction_a",
           "faction_b"
         ],
-        "pcg_steps_consumed": 0,
-        "resolved": 0,
-        "rejected": 2,
+        "pcg_steps_consumed": 2,
+        "resolved": 2,
+        "rejected": 0,
         "event": {
           "event_type": "EpochResolved",
           "epoch_number": 42,
@@ -451,18 +460,36 @@
             {
               "action_id": "gamble",
               "actor_id": "faction_a",
-              "reason": "invalid_action"
+              "degree": "success",
+              "mutations_applied": [
+                {
+                  "op": "add_prop",
+                  "target": "faction_a",
+                  "property": "power",
+                  "previous": 3,
+                  "next": 8
+                }
+              ]
             },
             {
               "action_id": "gamble",
               "actor_id": "faction_b",
-              "reason": "invalid_action"
+              "degree": "success",
+              "mutations_applied": [
+                {
+                  "op": "add_prop",
+                  "target": "faction_b",
+                  "property": "power",
+                  "previous": 3,
+                  "next": 8
+                }
+              ]
             }
           ],
-          "pcg_steps_consumed": 0
+          "pcg_steps_consumed": 2
         },
-        "events_hash": "4e2e609930251d8f0fcd3d5ecc78b30c9e240664140b0e29e407bc988d3ba254",
-        "state_hash": "c1ef67086fc29eb1a2995a75ba776f3fd7941e34af737bf4d4f4291550908836"
+        "events_hash": "ee81e8ec898c06926854327253e8494fdd6f320a33b3a2065068423d2a11c8ce",
+        "state_hash": "2d6291be7307a43e2dd1fb47fd2650f3ace77909c7433a02502749e9f6609a1a"
       }
     },
     {
@@ -490,48 +517,51 @@
         },
         "gamble": {
           "kind": "check",
-          "roll": {
-            "type": "dice",
-            "equation": "1d20"
-          },
-          "dc": {
-            "type": "literal",
-            "value": 10
-          },
-          "degrees": {
-            "success": {
-              "condition": {
-                "type": "delta_gte",
-                "value": 0
-              },
-              "mutations": [
-                {
-                  "type": "add_prop",
-                  "target": "self",
-                  "property": "power",
-                  "value": {
-                    "type": "literal",
-                    "value": 5
-                  }
-                }
-              ]
+          "check": {
+            "type": "check",
+            "roll": {
+              "type": "dice",
+              "equation": "1d20"
             },
-            "failure": {
-              "condition": {
-                "type": "delta_lte",
-                "value": -1
-              },
-              "mutations": [
-                {
-                  "type": "sub_prop",
-                  "target": "self",
-                  "property": "power",
-                  "value": {
-                    "type": "literal",
-                    "value": 1
+            "dc": {
+              "type": "literal",
+              "value": 10
+            },
+            "degrees": {
+              "success": {
+                "condition": {
+                  "type": "delta_gte",
+                  "value": 0
+                },
+                "mutations": [
+                  {
+                    "type": "add_prop",
+                    "target": "self",
+                    "property": "power",
+                    "value": {
+                      "type": "literal",
+                      "value": 5
+                    }
                   }
-                }
-              ]
+                ]
+              },
+              "failure": {
+                "condition": {
+                  "type": "delta_lte",
+                  "value": -1
+                },
+                "mutations": [
+                  {
+                    "type": "sub_prop",
+                    "target": "self",
+                    "property": "power",
+                    "value": {
+                      "type": "literal",
+                      "value": 1
+                    }
+                  }
+                ]
+              }
             }
           }
         }
@@ -627,48 +657,51 @@
         },
         "gamble": {
           "kind": "check",
-          "roll": {
-            "type": "dice",
-            "equation": "1d20"
-          },
-          "dc": {
-            "type": "literal",
-            "value": 10
-          },
-          "degrees": {
-            "success": {
-              "condition": {
-                "type": "delta_gte",
-                "value": 0
-              },
-              "mutations": [
-                {
-                  "type": "add_prop",
-                  "target": "self",
-                  "property": "power",
-                  "value": {
-                    "type": "literal",
-                    "value": 5
-                  }
-                }
-              ]
+          "check": {
+            "type": "check",
+            "roll": {
+              "type": "dice",
+              "equation": "1d20"
             },
-            "failure": {
-              "condition": {
-                "type": "delta_lte",
-                "value": -1
-              },
-              "mutations": [
-                {
-                  "type": "sub_prop",
-                  "target": "self",
-                  "property": "power",
-                  "value": {
-                    "type": "literal",
-                    "value": 1
+            "dc": {
+              "type": "literal",
+              "value": 10
+            },
+            "degrees": {
+              "success": {
+                "condition": {
+                  "type": "delta_gte",
+                  "value": 0
+                },
+                "mutations": [
+                  {
+                    "type": "add_prop",
+                    "target": "self",
+                    "property": "power",
+                    "value": {
+                      "type": "literal",
+                      "value": 5
+                    }
                   }
-                }
-              ]
+                ]
+              },
+              "failure": {
+                "condition": {
+                  "type": "delta_lte",
+                  "value": -1
+                },
+                "mutations": [
+                  {
+                    "type": "sub_prop",
+                    "target": "self",
+                    "property": "power",
+                    "value": {
+                      "type": "literal",
+                      "value": 1
+                    }
+                  }
+                ]
+              }
             }
           }
         }
@@ -778,48 +811,51 @@
         },
         "gamble": {
           "kind": "check",
-          "roll": {
-            "type": "dice",
-            "equation": "1d20"
-          },
-          "dc": {
-            "type": "literal",
-            "value": 10
-          },
-          "degrees": {
-            "success": {
-              "condition": {
-                "type": "delta_gte",
-                "value": 0
-              },
-              "mutations": [
-                {
-                  "type": "add_prop",
-                  "target": "self",
-                  "property": "power",
-                  "value": {
-                    "type": "literal",
-                    "value": 5
-                  }
-                }
-              ]
+          "check": {
+            "type": "check",
+            "roll": {
+              "type": "dice",
+              "equation": "1d20"
             },
-            "failure": {
-              "condition": {
-                "type": "delta_lte",
-                "value": -1
-              },
-              "mutations": [
-                {
-                  "type": "sub_prop",
-                  "target": "self",
-                  "property": "power",
-                  "value": {
-                    "type": "literal",
-                    "value": 1
+            "dc": {
+              "type": "literal",
+              "value": 10
+            },
+            "degrees": {
+              "success": {
+                "condition": {
+                  "type": "delta_gte",
+                  "value": 0
+                },
+                "mutations": [
+                  {
+                    "type": "add_prop",
+                    "target": "self",
+                    "property": "power",
+                    "value": {
+                      "type": "literal",
+                      "value": 5
+                    }
                   }
-                }
-              ]
+                ]
+              },
+              "failure": {
+                "condition": {
+                  "type": "delta_lte",
+                  "value": -1
+                },
+                "mutations": [
+                  {
+                    "type": "sub_prop",
+                    "target": "self",
+                    "property": "power",
+                    "value": {
+                      "type": "literal",
+                      "value": 1
+                    }
+                  }
+                ]
+              }
             }
           }
         }
@@ -955,48 +991,51 @@
         },
         "gamble": {
           "kind": "check",
-          "roll": {
-            "type": "dice",
-            "equation": "1d20"
-          },
-          "dc": {
-            "type": "literal",
-            "value": 10
-          },
-          "degrees": {
-            "success": {
-              "condition": {
-                "type": "delta_gte",
-                "value": 0
-              },
-              "mutations": [
-                {
-                  "type": "add_prop",
-                  "target": "self",
-                  "property": "power",
-                  "value": {
-                    "type": "literal",
-                    "value": 5
-                  }
-                }
-              ]
+          "check": {
+            "type": "check",
+            "roll": {
+              "type": "dice",
+              "equation": "1d20"
             },
-            "failure": {
-              "condition": {
-                "type": "delta_lte",
-                "value": -1
-              },
-              "mutations": [
-                {
-                  "type": "sub_prop",
-                  "target": "self",
-                  "property": "power",
-                  "value": {
-                    "type": "literal",
-                    "value": 1
+            "dc": {
+              "type": "literal",
+              "value": 10
+            },
+            "degrees": {
+              "success": {
+                "condition": {
+                  "type": "delta_gte",
+                  "value": 0
+                },
+                "mutations": [
+                  {
+                    "type": "add_prop",
+                    "target": "self",
+                    "property": "power",
+                    "value": {
+                      "type": "literal",
+                      "value": 5
+                    }
                   }
-                }
-              ]
+                ]
+              },
+              "failure": {
+                "condition": {
+                  "type": "delta_lte",
+                  "value": -1
+                },
+                "mutations": [
+                  {
+                    "type": "sub_prop",
+                    "target": "self",
+                    "property": "power",
+                    "value": {
+                      "type": "literal",
+                      "value": 1
+                    }
+                  }
+                ]
+              }
             }
           }
         }
