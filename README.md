@@ -52,10 +52,14 @@ flowchart TD
 
 ## License
 
-**Source-available under [BUSL-1.1](LICENSE) — *not* OSI open-source.** The implementation
-is fully inspectable and usable under the license terms; it is the deterministic core under
-a solo-founded commercial product ([TheWorldTable.ai](https://theworldtable.ai)), and the
-BUSL change-date converts it to an open license over time. Read it, run it, learn from it.
+**Source-available under [BUSL-1.1](LICENSE) — *not* OSI "open source."** It is licensed
+this way from day one (not relicensed after the fact), and **converts automatically to
+Apache 2.0** — each version four years after its release (Change Date 2030-05-08). You may
+**self-host, modify, contribute to, and build on it** for internal or non-competing
+commercial use today; the single restriction protects a solo developer from a hyperscaler
+turning the work into a competing hosted service before that conversion. No further
+restrictions are planned, and feedback on the terms is welcome. It's the deterministic core
+under a solo-founded commercial product ([TheWorldTable.ai](https://theworldtable.ai)).
 
 ## What it is — and isn't (so you don't have to guess)
 
