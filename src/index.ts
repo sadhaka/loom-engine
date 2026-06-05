@@ -645,6 +645,11 @@ export {
   replayEvents, replayFromSnapshot, verifyReplayEquivalence,
 } from './runtime/world-replay.js';
 export type { WorldEventReducer, ReplayResult } from './runtime/world-replay.js';
+// 3.0 - the canonical deterministic PRNG (PCG32, bit-identical across surfaces)
+// + the floor-division contract (toward -inf, exact via BigInt). The dice + math
+// foundation of the ruleset AST.
+export { Pcg32 } from './runtime/pcg32.js';
+export { floorDiv, floorMod } from './runtime/integer-math.js';
 // 0.84.0 - declarative asset list + dependency graph.
 export { AssetManifest, RESOURCE_ASSET_MANIFEST } from './runtime/asset-manifest.js';
 export type {

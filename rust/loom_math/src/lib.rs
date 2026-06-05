@@ -190,4 +190,27 @@ mod tests {
             assert_eq!(floor_div(a, b) * b + floor_mod(a, b), a);
         }
     }
+
+    #[test]
+    fn emit_pcg32_golden() {
+        // Emits the cross-language PCG32 reference (run with --nocapture). The TS +
+        // Python ports must reproduce it; captured into test_vectors/v3_pcg32.json.
+        fn seq(seed: u64, n: usize) -> Vec<u32> {
+            let mut r = Pcg32::seeded(seed);
+            (0..n).map(|_| r.next_u32()).collect()
+        }
+        let mut r7 = Pcg32::seeded(7);
+        let dice = r7.roll_dice(3, 6);
+        let mut r7b = Pcg32::seeded(7);
+        let dies: Vec<u32> = (0..5).map(|_| r7b.roll_die(20)).collect();
+        println!("PCG32_VECTOR_BEGIN");
+        println!(
+            "{{\"seed42_next8\":{:?},\"seed1_next4\":{:?},\"seed7_roll3d6\":{},\"seed7_die20x5\":{:?}}}",
+            seq(42, 8),
+            seq(1, 4),
+            dice,
+            dies
+        );
+        println!("PCG32_VECTOR_END");
+    }
 }
