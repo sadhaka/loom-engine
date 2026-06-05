@@ -25,7 +25,7 @@ fn golden_ast_byte_parity_with_ts() {
         let actor = c["actor"].as_str().unwrap();
 
         if kind == "condition" {
-            let state = apply_triggered_mutations(&c["state"], &c["mutations"], actor, seed)
+            let state = apply_triggered_mutations(&c["state"], &c["mutations"], actor, c["target"].as_str(), seed)
                 .unwrap_or_else(|e| panic!("{}: {}", label, e));
             let hash = world_state_hash(key.as_bytes(), &state).unwrap();
             assert_eq!(hash, c["expect"]["state_hash"].as_str().unwrap(), "{} hash", label);
@@ -40,4 +40,20 @@ fn golden_ast_byte_parity_with_ts() {
             assert_eq!(hash, c["expect"]["state_hash"].as_str().unwrap(), "{} hash", label);
         }
     }
+}
+
+// Codex P1b: an unsafe dice modifier (here the result exceeds 2^53-1) must be
+// rejected at VALIDATION time - before any PRNG draw - so a hostile equation cannot
+// nudge the stream and then "fail". parse_dice now validates the modifier + result
+// range, and validate_check parses dice during its budget pass, so this is fail-closed.
+#[test]
+fn p1b_unsafe_dice_modifier_rejected_at_validation() {
+    use loom_ruleset::validate_check;
+    let check = serde_json::json!({
+        "type": "check",
+        "roll": { "type": "dice", "equation": "1d6+9007199254740992" },
+        "dc": { "type": "literal", "value": 0 },
+        "degrees": {}
+    });
+    assert!(validate_check(&check).is_err(), "unsafe dice modifier must be rejected at validation");
 }

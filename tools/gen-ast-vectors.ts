@@ -38,6 +38,15 @@ function action(label: string, seed: bigint, actor: string, target: string, stat
   cases.push({ label, kind: 'action', key: KEY, seed: seed.toString(), actor, target, state, check,
     expect: { degree: r.degree, roll: r.roll, natural: r.natural, dc: r.dc, delta: r.delta, hp_after: r.state.entities[target].properties.hp, state_hash: worldStateHash(KEY, r.state) } });
 }
+// Codex P1a: a triggered mutation that targets ANOTHER entity (target ref, with a
+// targetId supplied via the context). TS/Python carry ctx.target; the Rust ORIGINAL
+// apply_triggered_mutations dropped it (target:None) and would error. This case pins
+// target parity across all three.
+function conditionTgt(label: string, seed: bigint, actor: string, target: string, state: WorldState, mutations: MutationNode[]): void {
+  var r = applyTriggeredMutations(state, mutations, makeContext(state, actor, seed, target));
+  cases.push({ label, kind: 'condition', key: KEY, seed: seed.toString(), actor, target, state, mutations,
+    expect: { applied: r.mutations, state_hash: worldStateHash(KEY, r.state) } });
+}
 
 // 1. Bleed: sub hp by floor_div(1d8,2) on turn start (Gemini's case).
 condition('Bleed: sub_prop hp by floor_div(1d8,2)', 123456789n, 'e1',
@@ -105,6 +114,12 @@ action('multi-die-natural: 2d20 natural is first die (seed 999)', 999n, 'hero', 
 condition('tag-add-remove-astral (UTF-16 tag sort post-mutation)', 1n, 'e1',
   { epoch: 0, worldSeed: 0, entities: { e1: { properties: { hp: 1 }, tags: ['a', 'z'] } } },
   [{ type: 'add_tag', target: 'self', tag: ASTRAL }])
+
+// 8. Codex P1a: a triggered mutation acting on the TARGET (not the actor). Pins that
+// apply_triggered_mutations preserves ctx.target across TS / Python / Rust.
+conditionTgt('targeted-trigger: sub_prop hp on target (P1a parity)', 1n, 'aura', 'victim',
+  { epoch: 0, worldSeed: 0, entities: { aura: { properties: {}, tags: [] }, victim: { properties: { hp: 20 }, tags: [] } } },
+  [{ type: 'sub_prop', target: 'target', property: 'hp', value: { type: 'literal', value: 7 } }])
 
 var out = {
   meta: {

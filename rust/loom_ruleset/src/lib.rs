@@ -37,6 +37,9 @@ pub struct ActionResult {
     pub natural: Option<i64>,
     pub dc: i64,
     pub delta: i64,
+    // Codex P2: the applied-mutation records (TS/Python evaluateAction return them),
+    // so the original seed-constructed API exposes the same shape as the _with_rng path.
+    pub mutations: Vec<AppliedMutation>,
 }
 
 // ---- integer helpers -------------------------------------------------------
@@ -90,6 +93,17 @@ fn parse_dice(eq: &str) -> Result<(i64, i64, i64), String> {
     };
     if count < 0 || count > 100 || sides < 0 || sides > 100_000 {
         return Err(format!("AST: dice out of bounds: {}", eq));
+    }
+    // Codex P1b: the modifier + the whole result range [count+mod .. count*sides+mod]
+    // must stay JS-safe, else eval rolls (advancing the PRNG) before assert_int throws
+    // - breaking the fail-closed / zero-rng contract. count*sides <= 1e7; compute in
+    // i128 so the range check itself cannot overflow. (An i64-overflowing modifier
+    // already fails to parse above, also a rejection.)
+    let max_int = MAX_INT as i128;
+    let max_res = count as i128 * sides as i128 + modi as i128;
+    let min_res = count as i128 + modi as i128;
+    if (modi as i128).abs() > max_int || max_res.abs() > max_int || min_res.abs() > max_int {
+        return Err(format!("AST: dice modifier/result out of safe-integer range: {}", eq));
     }
     Ok((count, sides, modi))
 }
@@ -636,10 +650,12 @@ pub fn compare_ids(a: &str, b: &str) -> std::cmp::Ordering {
 
 // ---- public API (seed-constructed rng; back-compat with golden_ast) ---------
 
-pub fn apply_triggered_mutations(state: &Value, mutations: &Value, actor: &str, seed: u64) -> Result<Value, String> {
+pub fn apply_triggered_mutations(state: &Value, mutations: &Value, actor: &str, target: Option<&str>, seed: u64) -> Result<Value, String> {
     validate_triggered_mutations(mutations)?; // fail-closed before any rng/mutation
     let mut work = state.clone();
-    let mut ctx = EvalCtx { actor: actor.to_string(), target: None, rng: Pcg32::seeded(seed), natural: None };
+    // Codex P1a: preserve the target (TS/Python applyTriggeredMutations carry ctx.target)
+    // so a triggered mutation can act on a target entity, not only the actor.
+    let mut ctx = EvalCtx { actor: actor.to_string(), target: target.map(|s| s.to_string()), rng: Pcg32::seeded(seed), natural: None };
     let arr = mutations.as_array().ok_or("AST: mutations must be an array")?;
     for m in arr {
         apply_mutation(&mut work, m, &mut ctx)?;
@@ -667,8 +683,9 @@ pub fn evaluate_action(state: &Value, check: &Value, actor: &str, target: Option
             }
         }
     }
+    let mut applied: Vec<AppliedMutation> = Vec::new();
     for m in &chosen_muts {
-        apply_mutation(&mut work, m, &mut ctx)?;
+        apply_mutation_recorded(&mut work, m, &mut ctx, &mut applied)?;
     }
-    Ok(ActionResult { state: work, degree: chosen, roll, natural, dc, delta })
+    Ok(ActionResult { state: work, degree: chosen, roll, natural, dc, delta, mutations: applied })
 }

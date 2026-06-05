@@ -508,6 +508,53 @@
         ],
         "state_hash": "80e1004fc9c4210d036f925f3a1b37c26515c564f99cf133d0dde8e312fe24f1"
       }
+    },
+    {
+      "label": "targeted-trigger: sub_prop hp on target (P1a parity)",
+      "kind": "condition",
+      "key": "v3-ast-golden-key",
+      "seed": "1",
+      "actor": "aura",
+      "target": "victim",
+      "state": {
+        "epoch": 0,
+        "worldSeed": 0,
+        "entities": {
+          "aura": {
+            "properties": {},
+            "tags": []
+          },
+          "victim": {
+            "properties": {
+              "hp": 20
+            },
+            "tags": []
+          }
+        }
+      },
+      "mutations": [
+        {
+          "type": "sub_prop",
+          "target": "target",
+          "property": "hp",
+          "value": {
+            "type": "literal",
+            "value": 7
+          }
+        }
+      ],
+      "expect": {
+        "applied": [
+          {
+            "target": "victim",
+            "property": "hp",
+            "op": "sub_prop",
+            "previous": 20,
+            "next": 13
+          }
+        ],
+        "state_hash": "42a9bf40bcc9afbec1f1d98d38c86adabb8fffc45d04070717abba3b8ede9989"
+      }
     }
   ]
 }

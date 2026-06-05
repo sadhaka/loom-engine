@@ -63,6 +63,12 @@ def parse_dice(equation):
     mod = int(m.group(3)) if m.group(3) else 0
     if count < 0 or count > 100 or sides < 0 or sides > 100000:
         raise ValueError("AST: dice out of bounds: %r" % (equation,))
+    # Codex P1b: the modifier + the whole result range [count+mod .. count*sides+mod]
+    # must stay JS-safe, else eval rolls (advancing the PRNG) before _assert_int throws
+    # on the unsafe sum - breaking the fail-closed / zero-rng contract. parse_dice runs
+    # during validation (before any draw), so reject here. Python ints are exact.
+    if abs(mod) > MAX_INT or abs(count * sides + mod) > MAX_INT or abs(count + mod) > MAX_INT:
+        raise ValueError("AST: dice modifier/result out of safe-integer range: %r" % (equation,))
     return {"count": count, "sides": sides, "mod": mod}
 
 

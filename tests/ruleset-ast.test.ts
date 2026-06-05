@@ -11,7 +11,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import {
-  applyTriggeredMutations, evaluateAction, makeContext, parseDice, evalExpression,
+  applyTriggeredMutations, evaluateAction, makeContext, parseDice, evalExpression, validateCheck,
 } from '../src/runtime/ruleset-ast.js';
 import { worldStateHash } from '../src/runtime/world-state-snapshot.js';
 import { Pcg32 } from '../src/runtime/pcg32.js';
@@ -25,7 +25,7 @@ test('golden vector: every AST case resolves to the pinned result', function () 
     var c = vec.cases[i];
     var seed = BigInt(c.seed);
     if (c.kind === 'condition') {
-      var r = applyTriggeredMutations(c.state, c.mutations, makeContext(c.state, c.actor, seed));
+      var r = applyTriggeredMutations(c.state, c.mutations, makeContext(c.state, c.actor, seed, c.target));
       assert.strictEqual(worldStateHash(c.key, r.state), c.expect.state_hash, c.label + ' hash');
     } else {
       var ra = evaluateAction(c.state, c.check, makeContext(c.state, c.actor, seed, c.target));
@@ -35,6 +35,16 @@ test('golden vector: every AST case resolves to the pinned result', function () 
       assert.strictEqual(worldStateHash(c.key, ra.state), c.expect.state_hash, c.label + ' hash');
     }
   }
+});
+
+test('P1b: an unsafe dice modifier is rejected at validation (before any rng)', function () {
+  // The result (1 + 2^53) exceeds the JS-safe integer range. parseDice must reject it,
+  // and validateCheck (which parses dice in its budget pass) must reject it too - so a
+  // hostile equation can never roll first and "fail" after nudging the PRNG.
+  assert.throws(function () { parseDice('1d6+9007199254740992'); }, /safe-integer range/);
+  var check = { type: 'check', roll: { type: 'dice', equation: '1d6+9007199254740992' },
+    dc: { type: 'literal', value: 0 }, degrees: {} };
+  assert.throws(function () { validateCheck(check as never); });
 });
 
 test('determinism: same seed -> identical resolution', function () {

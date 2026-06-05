@@ -105,6 +105,17 @@ export function parseDice(equation: string): ParsedDice {
   if (count < 0 || count > 100 || sides < 0 || sides > 100000) {
     throw new Error('AST: dice out of bounds: ' + equation);
   }
+  // Codex P1b: the modifier - and the whole result range [count+mod .. count*sides+mod]
+  // - must stay JS-safe. Otherwise eval would ROLL the dice (advancing the PRNG)
+  // before assertInt throws on the unsafe sum, violating the fail-closed / zero-rng
+  // contract (a hostile equation could nudge the PRNG, then "fail"). parseDice runs
+  // during validation (before any draw), so rejecting here closes that. count*sides
+  // <= 1e7, so the modifier is the only component that can breach safe range.
+  if (!Number.isSafeInteger(mod)
+    || !Number.isSafeInteger(count * sides + mod)
+    || !Number.isSafeInteger(count + mod)) {
+    throw new Error('AST: dice modifier/result out of safe-integer range: ' + equation);
+  }
   return { count: count, sides: sides, mod: mod };
 }
 
