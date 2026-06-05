@@ -24,6 +24,9 @@ export interface ChainSeal {
     head: string;
     sig: string;
 }
+export declare function field(s: string): string;
+export declare function assertCleanString(s: string): void;
+export declare function canonicalJson(value: unknown, depth?: number): string;
 export declare class EventChain<T = unknown> {
     private records;
     private key;

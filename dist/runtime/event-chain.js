@@ -72,14 +72,14 @@ const MAX_CANONICAL_DEPTH = 256;
 // Length-prefixed field: '<len>:<value>' where len is the JS string length.
 // Self-delimiting, so concatenating fields is injective - a value cannot forge
 // a field boundary no matter what characters it contains.
-function field(s) {
+export function field(s) {
     return s.length + ':' + s;
 }
 // 2.2.2 audit HIGH 1: reject unpaired surrogates in any signed string.
 // TextEncoder maps lone surrogates lossily to U+FFFD, so two distinct strings
 // could otherwise collide after HMAC encoding. Valid event data never contains
 // lone surrogates; rejecting them keeps the canonical encoding injective.
-function assertCleanString(s) {
+export function assertCleanString(s) {
     for (var i = 0; i < s.length; i++) {
         var c = s.charCodeAt(i);
         if (c >= 0xd800 && c <= 0xdbff) {
@@ -173,7 +173,7 @@ function deepCloneJson(v, depth = 0) {
 // Date / Map / Set / array-holes all collide), this FAILS CLOSED - any value
 // that cannot be faithfully + injectively serialized throws, and the caller
 // rejects the append or marks the record unverifiable.
-function canonicalJson(value, depth = 0) {
+export function canonicalJson(value, depth = 0) {
     if (depth > MAX_CANONICAL_DEPTH) {
         throw new Error('EventChain: payload nesting exceeds max depth ' + MAX_CANONICAL_DEPTH);
     }

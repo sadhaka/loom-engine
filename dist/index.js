@@ -8,7 +8,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '2.3.0';
+export const LOOM_ENGINE_VERSION = '3.0.0';
 export { vec2, vec3, rect, clamp, lerp, smoothstep, approxEq, rectContains, rectIntersects, visibleInView, } from './util/math.js';
 export { rgba, hexToRgba, rgbaToHexString, rgbaToCssString, colorLerp, COLOR_WHITE, COLOR_BLACK, COLOR_TRANSPARENT, COLOR_KNOT_STR, COLOR_KNOT_DEX, COLOR_KNOT_INT, COLOR_KNOT_CENTER, } from './util/color.js';
 export { EntityAllocator, NULL_ENTITY, entityIndex, entityGeneration, makeEntity, } from './entity.js';
@@ -164,7 +164,46 @@ export { sha256Bytes, sha256Hex, hmacSha256Bytes, hmacSha256Hex, timingSafeEqual
 // 2.2.0 - tamper-evident HMAC-chained event log (the integrity-bearing
 // sibling of EventLog; detects field tamper, deletion, reordering, and - with
 // a seal() commitment - tail truncation).
-export { EventChain, RESOURCE_EVENT_CHAIN } from './runtime/event-chain.js';
+export { EventChain, RESOURCE_EVENT_CHAIN, canonicalJson, field } from './runtime/event-chain.js';
+// 3.0 Phase 1 - deterministic cross-language world-state snapshot + replay anchor
+// (state_hash = HMAC(canonicalJson(world_state)); reuses the chain's canonical
+// encoder, so it inherits byte-parity across TS / Python / Rust).
+export { SNAPSHOT_DOMAIN, normalizeTags, canonicalWorldState, worldStateHash, snapshotWorldState, verifyWorldSnapshot, } from './runtime/world-state-snapshot.js';
+// 3.0 Phase 1 - deterministic world reconstruction from a snapshot + events (the
+// replay half; snapshot+replay is provably equal to full replay-from-genesis).
+export { replayEvents, replayFromSnapshot, verifyReplayEquivalence, } from './runtime/world-replay.js';
+// 3.0 - the canonical deterministic PRNG (PCG32, bit-identical across surfaces)
+// + the floor-division contract (toward -inf, exact via BigInt). The dice + math
+// foundation of the ruleset AST.
+export { Pcg32 } from './runtime/pcg32.js';
+export { floorDiv, floorMod } from './runtime/integer-math.js';
+// 3.0 Phase 2 - the deterministic ruleset AST (the Any-System engine): evaluate
+// a data-driven JSON ruleset (5e / PF2e / homebrew) with no untrusted code.
+export { parseDice, evalExpression, evaluateAction, applyTriggeredMutations, makeContext, validateCheck, validateTriggeredMutations, } from './runtime/ruleset-ast.js';
+// 3.0 Phase 3 - the deterministic between-session Epoch world-tick. Offline
+// actors resolve through the ruleset AST against an Epoch PRNG seeded purely from
+// SHA-256(world_id || epoch), so the browser client and the authoritative server
+// reach the byte-identical world-state hash. Bounded (max_actions / max_catchup)
+// + fail-closed (rejected proposals consume zero prng). Pinned by
+// test_vectors/v3_3_epoch_tick.json.
+export { deriveEpochPrng, tickEpoch, catchUpEpochs, DEFAULT_ACTOR_TAG, RESOURCE_WORLD_EPOCH, } from './runtime/world-epoch.js';
+// 3.0 Phase 4 - the WorldSession suspend/resume lifecycle. Ties the event-chain,
+// snapshot, and Epoch tick into one fail-closed flow: pack a world into a
+// verifiable bundle (suspend), then verify it, replay the HMAC chain tail via a
+// recorded-mutation reducer, and fast-forward offline epochs (resume) - byte-
+// identical on every surface. Pinned by test_vectors/v3_4_world_session.json.
+export { suspend, resume, replayEpochEvent, RESOURCE_WORLD_SESSION, } from './runtime/world-session.js';
+// 5.0 Phase 1 - the deterministic command-frame tick (real-time shared-world
+// multiplayer core). tickFrame resolves N players' commands for one server frame
+// in a canonical (numeric-aware playerId, then seq) order through the ruleset AST,
+// fail-closed + byte-identical on every surface - the authoritative substrate the
+// netcode (prediction / reconciliation) rides on. Pinned by
+// test_vectors/v5_1_command_frame.json.
+export { tickFrame, reconcileFrames, deriveFramePrng, RESOURCE_WORLD_FRAME, } from './runtime/world-frame.js';
+// 5.0 - region hashing for interest management: a 2-level Merkle over per-region
+// world-state hashes, so a partial-sync client verifies only its own region's leaf
+// plus the root. Pinned by test_vectors/v5_3_region_hash.json.
+export { regionHash, regionLeaves, globalRegionHash, verifyRegion, RESOURCE_REGION_HASH, } from './runtime/region-hash.js';
 // 0.84.0 - declarative asset list + dependency graph.
 export { AssetManifest, RESOURCE_ASSET_MANIFEST } from './runtime/asset-manifest.js';
 // 0.85.0 - keybinding profile manager (M9 0.85 milestone).
