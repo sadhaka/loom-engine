@@ -8,7 +8,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '2.2.5';
+export const LOOM_ENGINE_VERSION = '2.3.0';
 export { vec2, vec3, rect, clamp, lerp, smoothstep, approxEq, rectContains, rectIntersects, visibleInView, } from './util/math.js';
 export { rgba, hexToRgba, rgbaToHexString, rgbaToCssString, colorLerp, COLOR_WHITE, COLOR_BLACK, COLOR_TRANSPARENT, COLOR_KNOT_STR, COLOR_KNOT_DEX, COLOR_KNOT_INT, COLOR_KNOT_CENTER, } from './util/color.js';
 export { EntityAllocator, NULL_ENTITY, entityIndex, entityGeneration, makeEntity, } from './entity.js';
@@ -92,6 +92,14 @@ export { CooldownManager, RESOURCE_COOLDOWN_MANAGER } from './runtime/cooldown-m
 export { LRUCache, RESOURCE_LRU_CACHE } from './runtime/lru-cache.js';
 // 0.54.0 - 2D AABB queries.
 export { aabb, aabbFromRect, aabbFromPoints, aabbContainsPoint, aabbContainsAabb, aabbOverlaps, aabbWidth, aabbHeight, aabbArea, aabbCenter, aabbExpand, aabbTranslate, aabbUnion, aabbIntersection, aabbRangeQuery, aabbRaycastSegment, RESOURCE_AABB, } from './runtime/aabb.js';
+// 2.3.0 - Range Bands: grid-free relative positioning (Engaged/Near/Far).
+export { bandFromDistanceFt, normalizeBand, bandWithin, compareBands, createRangeBandField, rangeBandSet, rangeBandGet, rangeBandIsEngaged, rangeBandTargetsWithin, rangeBandEngagedWith, rangeBandClear, rangeBandSnapshot, RANGE_BAND_ENGAGED, RANGE_BAND_NEAR, RANGE_BAND_FAR, ENGAGED_MAX_FT, NEAR_MAX_FT, RESOURCE_RANGE_BANDS, } from './runtime/range-bands.js';
+// 2.3.0 - Reaction Economy: the per-round "1 reaction per combatant" ceiling.
+export { REACTIONS_PER_ROUND, createReactionLedger, canReact, reactionsRemaining, spendReaction, advanceReactionRound, setReactionRound, pruneStaleSpends, clearReactions, reactionLedgerSnapshot, RESOURCE_REACTION_ECONOMY, } from './runtime/reaction-economy.js';
+// 2.3.0 - Narration Contract: the engine-owns-outcomes (no-invented-number) gate.
+export { parseNumberWord, extractCandidateNumbers, findInventedNumber, isNarrationGrounded, RESOURCE_NARRATION_CONTRACT, } from './runtime/narration-contract.js';
+// 2.3.0 - Ruleset Adapters: 5e + PF2e action economy / initiative / conditions.
+export { startTurnBudget, canSpend, spend, initiativeOrder, compareIds, createConditionTrack, applyCondition, removeCondition, hasCondition, conditionRemaining, tickConditions, activeConditions, DURATION_UNTIL_REMOVED, RESOURCE_RULESET, } from './runtime/ruleset.js';
 // 0.55.0 - A* pathfinder on a grid (grid-agnostic via isWalkable callback).
 export { findPath, RESOURCE_PATHFINDER } from './runtime/pathfinder.js';
 // 0.56.0 - scene manager (named scenes with async enter/exit + tick).
