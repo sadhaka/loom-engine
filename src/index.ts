@@ -625,10 +625,20 @@ export {
 // 2.2.0 - tamper-evident HMAC-chained event log (the integrity-bearing
 // sibling of EventLog; detects field tamper, deletion, reordering, and - with
 // a seal() commitment - tail truncation).
-export { EventChain, RESOURCE_EVENT_CHAIN } from './runtime/event-chain.js';
+export { EventChain, RESOURCE_EVENT_CHAIN, canonicalJson, field } from './runtime/event-chain.js';
 export type {
   ChainedRecord, EventChainOptions, ChainMismatch, ChainVerifyResult, ChainSeal,
 } from './runtime/event-chain.js';
+// 3.0 Phase 1 - deterministic cross-language world-state snapshot + replay anchor
+// (state_hash = HMAC(canonicalJson(world_state)); reuses the chain's canonical
+// encoder, so it inherits byte-parity across TS / Python / Rust).
+export {
+  SNAPSHOT_DOMAIN, normalizeTags, canonicalWorldState, worldStateHash,
+  snapshotWorldState, verifyWorldSnapshot,
+} from './runtime/world-state-snapshot.js';
+export type {
+  WorldState, WorldEntity, WorldStateSnapshot, SnapshotInput,
+} from './runtime/world-state-snapshot.js';
 // 0.84.0 - declarative asset list + dependency graph.
 export { AssetManifest, RESOURCE_ASSET_MANIFEST } from './runtime/asset-manifest.js';
 export type {

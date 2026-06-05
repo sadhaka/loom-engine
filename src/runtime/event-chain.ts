@@ -117,7 +117,7 @@ const MAX_CANONICAL_DEPTH = 256;
 // Length-prefixed field: '<len>:<value>' where len is the JS string length.
 // Self-delimiting, so concatenating fields is injective - a value cannot forge
 // a field boundary no matter what characters it contains.
-function field(s: string): string {
+export function field(s: string): string {
   return s.length + ':' + s;
 }
 
@@ -216,7 +216,7 @@ function deepCloneJson<V>(v: V, depth: number = 0): V {
 // Date / Map / Set / array-holes all collide), this FAILS CLOSED - any value
 // that cannot be faithfully + injectively serialized throws, and the caller
 // rejects the append or marks the record unverifiable.
-function canonicalJson(value: unknown, depth: number = 0): string {
+export function canonicalJson(value: unknown, depth: number = 0): string {
   if (depth > MAX_CANONICAL_DEPTH) {
     throw new Error('EventChain: payload nesting exceeds max depth ' + MAX_CANONICAL_DEPTH);
   }

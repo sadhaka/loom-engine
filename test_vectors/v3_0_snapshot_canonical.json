@@ -1,0 +1,147 @@
+{
+  "meta": {
+    "engine_version": "2.3.0",
+    "vector": "v3.0 world-state snapshot",
+    "domain": "loom.snapshot/1",
+    "key": "v3-snapshot-golden-key",
+    "note": "state_hash = HMAC-SHA-256(key, field(domain) + field(canonicalJson(state))). One sort rule: UTF-16 code units, keys AND tags."
+  },
+  "cases": [
+    {
+      "label": "empty world",
+      "key": "v3-snapshot-golden-key",
+      "input": {
+        "epoch": 0,
+        "worldSeed": 0,
+        "entities": {}
+      },
+      "expect_canonical": "{\"entities\":{},\"epoch\":0,\"worldSeed\":0}",
+      "expect_hash": "4baec18caeabd62a9f6ec438673ee44f2c92c062f29ebe62c277ac1b3c9d9b23"
+    },
+    {
+      "label": "integer edges (max safe int, negative, zero)",
+      "key": "v3-snapshot-golden-key",
+      "input": {
+        "epoch": 1,
+        "worldSeed": 12345,
+        "entities": {
+          "hero": {
+            "properties": {
+              "hp": 30,
+              "str": -3,
+              "max": 9007199254740991,
+              "min": -9007199254740991,
+              "zero": 0
+            },
+            "tags": [
+              "alive",
+              "pc"
+            ]
+          }
+        }
+      },
+      "expect_canonical": "{\"entities\":{\"hero\":{\"properties\":{\"hp\":30,\"max\":9007199254740991,\"min\":-9007199254740991,\"str\":-3,\"zero\":0},\"tags\":[\"alive\",\"pc\"]}},\"epoch\":1,\"worldSeed\":12345}",
+      "expect_hash": "05eb9a9f63373b160e7b05b98f5fa789b410457046c6fd9a160609c8c15b5996"
+    },
+    {
+      "label": "id keys sort UTF-16 lexicographic (10 before 2 before alpha)",
+      "key": "v3-snapshot-golden-key",
+      "input": {
+        "epoch": 7,
+        "worldSeed": 99,
+        "entities": {
+          "2": {
+            "properties": {
+              "n": 2
+            },
+            "tags": []
+          },
+          "10": {
+            "properties": {
+              "n": 10
+            },
+            "tags": []
+          },
+          "alpha": {
+            "properties": {
+              "n": 1
+            },
+            "tags": []
+          }
+        }
+      },
+      "expect_canonical": "{\"entities\":{\"10\":{\"properties\":{\"n\":10},\"tags\":[]},\"2\":{\"properties\":{\"n\":2},\"tags\":[]},\"alpha\":{\"properties\":{\"n\":1},\"tags\":[]}},\"epoch\":7,\"worldSeed\":99}",
+      "expect_hash": "e317ecaef0aed54cc8d59f2076b91821a05da577c590184de4b4923193d818a5"
+    },
+    {
+      "label": "ASTRAL TRAP: UTF-16 vs UTF-8 invert (expected UTF-16: a, astral, bmp)",
+      "key": "v3-snapshot-golden-key",
+      "input": {
+        "epoch": 3,
+        "worldSeed": 42,
+        "entities": {
+          "🐍": {
+            "properties": {
+              "a": 1,
+              "🐍": 2,
+              "": 3
+            },
+            "tags": [
+              "a",
+              "🐍",
+              ""
+            ]
+          },
+          "": {
+            "properties": {
+              "hp": 5
+            },
+            "tags": []
+          },
+          "a": {
+            "properties": {
+              "hp": 1
+            },
+            "tags": []
+          }
+        }
+      },
+      "expect_canonical": "{\"entities\":{\"a\":{\"properties\":{\"hp\":1},\"tags\":[]},\"🐍\":{\"properties\":{\"a\":1,\"🐍\":2,\"\":3},\"tags\":[\"a\",\"🐍\",\"\"]},\"\":{\"properties\":{\"hp\":5},\"tags\":[]}},\"epoch\":3,\"worldSeed\":42}",
+      "expect_hash": "360ff794cf1883791c71797c15b0126ef45060b8a288c25528833877de1b958f"
+    },
+    {
+      "label": "nested regions",
+      "key": "v3-snapshot-golden-key",
+      "input": {
+        "epoch": 12,
+        "worldSeed": 7,
+        "rulesetRef": "dnd5e@1",
+        "entities": {
+          "hero": {
+            "properties": {
+              "hp": 22
+            },
+            "tags": [
+              "pc"
+            ]
+          }
+        },
+        "regions": {
+          "north": {
+            "danger": 5,
+            "factions": {
+              "wolves": 2,
+              "crows": 1
+            }
+          },
+          "south": {
+            "danger": 1,
+            "factions": {}
+          }
+        }
+      },
+      "expect_canonical": "{\"entities\":{\"hero\":{\"properties\":{\"hp\":22},\"tags\":[\"pc\"]}},\"epoch\":12,\"regions\":{\"north\":{\"danger\":5,\"factions\":{\"crows\":1,\"wolves\":2}},\"south\":{\"danger\":1,\"factions\":{}}},\"rulesetRef\":\"dnd5e@1\",\"worldSeed\":7}",
+      "expect_hash": "23fb17e9bcbd63866774518902bfc8f5ed6919bcedbe25e3f96ac424d6180c11"
+    }
+  ]
+}
