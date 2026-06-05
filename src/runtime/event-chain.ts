@@ -125,7 +125,7 @@ export function field(s: string): string {
 // TextEncoder maps lone surrogates lossily to U+FFFD, so two distinct strings
 // could otherwise collide after HMAC encoding. Valid event data never contains
 // lone surrogates; rejecting them keeps the canonical encoding injective.
-function assertCleanString(s: string): void {
+export function assertCleanString(s: string): void {
   for (var i = 0; i < s.length; i++) {
     var c = s.charCodeAt(i);
     if (c >= 0xd800 && c <= 0xdbff) {

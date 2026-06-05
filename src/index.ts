@@ -654,6 +654,7 @@ export { floorDiv, floorMod } from './runtime/integer-math.js';
 // a data-driven JSON ruleset (5e / PF2e / homebrew) with no untrusted code.
 export {
   parseDice, evalExpression, evaluateAction, applyTriggeredMutations, makeContext,
+  validateCheck, validateTriggeredMutations,
 } from './runtime/ruleset-ast.js';
 export type {
   ExprNode, MutationNode, DegreeCond, DegreeBranch, CheckNode, EvalContext,

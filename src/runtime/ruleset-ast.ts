@@ -25,9 +25,12 @@ import type { WorldState, WorldEntity } from './world-state-snapshot.js';
 import { normalizeTags } from './world-state-snapshot.js';
 import { Pcg32 } from './pcg32.js';
 import { floorDiv } from './integer-math.js';
+import { assertCleanString } from './event-chain.js';
 
-var MAX_INT = 9007199254740991; // 2^53 - 1
-var MAX_EXPR_DEPTH = 16;        // Gemini schema: bound expression nesting
+var MAX_INT = 9007199254740991; // 2^53 - 1 (referenced by the validation pass)
+var MAX_EXPR_DEPTH = 16;        // bound expression + degree-condition nesting
+var MAX_NODES = 256;            // audit P1: bound TOTAL AST nodes per action (not just depth)
+var MAX_DICE_TOTAL = 1000;      // audit P1: bound summed dice `count` per action (DoS)
 
 // ---- AST node types -------------------------------------------------------
 
@@ -99,7 +102,7 @@ export function parseDice(equation: string): ParsedDice {
   var count = parseInt(m[1] as string, 10);
   var sides = parseInt(m[2] as string, 10);
   var mod = m[3] ? parseInt(m[3], 10) : 0;
-  if (count < 0 || count > 1000 || sides < 0 || sides > 1000000) {
+  if (count < 0 || count > 100 || sides < 0 || sides > 100000) {
     throw new Error('AST: dice out of bounds: ' + equation);
   }
   return { count: count, sides: sides, mod: mod };
@@ -124,6 +127,11 @@ function ensureEntity(state: WorldState, id: string): WorldEntity {
 
 function assertInt(n: number, what: string): number {
   if (!Number.isSafeInteger(n)) throw new Error('AST: ' + what + ' must be a JS-safe integer: ' + n);
+  // Audit P0: `mul` can manufacture -0 (e.g. 0 * -1); Number.isSafeInteger(-0) is
+  // true, so it would store, then canonicalJson REJECTS -0 at the hash gate - a
+  // TS-only throw the integer Rust/Python ports never hit. Normalize -0 -> +0 at
+  // this central choke point so every surface stores +0 (and stays hashable).
+  if (Object.is(n, -0)) return 0;
   return n;
 }
 
@@ -139,9 +147,16 @@ export function evalExpression(node: ExprNode, ctx: EvalContext, depth: number =
       return assertInt(node.value, 'literal');
     case 'dice': {
       var p = parseDice(node.equation);
-      var raw = ctx.rng.rollDice(p.count, p.sides);
-      if (ctx.naturalRoll === null) ctx.naturalRoll = raw; // first die in this eval = the natural roll
-      return assertInt(raw + p.mod, 'dice result');
+      // Roll die-by-die (the SAME PRNG sequence rollDice loops), so we can capture
+      // the FIRST INDIVIDUAL die as the natural roll - NOT the sum (audit P1: a
+      // 2d20 must crit on a natural 20 on one die, not on two 10s summing to 20).
+      var sum = 0;
+      for (var di = 0; di < p.count; di++) {
+        var oneDie = ctx.rng.rollDie(p.sides);
+        if (ctx.naturalRoll === null) ctx.naturalRoll = oneDie;
+        sum += oneDie;
+      }
+      return assertInt(sum + p.mod, 'dice result');
     }
     case 'prop_ref': {
       var id = resolveTarget(node.target, ctx);
@@ -167,15 +182,17 @@ export function evalExpression(node: ExprNode, ctx: EvalContext, depth: number =
 
 // ---- Degree matching -------------------------------------------------------
 
-function matchDegree(cond: DegreeCond, delta: number, natural: number | null): boolean {
+function matchDegree(cond: DegreeCond, delta: number, natural: number | null, depth: number = 0): boolean {
+  if (depth > MAX_EXPR_DEPTH) throw new Error('AST: degree condition exceeds max depth ' + MAX_EXPR_DEPTH);
   if (!cond || typeof cond.type !== 'string') throw new Error('AST: malformed degree condition');
   switch (cond.type) {
     case 'delta_gte': return delta >= assertInt(cond.value, 'delta_gte');
     case 'delta_lte': return delta <= assertInt(cond.value, 'delta_lte');
     case 'nat_roll_eq': return natural !== null && natural === assertInt(cond.value, 'nat_roll_eq');
     case 'or': {
+      if (!Array.isArray(cond.conditions)) throw new Error('AST: or condition requires a conditions array');
       for (var i = 0; i < cond.conditions.length; i++) {
-        if (matchDegree(cond.conditions[i] as DegreeCond, delta, natural)) return true;
+        if (matchDegree(cond.conditions[i] as DegreeCond, delta, natural, depth + 1)) return true;
       }
       return false;
     }
@@ -221,12 +238,140 @@ function cloneState(state: WorldState): WorldState {
   return JSON.parse(JSON.stringify(state)) as WorldState;
 }
 
+// ---- Static validation pass (audit P1: validate BEFORE any RNG draw / mutation) -
+//
+// Walks the entire AST once, touching NO rng and NO state, and rejects fail-closed
+// on: unknown node types, non-integer literals, over-depth expression OR degree
+// subtrees, a non-array `or.conditions`, malformed dice (float / junk / out of
+// bounds), unclean or __proto__ property/tag names, and the node + summed-dice
+// budgets. Because it runs before evaluateAction/applyTriggeredMutations touch the
+// PRNG, a rejected AST advances neither rng nor state - so the reject boundary is
+// byte-identical across TS / Rust / Python.
+
+interface ValidateBudget { nodes: number; dice: number; }
+
+function bumpNode(b: ValidateBudget): void {
+  b.nodes++;
+  if (b.nodes > MAX_NODES) throw new Error('AST: node budget exceeded (max ' + MAX_NODES + ')');
+}
+
+function validateTargetRef(t: string): void {
+  if (t !== 'actor' && t !== 'self' && t !== 'target') throw new Error('AST: unknown target ref: ' + t);
+}
+
+// Player-supplied property / tag names: reject lone surrogates (canonicalJson would
+// otherwise throw at the hash gate AFTER mutating - audit P2) and an own __proto__ key.
+function assertCleanName(s: string, what: string): void {
+  if (typeof s !== 'string' || s.length === 0) throw new Error('AST: ' + what + ' name must be a non-empty string');
+  if (s === '__proto__') throw new Error('AST: ' + what + ' name "__proto__" is forbidden');
+  assertCleanString(s);
+}
+
+function validateExpr(node: ExprNode, b: ValidateBudget, depth: number): void {
+  bumpNode(b);
+  if (depth > MAX_EXPR_DEPTH) throw new Error('AST: expression exceeds max depth ' + MAX_EXPR_DEPTH);
+  if (!node || typeof node.type !== 'string') throw new Error('AST: malformed expression node');
+  switch (node.type) {
+    case 'literal':
+      assertInt(node.value, 'literal');
+      return;
+    case 'dice': {
+      var p = parseDice(node.equation); // dry-run: throws on float / junk / out-of-bounds
+      b.dice += p.count;
+      if (b.dice > MAX_DICE_TOTAL) throw new Error('AST: total dice count exceeds budget ' + MAX_DICE_TOTAL);
+      return;
+    }
+    case 'prop_ref':
+      validateTargetRef(node.target);
+      assertCleanName(node.property, 'property');
+      return;
+    case 'math':
+      if (node.op !== 'add' && node.op !== 'sub' && node.op !== 'mul' && node.op !== 'floor_div') {
+        throw new Error('AST: unknown math op: ' + (node as { op: string }).op);
+      }
+      validateExpr(node.left, b, depth + 1);
+      validateExpr(node.right, b, depth + 1);
+      return;
+    default:
+      throw new Error('AST: unknown expression node type: ' + (node as { type: string }).type);
+  }
+}
+
+function validateDegreeCond(cond: DegreeCond, b: ValidateBudget, depth: number): void {
+  bumpNode(b);
+  if (depth > MAX_EXPR_DEPTH) throw new Error('AST: degree condition exceeds max depth ' + MAX_EXPR_DEPTH);
+  if (!cond || typeof cond.type !== 'string') throw new Error('AST: malformed degree condition');
+  switch (cond.type) {
+    case 'delta_gte':
+    case 'delta_lte':
+    case 'nat_roll_eq':
+      assertInt(cond.value, cond.type);
+      return;
+    case 'or':
+      if (!Array.isArray(cond.conditions)) throw new Error('AST: or condition requires a conditions array');
+      for (var i = 0; i < cond.conditions.length; i++) {
+        validateDegreeCond(cond.conditions[i] as DegreeCond, b, depth + 1);
+      }
+      return;
+    default:
+      throw new Error('AST: unknown degree condition: ' + (cond as { type: string }).type);
+  }
+}
+
+function validateMutation(node: MutationNode, b: ValidateBudget): void {
+  bumpNode(b);
+  if (!node || typeof node.type !== 'string') throw new Error('AST: malformed mutation node');
+  validateTargetRef(node.target);
+  switch (node.type) {
+    case 'set_prop':
+    case 'add_prop':
+    case 'sub_prop':
+      assertCleanName(node.property, 'property');
+      validateExpr(node.value, b, 0);
+      return;
+    case 'add_tag':
+    case 'remove_tag':
+      assertCleanName(node.tag, 'tag');
+      return;
+    default:
+      throw new Error('AST: unknown mutation node type: ' + (node as { type: string }).type);
+  }
+}
+
+function validateMutationList(mutations: MutationNode[], b: ValidateBudget): void {
+  if (!Array.isArray(mutations)) throw new Error('AST: mutations must be an array');
+  for (var i = 0; i < mutations.length; i++) validateMutation(mutations[i] as MutationNode, b);
+}
+
+// Validate a full check AST fail-closed (no rng / no state). Call before eval, or
+// at ruleset-load time. Throws 'AST: ...' on any violation.
+export function validateCheck(check: CheckNode): void {
+  if (!check || check.type !== 'check') throw new Error('AST: expected a check node');
+  var b: ValidateBudget = { nodes: 0, dice: 0 };
+  validateExpr(check.roll, b, 0);
+  validateExpr(check.dc, b, 0);
+  if (!check.degrees || typeof check.degrees !== 'object') throw new Error('AST: check.degrees must be an object');
+  var keys = Object.keys(check.degrees).sort();
+  for (var k = 0; k < keys.length; k++) {
+    var branch = check.degrees[keys[k] as string];
+    if (!branch || typeof branch !== 'object') throw new Error('AST: malformed degree branch: ' + keys[k]);
+    validateDegreeCond(branch.condition, b, 0);
+    validateMutationList(branch.mutations, b);
+  }
+}
+
+// Validate a trigger's mutation list fail-closed (no rng / no state).
+export function validateTriggeredMutations(mutations: MutationNode[]): void {
+  validateMutationList(mutations, { nodes: 0, dice: 0 });
+}
+
 // ---- Public API ------------------------------------------------------------
 
 // Apply a list of mutations to a fresh clone of the state (the trigger path -
 // e.g. a Bleed condition's on_turn_start effects). Deterministic given the rng.
 export function applyTriggeredMutations(
   state: WorldState, mutations: MutationNode[], ctx: EvalContext): { state: WorldState; mutations: AppliedMutation[] } {
+  validateTriggeredMutations(mutations); // fail-closed BEFORE any rng draw or mutation (audit P1)
   var work = cloneState(state);
   var ctx2: EvalContext = { state: work, actorId: ctx.actorId, targetId: ctx.targetId, rng: ctx.rng, naturalRoll: null };
   var applied: AppliedMutation[] = [];
@@ -239,7 +384,7 @@ export function applyTriggeredMutations(
 // Resolve a check action: roll vs DC -> winning degree -> apply that degree's
 // mutations. Returns the new state + the full resolution (for the chain event).
 export function evaluateAction(state: WorldState, check: CheckNode, ctx: EvalContext): ActionResult {
-  if (!check || check.type !== 'check') throw new Error('AST: evaluateAction expects a check node');
+  validateCheck(check); // fail-closed BEFORE any rng draw or mutation (audit P1)
   var work = cloneState(state);
   var ctx2: EvalContext = { state: work, actorId: ctx.actorId, targetId: ctx.targetId, rng: ctx.rng, naturalRoll: null };
   ctx2.naturalRoll = null;
