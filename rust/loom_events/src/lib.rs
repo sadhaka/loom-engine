@@ -102,7 +102,7 @@ fn utf16_len(s: &str) -> usize {
 
 /// Length-prefixed field `<utf16len>:<value>` - self-delimiting, so concatenating
 /// fields is injective (a value cannot forge a boundary). Matches TS `field()`.
-fn field(s: &str) -> String {
+pub fn field(s: &str) -> String {
     let mut out = String::with_capacity(s.len() + 8);
     out.push_str(&utf16_len(s).to_string());
     out.push(':');
@@ -193,7 +193,7 @@ fn canonical_number(n: &serde_json::Number) -> Result<String, CanonError> {
 
 /// Deterministic STRICT JSON: object keys sorted (UTF-16 order), no whitespace,
 /// fail-closed on a non-integer number. Mirrors TS `canonicalJson`.
-fn canonical_json(value: &Value, depth: usize) -> Result<String, CanonError> {
+pub fn canonical_json(value: &Value, depth: usize) -> Result<String, CanonError> {
     if depth > MAX_CANONICAL_DEPTH {
         return Err(CanonError::DepthExceeded);
     }

@@ -115,6 +115,14 @@ name = "loom_math"
 version = "0.1.0"
 
 [[package]]
+name = "loom_snapshot"
+version = "0.1.0"
+dependencies = [
+ "loom_events",
+ "serde_json",
+]
+
+[[package]]
 name = "loom_wasm"
 version = "0.1.0"
 dependencies = [
