@@ -8,15 +8,23 @@
 //! TS reference. Pinned by test_vectors/v5_1_command_frame.json. The WASM, PyO3, and
 //! C-ABI surfaces bind `tick_frame_from_json`.
 
+use loom_events::field;
 use loom_math::Pcg32;
 use loom_ruleset::{
     apply_triggered_mutations_with_rng, compare_ids, evaluate_action_with_rng, validate_check,
     validate_triggered_mutations, AppliedMutation,
 };
 use serde_json::{json, Map, Value};
+use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 
-const FRAME_PRNG_DOMAIN: &str = "|loom.frame/1";
+// Structured domain label for the frame PRNG (length-prefixed via field(), NOT raw-
+// concatenated onto the world id - the old `worldId + "|loom.frame/1"` form let an
+// Epoch of a crafted world id collide with a frame stream). Mirrors TS
+// world-frame.deriveFramePrng. Codex P2.
+const FRAME_PRNG_DOMAIN: &str = "loom.frame/1";
+// Anti-DoS bound on the rollback-replay window (mirrors TS MAX_RECONCILE_WINDOW).
+const MAX_RECONCILE_WINDOW: i64 = 4096;
 const REASON_UNKNOWN_PLAYER: &str = "unknown_player";
 const REASON_MALFORMED_COMMAND: &str = "malformed_command";
 const REASON_UNKNOWN_ACTION: &str = "unknown_action";
@@ -71,6 +79,45 @@ fn with_frame(state: &Value, frame_number: i64) -> Value {
     Value::Object(out)
 }
 
+/// Derive the frame PRNG for (world_id, frame_number). Structured + length-prefixed
+/// (mirrors TS deriveFramePrng): message = UTF8( field("loom.frame/1") ++
+/// field(world_id) ) ++ LE64(frame_number), then SHA-256; bytes 0-7 (LE) = PCG
+/// state, 8-15 (LE, forced odd) = increment. Injective across world ids + domain-
+/// separated from the Epoch seed. Codex P2.
+pub fn derive_frame_prng(world_id: &str, frame_number: i64) -> Pcg32 {
+    let prefix = format!("{}{}", field(FRAME_PRNG_DOMAIN), field(world_id));
+    let mut hasher = Sha256::new();
+    hasher.update(prefix.as_bytes());
+    hasher.update(frame_number.to_le_bytes()); // i64 LE, two's complement for negatives
+    let digest = hasher.finalize();
+    let mut state_b = [0u8; 8];
+    state_b.copy_from_slice(&digest[0..8]);
+    let mut inc_b = [0u8; 8];
+    inc_b.copy_from_slice(&digest[8..16]);
+    let state = u64::from_le_bytes(state_b);
+    let inc = u64::from_le_bytes(inc_b) | 1;
+    Pcg32::from_raw(state, inc)
+}
+
+/// Structural pre-sort validation of the command list (mirrors the TS fail-closed
+/// check). Every command MUST carry a string playerId + a JS-safe-integer seq, so
+/// the (compare_ids, seq) ordering is byte-identical on every surface - never
+/// coerce a bad seq to 0 (that diverged from JS numeric coercion). Codex P1.
+fn validate_commands(commands: &Value) -> Result<(), String> {
+    let empty: Vec<Value> = Vec::new();
+    let cmds = commands.as_array().unwrap_or(&empty);
+    for c in cmds {
+        if c.get("playerId").and_then(|x| x.as_str()).is_none() {
+            return Err("world-frame: every command needs a string playerId".to_string());
+        }
+        let seq_ok = c.get("seq").and_then(|x| x.as_i64()).map(loom_epoch::is_safe_epoch).unwrap_or(false);
+        if !seq_ok {
+            return Err("world-frame: every command needs a JS-safe-integer seq".to_string());
+        }
+    }
+    Ok(())
+}
+
 // ---- tick_frame ------------------------------------------------------------
 
 pub struct TickFrameResult {
@@ -95,8 +142,7 @@ pub fn tick_frame(
     let max_per_player = max_per_player.unwrap_or(u64::MAX);
     let max_commands = max_commands.unwrap_or(u64::MAX);
 
-    let seed_id = format!("{}{}", world_id, FRAME_PRNG_DOMAIN);
-    let mut prng: Pcg32 = loom_epoch::derive_epoch_prng(&seed_id, frame_number);
+    let mut prng: Pcg32 = derive_frame_prng(world_id, frame_number);
 
     // Stable sort a COPY of the command refs by (compare_ids(playerId), seq).
     let empty: Vec<Value> = Vec::new();
@@ -256,9 +302,10 @@ pub fn tick_frame_from_json(input_json: &str) -> Result<String, String> {
     let v: Value = serde_json::from_str(input_json).map_err(|e| format!("world-frame: bad input json: {}", e))?;
     let world_id = v.get("worldId").and_then(|x| x.as_str()).ok_or("world-frame: worldId must be a string")?;
     let frame_number = v.get("frameNumber").and_then(|x| x.as_i64()).ok_or("world-frame: frameNumber must be an integer")?;
-    if !loom_epoch::is_safe_epoch(frame_number) {
-        return Err("world-frame: frameNumber must be a JS-safe integer".to_string());
+    if !loom_epoch::is_safe_epoch(frame_number) || frame_number < 0 {
+        return Err("world-frame: frameNumber must be a non-negative JS-safe integer".to_string());
     }
+    validate_commands(&v["commands"])?;
     let max_per_player = parse_cap(&v, "maxCommandsPerPlayer")?;
     let max_commands = parse_cap(&v, "maxCommands")?;
     let r = tick_frame(
@@ -326,8 +373,32 @@ pub fn reconcile_frames_from_json(input_json: &str) -> Result<String, String> {
     let v: Value = serde_json::from_str(input_json).map_err(|e| format!("world-frame: bad reconcile input json: {}", e))?;
     let world_id = v.get("worldId").and_then(|x| x.as_str()).ok_or("world-frame: worldId must be a string")?;
     let to_frame = v.get("toFrame").and_then(|x| x.as_i64()).ok_or("world-frame: toFrame must be an integer")?;
-    if !loom_epoch::is_safe_epoch(to_frame) {
-        return Err("world-frame: toFrame must be a JS-safe integer".to_string());
+    if !loom_epoch::is_safe_epoch(to_frame) || to_frame < 0 {
+        return Err("world-frame: toFrame must be a non-negative JS-safe integer".to_string());
+    }
+    // correctedState.frame is the authoritative replay anchor: a non-negative safe
+    // integer, no silent fallback to 0 (Codex P1/P2).
+    let from_frame = v
+        .get("correctedState")
+        .and_then(|c| c.get("frame"))
+        .and_then(|f| f.as_i64())
+        .filter(|n| loom_epoch::is_safe_epoch(*n) && *n >= 0)
+        .ok_or("world-frame: correctedState.frame must be a non-negative JS-safe integer")?;
+    if to_frame < from_frame {
+        return Err("world-frame: toFrame must be >= correctedState.frame".to_string());
+    }
+    if to_frame - from_frame > MAX_RECONCILE_WINDOW {
+        return Err("world-frame: reconcile window exceeds the bound".to_string());
+    }
+    // Validate exactly the replayed frames' commands (mirrors TS, which validates
+    // per replayed frame inside tickFrame). The window is already bounded above.
+    let cbf = &v["commandsByFrame"];
+    let mut f = from_frame + 1;
+    while f <= to_frame {
+        if let Some(cmds) = cbf.get(f.to_string().as_str()) {
+            validate_commands(cmds)?;
+        }
+        f += 1;
     }
     let max_per_player = parse_cap(&v, "maxCommandsPerPlayer")?;
     let max_commands = parse_cap(&v, "maxCommands")?;

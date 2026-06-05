@@ -61,3 +61,29 @@ test('rate cap: a per-player cap rejects the over-limit command', function () {
   assert.strictEqual(r.rejected, 1, 'one rate-limited');
   assert.strictEqual(r.state.frame, 1, 'frame advanced');
 });
+
+// Codex P1/P2: command-shape + frame-number validation must FAIL-CLOSED identically
+// on every surface (the old code silently coerced a bad seq - JS numerically, the
+// strict-parse surfaces to 0 - a real cross-language divergence).
+test('fail-closed: a non-safe-integer seq is rejected (not coerced)', function () {
+  var mk = function () { return { frame: 0, epoch: 0, worldSeed: 0, entities: { e1: { properties: { x: 0 }, tags: [] } } } as WorldState; };
+  // a string seq (the exact JS-vs-strict-parse divergence Codex flagged).
+  assert.throws(function () {
+    tickFrame({ worldId: 'w', state: mk(), frameNumber: 1, commands: [{ playerId: 'p1', seq: ('9' as unknown as number), actionId: 'move' }], ruleset: RULESET, playerEntities: { p1: 'e1' } });
+  }, /JS-safe-integer seq/);
+  // a fractional seq.
+  assert.throws(function () {
+    tickFrame({ worldId: 'w', state: mk(), frameNumber: 1, commands: [{ playerId: 'p1', seq: 1.5, actionId: 'move' }], ruleset: RULESET, playerEntities: { p1: 'e1' } });
+  }, /JS-safe-integer seq/);
+  // a non-string playerId (cannot be ordered by compareIds).
+  assert.throws(function () {
+    tickFrame({ worldId: 'w', state: mk(), frameNumber: 1, commands: [{ playerId: (7 as unknown as string), seq: 1, actionId: 'move' }], ruleset: RULESET, playerEntities: { p1: 'e1' } });
+  }, /string playerId/);
+});
+
+test('fail-closed: a negative frameNumber is rejected', function () {
+  var state: WorldState = { frame: 0, epoch: 0, worldSeed: 0, entities: {} } as WorldState;
+  assert.throws(function () {
+    tickFrame({ worldId: 'w', state: state, frameNumber: -1, commands: [], ruleset: RULESET, playerEntities: {} });
+  }, /non-negative/);
+});

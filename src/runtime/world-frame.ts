@@ -14,9 +14,10 @@
 //      STABLE sort, so the resolution order - and thus the PRNG draw order - is
 //      byte-identical on every surface regardless of network arrival order.
 //
-//   2. PRNG ISOLATION. The frame PRNG is seeded from SHA-256(worldId<frame-domain>
-//      || frameNumber), domain-separated from the offline Epoch seed so frame N and
-//      epoch N never share a stream.
+//   2. PRNG ISOLATION. The frame PRNG is seeded from SHA-256( field('loom.frame/1')
+//      || field(worldId) || LE64(frameNumber) ) - length-prefixed structured fields,
+//      so it is injective across world ids AND domain-separated from the offline
+//      Epoch seed (no crafted world id can re-segment into another world's stream).
 //
 //   3. FAIL-CLOSED, ZERO-RNG-ON-REJECT. A command with an unknown player, malformed
 //      / unknown / invalid action, or one over a rate cap is rejected with a fixed
@@ -32,18 +33,76 @@
 //
 // Code style: var-only in browser source (matches world-epoch.ts).
 
-import { deriveEpochPrng } from './world-epoch.js';
 import type { Ruleset, WorldAction, SerializedMutation } from './world-epoch.js';
+import { Pcg32 } from './pcg32.js';
 import type { Pcg32State } from './pcg32.js';
+import { sha256Bytes } from './hmac-sha256.js';
 import { compareIds } from './ruleset.js';
 import { evaluateAction, applyTriggeredMutations, validateCheck, validateTriggeredMutations } from './ruleset-ast.js';
 import type { CheckNode, MutationNode, AppliedMutation, EvalContext } from './ruleset-ast.js';
 import type { WorldState } from './world-state-snapshot.js';
-import { assertCleanString } from './event-chain.js';
+import { assertCleanString, field } from './event-chain.js';
 
-// Domain suffix that namespaces the real-time frame PRNG away from the offline
-// Epoch PRNG, so a frame and an epoch with the same number never collide.
-var FRAME_PRNG_DOMAIN = '|loom.frame/1';
+var MASK64 = (1n << 64n) - 1n;
+
+// Structured domain label for the real-time frame PRNG. It is NOT concatenated raw
+// onto the world id (the old `worldId + '|loom.frame/1'` form let an Epoch of a
+// crafted world id - one literally ending in the suffix - collide with a frame:
+// deriveEpochPrng('arena|loom.frame/1', 5) == the frame stream for 'arena'@5). The
+// derivation below instead frames each component with the length-prefixed field()
+// encoder (the same one the event chain uses), so the message is injective and no
+// world id can be re-segmented to forge another world's frame stream. Codex P2.
+var FRAME_PRNG_DOMAIN = 'loom.frame/1';
+
+// Cap on the rollback-replay window (correctedState.frame+1 .. toFrame). A real
+// netcode rollback spans the round-trip lead (tens of frames); a request to replay
+// further is a malformed/oversized correction and is rejected rather than looped.
+// PARAMETER-free engine bound (anti-DoS), distinct from the per-frame command caps.
+var MAX_RECONCILE_WINDOW = 4096;
+
+// ---- frame PRNG derivation -------------------------------------------------
+
+// Serialize an i64 as exactly 8 little-endian bytes (mirrors world-epoch.le64Signed
+// + Rust i64::to_le_bytes + Python int.to_bytes(8,'little',signed=True)).
+function le64Signed(n: bigint): Uint8Array {
+  var u = n & MASK64;
+  var b = new Uint8Array(8);
+  for (var i = 0; i < 8; i++) {
+    b[i] = Number(u & 0xffn);
+    u = u >> 8n;
+  }
+  return b;
+}
+
+function readLeU64(bytes: Uint8Array, off: number): bigint {
+  var v = 0n;
+  for (var i = 7; i >= 0; i--) {
+    v = (v << 8n) | BigInt(bytes[off + i] as number);
+  }
+  return v;
+}
+
+// Derive the frame PRNG for (worldId, frameNumber). PUBLIC + deterministic: every
+// surface reproduces it. Message = UTF8( field('loom.frame/1') ++ field(worldId) )
+// ++ LE64(frameNumber), then SHA-256; bytes 0-7 (LE) = PCG state, 8-15 (LE, forced
+// odd) = increment. The length-prefixed fields keep it domain-separated from the
+// Epoch seed AND injective across world ids (Codex P2).
+export function deriveFramePrng(worldId: string, frameNumber: number): Pcg32 {
+  assertCleanString(worldId);
+  if (!Number.isSafeInteger(frameNumber)) {
+    throw new Error('world-frame: frameNumber must be a JS-safe integer');
+  }
+  var prefix = field(FRAME_PRNG_DOMAIN) + field(worldId);
+  var prefixBytes = new TextEncoder().encode(prefix);
+  var frameBytes = le64Signed(BigInt(frameNumber));
+  var msg = new Uint8Array(prefixBytes.length + 8);
+  msg.set(prefixBytes, 0);
+  msg.set(frameBytes, prefixBytes.length);
+  var digest = sha256Bytes(msg);
+  var state = readLeU64(digest, 0);
+  var inc = readLeU64(digest, 8) | 1n;
+  return Pcg32.fromRaw(state, inc);
+}
 
 // ---- types -----------------------------------------------------------------
 
@@ -146,8 +205,25 @@ function compareCommands(a: PlayerCommand, b: PlayerCommand): number {
 // state (frame advanced) + the canonical FrameResolved event.
 export function tickFrame(input: TickFrameInput): TickFrameResult {
   assertCleanString(input.worldId);
-  if (!Number.isSafeInteger(input.frameNumber)) {
-    throw new Error('world-frame: frameNumber must be a JS-safe integer');
+  if (!Number.isSafeInteger(input.frameNumber) || input.frameNumber < 0) {
+    throw new Error('world-frame: frameNumber must be a non-negative JS-safe integer');
+  }
+  // FAIL-CLOSED command shape: validate the ORDERING keys (playerId, seq) up front,
+  // before the sort. A non-string playerId or a non-safe-integer seq cannot be
+  // ordered identically across surfaces (JS coerces a string seq numerically; a
+  // strict i64 parse coerces it to 0 - a real divergence), so reject the whole
+  // frame deterministically rather than silently re-ordering it. The TWT gateway
+  // validates client input before queueing; this is the engine's own backstop.
+  // Codex P1.
+  var cmdList0 = input.commands || [];
+  for (var vi = 0; vi < cmdList0.length; vi++) {
+    var vc = cmdList0[vi] as PlayerCommand;
+    if (typeof vc.playerId !== 'string') {
+      throw new Error('world-frame: every command needs a string playerId');
+    }
+    if (!Number.isSafeInteger(vc.seq)) {
+      throw new Error('world-frame: every command needs a JS-safe-integer seq');
+    }
   }
   if (input.maxCommandsPerPlayer !== undefined
     && (!Number.isSafeInteger(input.maxCommandsPerPlayer) || input.maxCommandsPerPlayer < 0)) {
@@ -160,7 +236,7 @@ export function tickFrame(input: TickFrameInput): TickFrameResult {
   var maxPerPlayer = input.maxCommandsPerPlayer === undefined ? Number.MAX_SAFE_INTEGER : input.maxCommandsPerPlayer;
   var maxCommands = input.maxCommands === undefined ? Number.MAX_SAFE_INTEGER : input.maxCommands;
 
-  var prng = deriveEpochPrng(input.worldId + FRAME_PRNG_DOMAIN, input.frameNumber);
+  var prng = deriveFramePrng(input.worldId, input.frameNumber);
 
   // Sort a COPY (do not mutate the caller's array). Stable sort -> deterministic.
   var ordered = (input.commands || []).slice();
@@ -298,11 +374,26 @@ export interface FrameReconcileResult {
 // Replay frames (correctedState.frame + 1) .. toFrame over the corrected state,
 // applying each frame's local commands. Pure: does not mutate the input.
 export function reconcileFrames(input: FrameReconcileInput): FrameReconcileResult {
-  if (!Number.isSafeInteger(input.toFrame)) {
-    throw new Error('world-frame: toFrame must be a JS-safe integer');
+  if (!Number.isSafeInteger(input.toFrame) || input.toFrame < 0) {
+    throw new Error('world-frame: toFrame must be a non-negative JS-safe integer');
   }
-  var startRaw = (input.correctedState as unknown as { frame?: number }).frame;
-  var fromFrame = (typeof startRaw === 'number' && Number.isSafeInteger(startRaw)) ? startRaw : 0;
+  // correctedState.frame is the authoritative anchor the replay starts from. It MUST
+  // be a non-negative safe integer (no silent fallback to 0 - that diverged from the
+  // strict-parse surfaces, which previously accepted i64::MAX and replayed nothing).
+  // Codex P1 + P2.
+  var startRaw = (input.correctedState as unknown as { frame?: unknown }).frame;
+  if (typeof startRaw !== 'number' || !Number.isSafeInteger(startRaw) || startRaw < 0) {
+    throw new Error('world-frame: correctedState.frame must be a non-negative JS-safe integer');
+  }
+  var fromFrame = startRaw;
+  if (input.toFrame < fromFrame) {
+    throw new Error('world-frame: toFrame must be >= correctedState.frame');
+  }
+  // Bound the replay so an oversized/forged correction cannot spin a multi-million
+  // frame loop (anti-DoS). A genuine rollback window is tens of frames.
+  if (input.toFrame - fromFrame > MAX_RECONCILE_WINDOW) {
+    throw new Error('world-frame: reconcile window exceeds the bound');
+  }
   var work = input.correctedState;
   var events: FrameResolvedEvent[] = [];
   var replayed = 0;

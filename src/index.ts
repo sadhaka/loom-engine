@@ -693,7 +693,7 @@ export type {
 // netcode (prediction / reconciliation) rides on. Pinned by
 // test_vectors/v5_1_command_frame.json.
 export {
-  tickFrame, reconcileFrames, RESOURCE_WORLD_FRAME,
+  tickFrame, reconcileFrames, deriveFramePrng, RESOURCE_WORLD_FRAME,
 } from './runtime/world-frame.js';
 export type {
   PlayerCommand, PlayerEntityMap, FrameActionEntry, FrameResolvedEvent,

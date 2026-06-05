@@ -363,8 +363,41 @@ where
     })
 }
 
+// Shared body: parse `json` -> Value, run a keyed hash `f`, write the 64-hex out.
+// Returns 64; -1 bad key; -2 invalid JSON; -3 non-canonicalizable input. Both the
+// C-string and bounded `_n` hash variants funnel through this.
+unsafe fn write_keyed_hash<F>(
+    key: *const u8,
+    key_len: usize,
+    json: &str,
+    out: *mut c_char,
+    out_cap: usize,
+    f: F,
+) -> c_int
+where
+    F: FnOnce(&[u8], &serde_json::Value) -> Result<String, ()>,
+{
+    let key_slice = match checked_u8_slice(key, key_len) {
+        Some(s) => s,
+        None => return -1,
+    };
+    let val: serde_json::Value = match serde_json::from_str(json) {
+        Ok(v) => v,
+        Err(_) => return -2,
+    };
+    match f(key_slice, &val) {
+        Ok(hex) => write_hex64(&hex, out, out_cap),
+        Err(()) => -3,
+    }
+}
+
 /// HMAC-SHA-256 of the canonical world state -> 64-char hex into `out` (cap >= 65).
 /// Returns 64; -1 bad arg / non-UTF-8; -2 invalid JSON; -3 non-canonicalizable state.
+///
+/// DEPRECATED ABI: `state_json` is read with an UNBOUNDED `CStr` scan, so a non-NUL-
+/// terminated buffer is undefined behaviour the panic guard cannot catch. Prefer the
+/// bounded `loom_world_state_hash_n` (ptr + len). Kept only for NUL-terminated
+/// callers. Codex P1.
 ///
 /// # Safety
 /// `key` points to `key_len` bytes; `state_json` is a NUL-terminated C string;
@@ -381,28 +414,53 @@ pub unsafe extern "C" fn loom_world_state_hash(
         if state_json.is_null() {
             return -1;
         }
-        let key_slice = match checked_u8_slice(key, key_len) {
-            Some(s) => s,
-            None => return -1,
-        };
         let sj = match CStr::from_ptr(state_json).to_str() {
             Ok(s) => s,
             Err(_) => return -1,
         };
-        let state: serde_json::Value = match serde_json::from_str(sj) {
-            Ok(v) => v,
-            Err(_) => return -2,
+        write_keyed_hash(key, key_len, sj, out, out_cap, |k, v| {
+            loom_snapshot::world_state_hash(k, v).map_err(|_| ())
+        })
+    })
+}
+
+/// Bounded-read variant of `loom_world_state_hash` - `state_ptr` points to `state_len`
+/// JSON bytes (no NUL terminator required). The safe ABI for the world-state hash.
+/// Codex P1.
+///
+/// # Safety
+/// `key` points to `key_len` bytes; `state_ptr` points to `state_len` readable bytes
+/// (null only if `state_len == 0`); `out` is writable for `out_cap` bytes.
+#[no_mangle]
+pub unsafe extern "C" fn loom_world_state_hash_n(
+    key: *const u8,
+    key_len: usize,
+    state_ptr: *const u8,
+    state_len: usize,
+    out: *mut c_char,
+    out_cap: usize,
+) -> c_int {
+    ffi_guard(|| {
+        let bytes = match checked_u8_slice(state_ptr, state_len) {
+            Some(b) => b,
+            None => return -1,
         };
-        match loom_snapshot::world_state_hash(key_slice, &state) {
-            Ok(hex) => write_hex64(&hex, out, out_cap),
-            Err(_) => -3,
-        }
+        let sj = match std::str::from_utf8(bytes) {
+            Ok(s) => s,
+            Err(_) => return -1,
+        };
+        write_keyed_hash(key, key_len, sj, out, out_cap, |k, v| {
+            loom_snapshot::world_state_hash(k, v).map_err(|_| ())
+        })
     })
 }
 
 /// The global region hash (interest-management Merkle root) -> 64-char hex into `out`
 /// (cap >= 65). `regions_json` = { regionId: regionState, ... }. Returns 64; -1 bad
 /// arg / non-UTF-8; -2 invalid JSON; -3 non-canonicalizable region.
+///
+/// DEPRECATED ABI: reads `regions_json` with an UNBOUNDED `CStr` scan (UB on a non-
+/// NUL-terminated buffer). Prefer the bounded `loom_global_region_hash_n`. Codex P1.
 ///
 /// # Safety
 /// `key` points to `key_len` bytes; `regions_json` is a NUL-terminated C string;
@@ -419,22 +477,43 @@ pub unsafe extern "C" fn loom_global_region_hash(
         if regions_json.is_null() {
             return -1;
         }
-        let key_slice = match checked_u8_slice(key, key_len) {
-            Some(s) => s,
-            None => return -1,
-        };
         let rj = match CStr::from_ptr(regions_json).to_str() {
             Ok(s) => s,
             Err(_) => return -1,
         };
-        let regions: serde_json::Value = match serde_json::from_str(rj) {
-            Ok(v) => v,
-            Err(_) => return -2,
+        write_keyed_hash(key, key_len, rj, out, out_cap, |k, v| {
+            loom_snapshot::global_region_hash(k, v).map_err(|_| ())
+        })
+    })
+}
+
+/// Bounded-read variant of `loom_global_region_hash` - `regions_ptr` points to
+/// `regions_len` JSON bytes (no NUL terminator required). The safe ABI. Codex P1.
+///
+/// # Safety
+/// `key` points to `key_len` bytes; `regions_ptr` points to `regions_len` readable
+/// bytes (null only if `regions_len == 0`); `out` is writable for `out_cap` bytes.
+#[no_mangle]
+pub unsafe extern "C" fn loom_global_region_hash_n(
+    key: *const u8,
+    key_len: usize,
+    regions_ptr: *const u8,
+    regions_len: usize,
+    out: *mut c_char,
+    out_cap: usize,
+) -> c_int {
+    ffi_guard(|| {
+        let bytes = match checked_u8_slice(regions_ptr, regions_len) {
+            Some(b) => b,
+            None => return -1,
         };
-        match loom_snapshot::global_region_hash(key_slice, &regions) {
-            Ok(hex) => write_hex64(&hex, out, out_cap),
-            Err(_) => -3,
-        }
+        let rj = match std::str::from_utf8(bytes) {
+            Ok(s) => s,
+            Err(_) => return -1,
+        };
+        write_keyed_hash(key, key_len, rj, out, out_cap, |k, v| {
+            loom_snapshot::global_region_hash(k, v).map_err(|_| ())
+        })
     })
 }
 
@@ -442,6 +521,9 @@ pub unsafe extern "C" fn loom_global_region_hash(
 /// ruleset, actorTags?, maxActions?}. Writes {state, event, resolved, rejected} JSON
 /// to `out` (two-call protocol). Returns the length; -1 bad arg / non-UTF-8; -2 on a
 /// rejected/invalid input (e.g. unsafe epoch, invalid cap).
+///
+/// DEPRECATED ABI: reads `input_json` with an UNBOUNDED `CStr` scan. Prefer the
+/// bounded `loom_tick_epoch_n` (ptr + len). Codex P1.
 ///
 /// # Safety
 /// `input_json` is a NUL-terminated C string; `out` is writable for `out_cap` bytes
@@ -474,6 +556,8 @@ pub unsafe extern "C" fn loom_tick_epoch_n(
 /// maxCatchup, ruleset, proposalsByEpoch?, actorTags?, maxActions?}. Writes {state,
 /// events, epochsResolved, epochsVoided} JSON. Returns the length; -1/-2 as above.
 ///
+/// DEPRECATED ABI: unbounded `CStr` scan; prefer `loom_catch_up_epochs_n`. Codex P1.
+///
 /// # Safety
 /// As `loom_tick_epoch`.
 #[no_mangle]
@@ -505,6 +589,8 @@ pub unsafe extern "C" fn loom_catch_up_epochs_n(
 /// arg / non-UTF-8; -2 on a corrupted snapshot, tampered chain tail, time-travel, or
 /// invalid input.
 ///
+/// DEPRECATED ABI: unbounded `CStr` scan; prefer `loom_resume_session_n`. Codex P1.
+///
 /// # Safety
 /// As `loom_tick_epoch`.
 #[no_mangle]
@@ -535,6 +621,8 @@ pub unsafe extern "C" fn loom_resume_session_n(
 /// maxCommands?}. Writes {state, event, resolved, rejected} JSON. Returns the length;
 /// -1 bad arg / non-UTF-8; -2 on an unsafe frameNumber / invalid cap.
 ///
+/// DEPRECATED ABI: unbounded `CStr` scan; prefer `loom_tick_frame_n`. Codex P1.
+///
 /// # Safety
 /// As `loom_tick_epoch`.
 #[no_mangle]
@@ -563,6 +651,8 @@ pub unsafe extern "C" fn loom_tick_frame_n(
 /// Client-side rollback reconciliation. `input_json` = {worldId, correctedState,
 /// commandsByFrame, toFrame, ruleset, playerEntities, maxCommandsPerPlayer?,
 /// maxCommands?}. Writes {state, events, framesReplayed} JSON (two-call protocol).
+///
+/// DEPRECATED ABI: unbounded `CStr` scan; prefer `loom_reconcile_frames_n`. Codex P1.
 ///
 /// # Safety
 /// As `loom_tick_epoch`.
@@ -786,5 +876,34 @@ mod tests {
         let mut buf = vec![0 as c_char; cap];
         let n = unsafe { loom_tick_frame_n(b.as_ptr(), b.len(), buf.as_mut_ptr(), cap) };
         assert_eq!(n, needed, "_n writes successfully");
+
+        // P1-3: the new bounded _n hash variants exist AND agree with the (deprecated)
+        // C-string forms for a NUL-terminated input - byte-identical hex.
+        let sjson = "{\"epoch\":0,\"worldSeed\":0,\"entities\":{}}";
+        let scstr = CString::new(sjson).unwrap();
+        let sb = sjson.as_bytes();
+        let mut h_cstr = [0 as c_char; 65];
+        let mut h_n = [0 as c_char; 65];
+        let key2 = [9u8; 6];
+        let rc = unsafe { loom_world_state_hash(key2.as_ptr(), key2.len(), scstr.as_ptr(), h_cstr.as_mut_ptr(), 65) };
+        let rn = unsafe { loom_world_state_hash_n(key2.as_ptr(), key2.len(), sb.as_ptr(), sb.len(), h_n.as_mut_ptr(), 65) };
+        assert_eq!(rc, 64);
+        assert_eq!(rn, 64, "world_state_hash_n writes 64");
+        let a = unsafe { CStr::from_ptr(h_cstr.as_ptr()) }.to_str().unwrap();
+        let bb = unsafe { CStr::from_ptr(h_n.as_ptr()) }.to_str().unwrap();
+        assert_eq!(a, bb, "world_state_hash _n == C-string form");
+        // region hash _n likewise agrees with the C-string form.
+        let rjson = "{\"r1\":{\"epoch\":0,\"worldSeed\":0,\"entities\":{}}}";
+        let rcstr = CString::new(rjson).unwrap();
+        let rbb = rjson.as_bytes();
+        let mut g_cstr = [0 as c_char; 65];
+        let mut g_n = [0 as c_char; 65];
+        let g1 = unsafe { loom_global_region_hash(key2.as_ptr(), key2.len(), rcstr.as_ptr(), g_cstr.as_mut_ptr(), 65) };
+        let g2 = unsafe { loom_global_region_hash_n(key2.as_ptr(), key2.len(), rbb.as_ptr(), rbb.len(), g_n.as_mut_ptr(), 65) };
+        assert_eq!(g1, 64);
+        assert_eq!(g2, 64, "global_region_hash_n writes 64");
+        let ga = unsafe { CStr::from_ptr(g_cstr.as_ptr()) }.to_str().unwrap();
+        let gb = unsafe { CStr::from_ptr(g_n.as_ptr()) }.to_str().unwrap();
+        assert_eq!(ga, gb, "global_region_hash _n == C-string form");
     }
 }

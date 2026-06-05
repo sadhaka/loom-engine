@@ -36,7 +36,13 @@ the same seed on every surface - proven by shared golden vectors.
   id, resolved through the AST, fail-closed + rate-capped), client-side rollback
   reconciliation (replay unconfirmed commands over the corrected server frame), and
   region hashing (a 2-level Merkle so a partial-sync client verifies only its own
-  region + the root). The client can predict but can never forge an outcome.
+  region + the root). The client can predict but can never forge an outcome. The
+  frame PRNG is derived from structured length-prefixed fields
+  (`field('loom.frame/1') || field(worldId) || LE64(frameNumber)`), injective across
+  world ids; every command's `playerId`/`seq` and the reconcile anchor
+  (`correctedState.frame`/`toFrame`) are validated fail-closed at the boundary and the
+  rollback window is bounded, so the ordering and replay are byte-identical on every
+  surface (no silent seq coercion, no unbounded replay).
 - **Four binding surfaces**: a Rust workspace (`loom_math`, `loom_events`,
   `loom_snapshot`, `loom_ruleset`, `loom_epoch`, `loom_session`, `loom_frame`) bound to
   WASM (`loom_wasm`), a PyO3 wheel (`loom_py`), and a panic-guarded C ABI

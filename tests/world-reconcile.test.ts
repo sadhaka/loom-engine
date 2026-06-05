@@ -36,3 +36,31 @@ test('reconcileFrames: replaying over an UNCORRECTED state reproduces the origin
   assert.strictEqual(worldStateHash(i.key, r.state), vec.expect.predicted_102_hash, 'replay == prediction when there is no correction');
   assert.strictEqual(r.framesReplayed, 1);
 });
+
+// Codex P1/P2: reconcileFrames must validate its replay anchor + bound its window,
+// rather than silently falling back to frame 0 (which diverged from the strict-parse
+// surfaces) or looping over an unbounded/forged correction.
+test('fail-closed: reconcileFrames validates correctedState.frame + toFrame + window', function () {
+  var i = vec.inputs;
+  var base = { worldId: i.worldId, commandsByFrame: {}, ruleset: i.ruleset, playerEntities: i.playerEntities };
+  // correctedState.frame missing / non-integer -> reject (no fallback to 0).
+  assert.throws(function () {
+    reconcileFrames(Object.assign({}, base, { correctedState: { epoch: 0, worldSeed: 0, entities: {} }, toFrame: 5 }) as Parameters<typeof reconcileFrames>[0]);
+  }, /correctedState\.frame/);
+  // negative correctedState.frame -> reject.
+  assert.throws(function () {
+    reconcileFrames(Object.assign({}, base, { correctedState: { frame: -3, epoch: 0, worldSeed: 0, entities: {} }, toFrame: 5 }) as Parameters<typeof reconcileFrames>[0]);
+  }, /correctedState\.frame/);
+  // negative toFrame -> reject.
+  assert.throws(function () {
+    reconcileFrames(Object.assign({}, base, { correctedState: { frame: 0, epoch: 0, worldSeed: 0, entities: {} }, toFrame: -1 }) as Parameters<typeof reconcileFrames>[0]);
+  }, /non-negative/);
+  // toFrame < correctedState.frame -> reject.
+  assert.throws(function () {
+    reconcileFrames(Object.assign({}, base, { correctedState: { frame: 10, epoch: 0, worldSeed: 0, entities: {} }, toFrame: 5 }) as Parameters<typeof reconcileFrames>[0]);
+  }, />=/);
+  // an oversized replay window (anti-DoS) -> reject.
+  assert.throws(function () {
+    reconcileFrames(Object.assign({}, base, { correctedState: { frame: 0, epoch: 0, worldSeed: 0, entities: {} }, toFrame: 9000 }) as Parameters<typeof reconcileFrames>[0]);
+  }, /window/);
+});

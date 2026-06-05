@@ -89,8 +89,12 @@ name = "loom_c_abi"
 version = "0.1.0"
 dependencies = [
  "loom_combat",
+ "loom_epoch",
  "loom_events",
+ "loom_frame",
  "loom_math",
+ "loom_session",
+ "loom_snapshot",
  "serde_json",
 ]
 
@@ -102,10 +106,34 @@ dependencies = [
 ]
 
 [[package]]
+name = "loom_epoch"
+version = "0.1.0"
+dependencies = [
+ "loom_math",
+ "loom_ruleset",
+ "loom_snapshot",
+ "serde_json",
+ "sha2",
+]
+
+[[package]]
 name = "loom_events"
 version = "0.1.0"
 dependencies = [
  "hmac",
+ "serde_json",
+ "sha2",
+]
+
+[[package]]
+name = "loom_frame"
+version = "0.1.0"
+dependencies = [
+ "loom_epoch",
+ "loom_events",
+ "loom_math",
+ "loom_ruleset",
+ "loom_snapshot",
  "serde_json",
  "sha2",
 ]
@@ -124,6 +152,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "loom_session"
+version = "0.1.0"
+dependencies = [
+ "loom_epoch",
+ "loom_events",
+ "loom_snapshot",
+ "serde_json",
+]
+
+[[package]]
 name = "loom_snapshot"
 version = "0.1.0"
 dependencies = [
@@ -136,7 +174,13 @@ name = "loom_wasm"
 version = "0.1.0"
 dependencies = [
  "loom_combat",
+ "loom_epoch",
+ "loom_frame",
  "loom_math",
+ "loom_ruleset",
+ "loom_session",
+ "loom_snapshot",
+ "serde_json",
  "wasm-bindgen",
 ]
 

@@ -139,15 +139,15 @@
                   "target": "e2",
                   "property": "x",
                   "previous": 0,
-                  "next": 2
+                  "next": 3
                 }
               ]
             }
           ],
           "pcg_steps_consumed": 2
         },
-        "event_hash": "cc9d3f74dba8128518dca8c289d5f401b051a3478ffad427156871508b474830",
-        "state_hash": "6c9084bb2d75e9f2c33dbc9c574000428c93425a33fa96e5dc19fcf749da5b75"
+        "event_hash": "3a1018613a2e5fde9e6375b0630bf2132410a312513747e17c7e46b85b80ea2e",
+        "state_hash": "a62edb26cddfc61d23d063459f00620a32f740694e1be16d0d1635571c0e3536"
       }
     },
     {
@@ -511,22 +511,14 @@
               "player_id": "p1",
               "actor_id": "hero",
               "action_id": "strike",
-              "degree": "success",
-              "mutations_applied": [
-                {
-                  "op": "sub_prop",
-                  "target": "goblin",
-                  "property": "hp",
-                  "previous": 20,
-                  "next": 15
-                }
-              ]
+              "degree": "failure",
+              "mutations_applied": []
             }
           ],
           "pcg_steps_consumed": 1
         },
-        "event_hash": "d4bc97bb66a85b5709cde1d60c778a1a6e0a6dcbba65c0eb5e20cb576b96cce6",
-        "state_hash": "49b7f79b9308d1bb7f82e8b32c3de2c776a519341df2692fca58ddfa5c74ed30"
+        "event_hash": "c6319a9012d9225bc16c9e769bc35cd7ef5a2c5c7ae111ff8d21a01a23765e0a",
+        "state_hash": "d134db3baaa195a25ce7ebe043cdabaa030f795475c3a77c212adddea78a75bd"
       }
     }
   ]

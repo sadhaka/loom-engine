@@ -65,4 +65,35 @@ fn frame_from_json_is_fail_closed() {
     // an unsafe frame number is rejected, matching every other surface.
     let bad = serde_json::json!({"worldId":"w","frameNumber":9007199254740992i64,"state":{"frame":0,"epoch":0,"worldSeed":0,"entities":{}},"commands":[],"ruleset":{},"playerEntities":{}});
     assert!(tick_frame_from_json(&bad.to_string()).is_err(), "unsafe frameNumber must be rejected");
+
+    // Codex P2: a negative frameNumber is rejected (matches TS).
+    let neg = serde_json::json!({"worldId":"w","frameNumber":-1i64,"state":{"frame":0,"epoch":0,"worldSeed":0,"entities":{}},"commands":[],"ruleset":{},"playerEntities":{}});
+    assert!(tick_frame_from_json(&neg.to_string()).is_err(), "negative frameNumber must be rejected");
+
+    // Codex P1: a string seq is rejected here exactly as TS throws - NOT coerced to 0
+    // (the old as_i64().unwrap_or(0) divergence). Same for a fractional seq.
+    let str_seq = serde_json::json!({"worldId":"w","frameNumber":1,"state":{"frame":0,"epoch":0,"worldSeed":0,"entities":{}},"commands":[{"playerId":"p1","seq":"9","actionId":"move"}],"ruleset":{},"playerEntities":{"p1":"e1"}});
+    assert!(tick_frame_from_json(&str_seq.to_string()).is_err(), "string seq must be rejected, not coerced to 0");
+    let frac_seq = serde_json::json!({"worldId":"w","frameNumber":1,"state":{"frame":0,"epoch":0,"worldSeed":0,"entities":{}},"commands":[{"playerId":"p1","seq":1.5,"actionId":"move"}],"ruleset":{},"playerEntities":{"p1":"e1"}});
+    assert!(tick_frame_from_json(&frac_seq.to_string()).is_err(), "fractional seq must be rejected");
+    // a non-string playerId is rejected (cannot be ordered by compare_ids).
+    let bad_pid = serde_json::json!({"worldId":"w","frameNumber":1,"state":{"frame":0,"epoch":0,"worldSeed":0,"entities":{}},"commands":[{"playerId":7,"seq":1,"actionId":"move"}],"ruleset":{},"playerEntities":{}});
+    assert!(tick_frame_from_json(&bad_pid.to_string()).is_err(), "non-string playerId must be rejected");
+}
+
+#[test]
+fn reconcile_from_json_is_fail_closed() {
+    let base_cmds = serde_json::json!({});
+    // correctedState.frame missing -> reject (no silent fallback to 0).
+    let no_frame = serde_json::json!({"worldId":"w","correctedState":{"epoch":0,"worldSeed":0,"entities":{}},"commandsByFrame":base_cmds,"toFrame":5,"ruleset":{},"playerEntities":{}});
+    assert!(loom_frame::reconcile_frames_from_json(&no_frame.to_string()).is_err(), "missing correctedState.frame must be rejected");
+    // negative correctedState.frame -> reject.
+    let neg_frame = serde_json::json!({"worldId":"w","correctedState":{"frame":-2,"epoch":0,"worldSeed":0,"entities":{}},"commandsByFrame":base_cmds,"toFrame":5,"ruleset":{},"playerEntities":{}});
+    assert!(loom_frame::reconcile_frames_from_json(&neg_frame.to_string()).is_err(), "negative correctedState.frame must be rejected");
+    // negative toFrame -> reject.
+    let neg_to = serde_json::json!({"worldId":"w","correctedState":{"frame":0,"epoch":0,"worldSeed":0,"entities":{}},"commandsByFrame":base_cmds,"toFrame":-1,"ruleset":{},"playerEntities":{}});
+    assert!(loom_frame::reconcile_frames_from_json(&neg_to.to_string()).is_err(), "negative toFrame must be rejected");
+    // an oversized replay window (anti-DoS) -> reject.
+    let huge = serde_json::json!({"worldId":"w","correctedState":{"frame":0,"epoch":0,"worldSeed":0,"entities":{}},"commandsByFrame":base_cmds,"toFrame":9000,"ruleset":{},"playerEntities":{}});
+    assert!(loom_frame::reconcile_frames_from_json(&huge.to_string()).is_err(), "oversized reconcile window must be rejected");
 }
