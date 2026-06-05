@@ -4,10 +4,13 @@ build-backend = "maturin"
 
 [project]
 name = "loom-engine-native"
-version = "0.1.0"
+version = "3.0.0"  # tracks the engine version (npm loom-engine + loom-engine-rpg)
 description = "Native (Rust) Python bindings for the Loom Engine deterministic core - the same Rust core the WASM and C-ABI surfaces use, so a Python-server result is byte-identical to a browser-client one."
 requires-python = ">=3.8"
-license = { text = "MIT OR Apache-2.0" }
+# SPDX (PEP 639) - BUSL-1.1, matching the engine. This wheel bundles the compiled
+# BUSL deterministic core (ruleset/epoch/session/frame/snapshot). The `{ text = ... }`
+# form emits a deprecated field PyPI rejects; the SPDX string is required.
+license = "BUSL-1.1"
 classifiers = [
   "Programming Language :: Rust",
   "Programming Language :: Python :: Implementation :: CPython",

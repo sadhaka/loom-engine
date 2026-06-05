@@ -3,7 +3,7 @@
 # unrelated existing 'loomengine'). The IMPORT name stays `loom_engine`; the
 # npm package stays `loom-engine`. Like `pip install beautifulsoup4` -> `import bs4`.
 name = "loom-engine-rpg"
-version = "2.3.0"  # pinned to track the npm loom-engine version
+version = "3.0.0"  # pinned to track the npm loom-engine version
 description = "Deterministic TTRPG simulation core for AI-run games - the Python surface of loom-engine. Engine-is-truth: seeded, replay-safe rules the AI narrates but cannot invent."
 readme = "README.md"
 requires-python = ">=3.9"
