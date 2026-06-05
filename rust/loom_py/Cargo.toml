@@ -8,7 +8,10 @@
 
 [package]
 name = "loom_py"
-version = "0.1.1"
+# Tracks the engine/wheel version (3.0.0), not the core-crate 0.1.x line. loom_py is
+# workspace-excluded + publish=false, so its version is independent; maturin reads
+# the wheel version from pyproject ([project].version = "3.0.0").
+version = "3.0.0"
 edition = "2021"
 # BUSL-1.1 (matches the engine). Shipped to PyPI as a wheel (loom_engine_native),
 # never to crates.io.
@@ -23,7 +26,10 @@ name = "loom_engine_native"
 crate-type = ["cdylib"]
 
 [dependencies]
-pyo3 = { version = "0.24", features = ["extension-module"] }
+# abi3-py38: build ONE stable-ABI wheel per platform that works on all CPython >=3.8
+# (instead of a separate wheel per Python minor). Our bindings are simple
+# fn-returning-str/int, fully within the limited API.
+pyo3 = { version = "0.24", features = ["extension-module", "abi3-py38"] }
 serde_json = "1"
 loom_math = { path = "../loom_math", version = "0.1.1" }
 loom_combat = { path = "../loom_combat", version = "0.1.1" }
