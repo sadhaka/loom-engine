@@ -639,6 +639,12 @@ export {
 export type {
   WorldState, WorldEntity, WorldStateSnapshot, SnapshotInput,
 } from './runtime/world-state-snapshot.js';
+// 3.0 Phase 1 - deterministic world reconstruction from a snapshot + events (the
+// replay half; snapshot+replay is provably equal to full replay-from-genesis).
+export {
+  replayEvents, replayFromSnapshot, verifyReplayEquivalence,
+} from './runtime/world-replay.js';
+export type { WorldEventReducer, ReplayResult } from './runtime/world-replay.js';
 // 0.84.0 - declarative asset list + dependency graph.
 export { AssetManifest, RESOURCE_ASSET_MANIFEST } from './runtime/asset-manifest.js';
 export type {
