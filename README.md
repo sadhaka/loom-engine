@@ -13,7 +13,13 @@ ledger logs. **v2.3.0** extracts the deterministic tabletop rules - grid-free
 range bands, the per-round reaction economy, the narration contract, and 5e /
 Pathfinder 2e adapters - into a **cross-language core** that runs byte-identically
 in TypeScript, Python, and Rust (via WASM, a native PyO3 wheel, and a C ABI for
-C#/Unity, Godot, and Go).
+C#/Unity, Godot, and Go). **v3.0** turns that core into a deterministic **Living
+Persistent World**: a data-driven Any-System rules AST (any tabletop system, no
+untrusted code), cross-session snapshot + replay, an offline Epoch world-tick, an
+HMAC-verified suspend/resume lifecycle, and a real-time shared-world multiplayer core
+(server-authoritative command frames + client rollback reconciliation + region-hash
+interest management) - every primitive byte-identical across all four surfaces and
+pinned by a shared golden vector.
 
 Try the live playground at [theworldtable.ai/engine](https://theworldtable.ai/engine/) -
 8 click-to-expand component demos + a multi-component NPC sustain dial
@@ -33,7 +39,34 @@ The design spec (`LOOM-ENGINE-SPEC.md`) lives in the consuming
 TheWorldTable.ai repo and is the canonical source for phase
 plans and architectural decisions.
 
-## v2.3.0 - deterministic TTRPG core, every language (current)
+## v3.0 - the Living Persistent World (current)
+
+v3.0 makes the engine a deterministic, **server-authoritative world engine**. One
+Rust core, bound to four surfaces, resolves the same seed to byte-identical results
+everywhere - the basis for replay, anti-cheat, and honest AI narration in a shared
+persistent world.
+
+- **Any-System ruleset AST** - bring any tabletop system as DATA (a strict JSON
+  interpreter; no untrusted-code execution). Roll-vs-DC -> degree -> mutations,
+  integer-only expressions, floor_div toward -inf, a fail-closed validation pass.
+- **Snapshot + replay** - a pure content `state_hash` reconstructs a world from a
+  verified snapshot + the events after it (provably equal to replay-from-genesis).
+- **Epoch world-tick** - the world keeps moving between sessions: offline factions
+  act deterministically, fail-closed, bounded (the Veil-Ceiling guard).
+- **WorldSession suspend/resume** - pack a world into a verifiable bundle; on resume,
+  verify the snapshot hash, replay the HMAC chain tail, reject time-travel, fast-forward.
+- **Real-time multiplayer core** - server-authoritative command frames, client
+  rollback reconciliation (predict, then reconcile to the authoritative frame - you
+  can never forge an outcome), and region hashing (a partial-sync client verifies
+  only its own region + the Merkle root).
+
+**Every surface, one core.** A Rust workspace (`loom_math` / `loom_events` /
+`loom_snapshot` / `loom_ruleset` / `loom_epoch` / `loom_session` / `loom_frame`) binds
+to **WASM** (browser), a native **PyO3** wheel (Python server), and a panic-guarded
+**C ABI** (Unity / Godot / Go) - each verified against the same golden vectors as the
+TypeScript reference.
+
+## v2.3.0 - deterministic TTRPG core, every language
 
 The 2.3.0 milestone extracts the deterministic tabletop primitives into a
 **cross-language core**: the same rules resolve byte-identically in TypeScript,

@@ -7,6 +7,47 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 3.0.0 - 2026-06-05 (Living Persistent World + cross-language surfaces + real-time multiplayer core)
+
+The engine becomes a deterministic, server-authoritative world engine: the same logic
+compiled to a Rust core and bound to TypeScript (npm), WASM (browser), a native Python
+wheel (PyO3), and a C ABI (Unity / Godot / Go), producing byte-identical results from
+the same seed on every surface - proven by shared golden vectors.
+
+- **Any-System ruleset AST** (`runtime/ruleset-ast`): a strict, data-driven JSON
+  interpreter - bring any tabletop system (5e / PF2e / homebrew) as DATA, with no
+  untrusted-code execution. Checks (roll vs DC -> degree -> mutations), expressions
+  (dice / prop refs / integer math / floor_div toward -inf), and a fail-closed static
+  validation pass that runs before any RNG draw.
+- **World snapshot + replay** (`runtime/world-state-snapshot`, `runtime/world-replay`):
+  a pure content `state_hash` (HMAC over canonical, integer-only JSON) so a world is
+  persisted compactly and reconstructed from a verified snapshot + the events after it
+  - provably equal to replay-from-genesis.
+- **Epoch world-tick** (`runtime/world-epoch`): the between-session tick - offline
+  factions act deterministically against a PRNG seeded purely from (worldId, epoch),
+  fail-closed (a rejected proposal consumes zero RNG) and bounded (max-actions, a
+  capped catch-up that voids excess offline time).
+- **WorldSession lifecycle** (`runtime/world-session`): suspend packs a world into a
+  verifiable bundle; resume verifies the snapshot hash, verifies + replays the HMAC
+  chain tail via a recorded-mutation reducer, rejects time-travel, and fast-forwards
+  bounded offline epochs.
+- **Real-time multiplayer core** (`runtime/world-frame`, `runtime/region-hash`): a
+  server-authoritative command-frame tick (commands sorted by a numeric-aware player
+  id, resolved through the AST, fail-closed + rate-capped), client-side rollback
+  reconciliation (replay unconfirmed commands over the corrected server frame), and
+  region hashing (a 2-level Merkle so a partial-sync client verifies only its own
+  region + the root). The client can predict but can never forge an outcome.
+- **Four binding surfaces**: a Rust workspace (`loom_math`, `loom_events`,
+  `loom_snapshot`, `loom_ruleset`, `loom_epoch`, `loom_session`, `loom_frame`) bound to
+  WASM (`loom_wasm`), a PyO3 wheel (`loom_py`), and a panic-guarded C ABI
+  (`loom_c_abi`), each verified against the shared golden vectors. The C ABI is hardened
+  against FFI misuse: no Rust panic crosses the boundary, every caller slice is
+  length-checked, and bounded-read `_n` variants avoid unbounded C-string scans.
+
+Every deterministic primitive is pinned by a cross-language golden vector. SRD 5.1
+(CC-BY-4.0) + PF2e Remaster (ORC) attributed in `NOTICE.md`; source-available under
+BUSL-1.1.
+
 ## 2.3.0 - 2026-06-05 (Combat determinism extraction - range bands + reaction economy + narration contract)
 
 Extracts the generic, framework-agnostic deterministic combat primitives proven
