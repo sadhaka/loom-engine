@@ -1,43 +1,64 @@
 # Loom Engine
 
-Uniquely adaptable TypeScript engine for AI-driven worlds. Cross-session
-NPC memory via NarrativeMemory; asymmetric relationships via
-RelationshipGraph + EmotionState; deterministic replay via mulberry32 +
-per-tick state hash. **Trinity Mainframe v2.0** adds 14 pure-logic
-kernels (acoustic propagation, voxel mesh, packet routing, AI Director
-governance, anti-cheat, more) that drive a deferred WebGPU /
-WebTransport / WebCrypto / WASM-SIMD integration layer. **EventChain
-(2.2.x)** adds a tamper-evident, HMAC-SHA-256-chained event log - the
-integrity layer for audit trails, anti-cheat event tapes, and economy /
-ledger logs. **v2.3.0** extracts the deterministic tabletop rules - grid-free
-range bands, the per-round reaction economy, the narration contract, and 5e /
-Pathfinder 2e adapters - into a **cross-language core** that runs byte-identically
-in TypeScript, Python, and Rust (via WASM, a native PyO3 wheel, and a C ABI for
-C#/Unity, Godot, and Go). **v3.0** turns that core into a deterministic **Living
-Persistent World**: a data-driven Any-System rules AST (any tabletop system, no
-untrusted code), cross-session snapshot + replay, an offline Epoch world-tick, an
-HMAC-verified suspend/resume lifecycle, and a real-time shared-world multiplayer core
-(server-authoritative command frames + client rollback reconciliation + region-hash
-interest management) - every primitive byte-identical across all four surfaces and
-pinned by a shared golden vector.
+**A source-available, deterministic RPG simulation core — one Rust engine, five language
+surfaces, same seed, same result.**
 
-Try the live playground at [theworldtable.ai/engine](https://theworldtable.ai/engine/) -
-8 click-to-expand component demos + a multi-component NPC sustain dial
-that runs the engine in your browser. No external engine reuse - built
-from scratch in TypeScript for [TheWorldTable.ai](https://theworldtable.ai).
+The engine resolves the dice and owns the state; an AI narrates the outcome but can never
+author it. The same seeded simulation runs in **TypeScript (npm), Python (PyPI), Rust
+(crates.io), WebAssembly, and a C ABI** and produces **byte-identical** output on every
+surface — the basis for replay, server-authoritative anti-cheat primitives, and honest
+AI-narrated play.
 
-The same determinism runs in production: **LoomMaster**
-([theworldtable.ai/loommaster.html](https://theworldtable.ai/loommaster.html))
-is a shipped AI Dungeon Master for D&D 5e + Pathfinder 2e. Every die roll,
-degree-of-success, and HP change is resolved server-side on a seeded PRNG
-(validate-before-show) and every turn is HMAC-chained for replay + anti-cheat -
-the LLM never rolls, it only narrates. The engine owns the truth.
+```text
+same input → same 1d4 roll → same state hash, on every surface:
 
-Repo: [sadhaka/loom-engine](https://github.com/sadhaka/loom-engine).
-API docs: [loom-engine.pages.dev](https://loom-engine.pages.dev/).
-The design spec (`LOOM-ENGINE-SPEC.md`) lives in the consuming
-TheWorldTable.ai repo and is the canonical source for phase
-plans and architectural decisions.
+  tickFrame({ worldId:"arena", frameNumber:1,
+    commands:[{ playerId:"p1", seq:1, actionId:"move" }], ... })
+
+  →  x = 4
+  →  state_hash = cea43ee25ad95f845260985846936bd81f2b6d1aa735102cfd001295654b0a54
+```
+
+That exact hash is reproduced by npm, the PyPI wheel, the Rust crates, the WASM build, and
+the C ABI — pinned by a shared golden-vector suite (4,188 tests).
+
+## Install (≈1 minute)
+
+```bash
+npm install loom-engine            # TypeScript / browser / Node
+pip install loom-engine-native     # Python — native wheel (Rust core); or loom-engine-rpg (pure-Python)
+cargo add loom_frame               # Rust — the deterministic crates
+```
+
+Live playground: [theworldtable.ai/engine](https://theworldtable.ai/engine/) ·
+API docs: [loom-engine.pages.dev](https://loom-engine.pages.dev/) ·
+Repo: [sadhaka/loom-engine](https://github.com/sadhaka/loom-engine)
+
+## License
+
+**Source-available under [BUSL-1.1](LICENSE) — *not* OSI open-source.** The implementation
+is fully inspectable and usable under the license terms; it is the deterministic core under
+a solo-founded commercial product ([TheWorldTable.ai](https://theworldtable.ai)), and the
+BUSL change-date converts it to an open license over time. Read it, run it, learn from it.
+
+## What it is — and isn't (so you don't have to guess)
+
+- ✅ A **deterministic simulation core**: a seeded PRNG, an Any-System rules AST (any
+  tabletop system as *data*, no untrusted-code execution), a tamper-evident HMAC event
+  chain, snapshot + replay, and a real-time command-frame + client-rollback netcode primitive.
+- ✅ **Server-authoritative primitives** for anti-cheat: the engine owns the dice and the
+  state, so an AI — or a client — cannot author a mechanical outcome. (Anti-cheat is a
+  *system* you build on these; this is the honest referee, not a finished anti-cheat product.)
+- ✅ **5e / PF2e-*style* adapters** for action economy, conditions, and grid-free range
+  bands (rules-style primitives, not official D&D / Pathfinder content).
+- ⚠️ Determinism is proven **byte-identical across the shared golden vectors for the
+  supported APIs** — not a proof over every possible program state.
+- ❌ Not a full VTT or tabletop app (no character sheets, maps, or campaign UX). It is the
+  engine *underneath* one.
+
+Shipped in production by **LoomMaster** ([theworldtable.ai/loommaster.html](https://theworldtable.ai/loommaster.html)),
+an AI Dungeon Master for 5e + PF2e where every roll, degree-of-success, and HP change is
+resolved server-side on a seeded PRNG and HMAC-chained for replay — the LLM only narrates.
 
 ## v3.0 - the Living Persistent World (current)
 

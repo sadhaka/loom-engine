@@ -1,0 +1,11 @@
+[package]
+name = "same-seed"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+# The deterministic crates, straight from crates.io.
+[dependencies]
+loom_frame = "0.1.1"
+loom_snapshot = "0.1.1"
+serde_json = "1"
