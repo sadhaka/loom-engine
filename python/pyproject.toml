@@ -1,10 +1,16 @@
 [project]
-name = "loom-engine"
+# pip-install name: 'loom-engine' is blocked on PyPI (too similar to the
+# unrelated existing 'loomengine'). The IMPORT name stays `loom_engine`; the
+# npm package stays `loom-engine`. Like `pip install beautifulsoup4` -> `import bs4`.
+name = "loom-engine-rpg"
 version = "2.3.0"  # pinned to track the npm loom-engine version
 description = "Deterministic TTRPG simulation core for AI-run games - the Python surface of loom-engine. Engine-is-truth: seeded, replay-safe rules the AI narrates but cannot invent."
 readme = "README.md"
 requires-python = ">=3.9"
-license = { text = "See LICENSE / COMMERCIAL_LICENSE_TERMS.md in the repo root" }
+# SPDX expression (PEP 639) - matches the npm package. The free-text
+# `{ text = ... }` form emits a deprecated Metadata-2.4 `License:` field that
+# PyPI rejects with a 400. Full terms: LICENSE + COMMERCIAL_LICENSE_TERMS.md.
+license = "BUSL-1.1"
 keywords = ["ttrpg", "rpg", "deterministic", "ai-game-master", "5e", "pathfinder", "simulation"]
 dependencies = []  # ZERO runtime deps - the deterministic core is pure stdlib
 
@@ -15,7 +21,7 @@ test = ["pytest>=7.0.0"]
 Homepage = "https://www.npmjs.com/package/loom-engine"
 
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=77.0.0"]  # PEP 639 SPDX `license = "..."` support
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]

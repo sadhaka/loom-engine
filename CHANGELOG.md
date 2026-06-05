@@ -7,6 +7,27 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 2.3.1 - 2026-06-05 (Cross-language core + bindings; docs refresh)
+
+Documents and ships the full cross-language extraction completed alongside 2.3.0,
+and refreshes the README + npm package description (which still described 2.2.x).
+
+- **Rust deterministic core**: `loom_math` (PCG32 PRNG + integer floor-div),
+  `loom_combat` (range bands, reaction economy, 5e/PF2e ruleset with a
+  numeric-aware initiative tiebreak, conditions), `loom_events` (HMAC-SHA-256
+  event chain) - byte-compatible with the TypeScript chain.
+- **Bindings**: `loom_wasm` (wasm-bindgen, for TS/browser/edge), `loom_py` (PyO3
+  native wheel), `loom_c_abi` (cbindgen C ABI for C#/Unity, Godot, Go).
+- **Companion packages**: pure-Python port on PyPI (`pip install loom-engine-rpg`,
+  then `import loom_engine`); Rust crates on crates.io.
+- **Cross-language byte-parity** enforced by a shared golden-vector suite that the
+  TypeScript, Python, and Rust test harnesses all assert against.
+- **External security + determinism audit** (pre-publish): fixed C-ABI output
+  buffer safety, Rust<->TS canonicalization parity (-0, `__proto__`, non-integer
+  and JS-unsafe integers `> 2^53-1` now rejected on both sides), `floor_div`
+  overflow, WASM 64-bit (bigint) widths, integer-feet range bands, sorted
+  collection ordering, and the numeric-aware id tiebreak. 4131 / 4131 TS tests pass.
+
 ## 2.3.0 - 2026-06-05 (Combat determinism extraction - range bands + reaction economy + narration contract)
 
 Extracts the generic, framework-agnostic deterministic combat primitives proven

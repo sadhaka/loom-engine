@@ -3,6 +3,13 @@
 The Python surface of [loom-engine](https://www.npmjs.com/package/loom-engine) - a
 deterministic rules core for AI-run tabletop and RPG games.
 
+```sh
+pip install loom-engine-rpg   # the bare 'loom-engine' name is taken on PyPI
+```
+```python
+import loom_engine            # the import name is loom_engine
+```
+
 The design principle: **the engine is truth.** Dice, action economy, initiative,
 range, conditions, reactions, and validation are resolved by pure, replay-safe
 code. An AI narrator can describe the outcome, but it never gets to invent the

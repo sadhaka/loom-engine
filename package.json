@@ -1,7 +1,7 @@
 {
   "name": "loom-engine",
-  "version": "2.3.0",
-  "description": "Uniquely adaptable TypeScript engine for AI-driven worlds. Cross-session NPC memory, asymmetric relationships, deterministic replay, Trinity Mainframe kernels, and a tamper-evident HMAC-SHA-256 EventChain integrity layer for audit trails, anti-cheat, and economy ledgers.",
+  "version": "2.3.1",
+  "description": "Deterministic engine for AI-driven worlds and AI tabletop RPGs. v2.3.0 extracts a cross-language rules core - grid-free range bands, reaction economy, 5e/PF2e adapters, and an HMAC-SHA-256 EventChain - that runs byte-identically in TypeScript, Python, and Rust (WASM / PyO3 / C-ABI). The engine owns the dice; the AI only narrates.",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",

@@ -9,7 +9,11 @@ governance, anti-cheat, more) that drive a deferred WebGPU /
 WebTransport / WebCrypto / WASM-SIMD integration layer. **EventChain
 (2.2.x)** adds a tamper-evident, HMAC-SHA-256-chained event log - the
 integrity layer for audit trails, anti-cheat event tapes, and economy /
-ledger logs.
+ledger logs. **v2.3.0** extracts the deterministic tabletop rules - grid-free
+range bands, the per-round reaction economy, the narration contract, and 5e /
+Pathfinder 2e adapters - into a **cross-language core** that runs byte-identically
+in TypeScript, Python, and Rust (via WASM, a native PyO3 wheel, and a C ABI for
+C#/Unity, Godot, and Go).
 
 Try the live playground at [theworldtable.ai/engine](https://theworldtable.ai/engine/) -
 8 click-to-expand component demos + a multi-component NPC sustain dial
@@ -29,7 +33,36 @@ The design spec (`LOOM-ENGINE-SPEC.md`) lives in the consuming
 TheWorldTable.ai repo and is the canonical source for phase
 plans and architectural decisions.
 
-## v2.2.x - EventChain integrity layer (current)
+## v2.3.0 - deterministic TTRPG core, every language (current)
+
+The 2.3.0 milestone extracts the deterministic tabletop primitives into a
+**cross-language core**: the same rules resolve byte-identically in TypeScript,
+Python, and Rust, so a server-authoritative result and a browser one can never
+disagree - the basis for replay, anti-cheat, and honest AI narration.
+
+New rules modules: grid-free **range bands** (Engaged / Near / Far), the
+per-round **reaction economy** ceiling, the **narration contract**
+(`findInventedNumber` - reject prose that states a mechanics number the engine
+never produced, numerals **and** number-words), and **ruleset adapters** for
+D&D 5e + Pathfinder 2e (action economy, initiative with a numeric-aware
+tiebreak, conditions). SRD 5.1 (CC-BY-4.0) + PF2e Remaster (ORC) attributed in
+`NOTICE.md`.
+
+**One core, every surface.** A Rust deterministic core (`loom_math` PCG32 +
+integer math, `loom_combat`, `loom_events` HMAC chain) binds to:
+
+- **WASM** (wasm-bindgen) - for TS / browser / edge,
+- a **native Python** extension (PyO3),
+- a **C ABI** (cbindgen) - for C#/Unity, Godot/GDExtension, and Go/cgo.
+
+A pure-Python port ships alongside: **`pip install loom-engine-rpg`** then
+`import loom_engine` (the bare `loom-engine` name is taken on PyPI). Cross-language
+**byte-parity is enforced** by a shared golden-vector suite that the TypeScript,
+Python, and Rust test harnesses all assert against. 4131 / 4131 TS tests pass;
+the release was hardened by a full external security + cross-language determinism
+audit. **2.3.0 is the current npm `latest`** (`npm install loom-engine`).
+
+## v2.2.x - EventChain integrity layer
 
 The 2.2.x line adds **EventChain**, a tamper-evident HMAC-SHA-256-chained
 event log - the integrity-bearing sibling of EventLog. Every record is
@@ -40,8 +73,7 @@ truncation. Use it for audit trails, anti-cheat event tapes, and economy
 canonical encoding (length-prefixed + domain-tagged, fail-closed
 canonicalization, deep-clone isolation + bounded recursion + transactional
 snapshot at every trust boundary); the round-4 audit is GREEN with no
-CRITICAL/HIGH/MED findings. 4087 / 4087 tests pass. **2.2.5 is the current npm
-`latest`** (`npm install loom-engine`).
+CRITICAL/HIGH/MED findings. 4087 / 4087 tests passed at 2.2.5.
 
 ## v2.0.0 - Trinity Mainframe complete
 
