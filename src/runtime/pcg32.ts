@@ -20,6 +20,12 @@
 var MASK64 = (1n << 64n) - 1n;
 var MASK32 = 0xffffffffn;
 
+// A captured PRNG position: the LCG state, the (odd) increment, and the running
+// draw count. Used by the Epoch world-tick to snapshot/restore the PRNG so a
+// rejected faction proposal consumes ZERO randomness, byte-identically on every
+// surface (TS / Python / Rust).
+export interface Pcg32State { state: bigint; inc: bigint; draws: number; }
+
 export class Pcg32 {
   // The PCG multiplier constant (LCG step). MUST match Rust/Python.
   static MULT: bigint = 6364136223846793005n;
@@ -28,6 +34,10 @@ export class Pcg32 {
 
   private state: bigint;
   private inc: bigint;
+  // 3.0 Phase 3: count of nextU32() draws since construction (or since fromRaw /
+  // restore last reset it). Pure metadata - never affects outputs - reported as
+  // pcg_steps_consumed by the Epoch world-tick. Mirrored in the Python / Rust ports.
+  private draws: number = 0;
 
   // Construct from a seed + a stream selector (seq). Same seed, different stream
   // -> distinct, non-correlated sequences. Both are treated as u64 (masked).
@@ -44,8 +54,31 @@ export class Pcg32 {
     return new Pcg32(seed, Pcg32.DEFAULT_STREAM);
   }
 
+  // 3.0 Phase 3: construct directly from a RAW (state, inc) pair - NO seeding
+  // steps. The Epoch world-tick derives these from SHA-256(world_id || epoch), so
+  // the offline PRNG is reproducible by any surface from PUBLIC inputs alone (the
+  // keyed world-state hash, not the seed, is the anti-cheat anchor). inc is forced
+  // odd (a PCG requirement). Matches the Rust Pcg32::from_raw / Python from_raw.
+  static fromRaw(rawState: bigint, rawInc: bigint): Pcg32 {
+    var p = new Pcg32(0n, 0n);
+    p.state = rawState & MASK64;
+    p.inc = (rawInc | 1n) & MASK64;
+    p.draws = 0;
+    return p;
+  }
+
+  // Draws (nextU32 calls) since construction or the last fromRaw / restore reset.
+  getDraws(): number { return this.draws; }
+
+  // Capture / restore the full PRNG position. The Epoch tick captures before
+  // resolving a proposal and restores on rejection, so a rejected proposal advances
+  // the PRNG by exactly zero - the same fail-closed guarantee on every surface.
+  snapshot(): Pcg32State { return { state: this.state, inc: this.inc, draws: this.draws }; }
+  restore(s: Pcg32State): void { this.state = s.state; this.inc = s.inc; this.draws = s.draws; }
+
   // The next 32-bit output + advance the state.
   nextU32(): number {
+    this.draws = this.draws + 1;
     var old = this.state;
     this.state = (old * Pcg32.MULT + this.inc) & MASK64;
     // XSH RR: xorshift the high bits, then a data-dependent rotate.

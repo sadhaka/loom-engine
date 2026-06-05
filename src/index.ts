@@ -660,6 +660,21 @@ export type {
   ExprNode, MutationNode, DegreeCond, DegreeBranch, CheckNode, EvalContext,
   ActionResult, AppliedMutation, ParsedDice,
 } from './runtime/ruleset-ast.js';
+export type { Pcg32State } from './runtime/pcg32.js';
+// 3.0 Phase 3 - the deterministic between-session Epoch world-tick. Offline
+// actors resolve through the ruleset AST against an Epoch PRNG seeded purely from
+// SHA-256(world_id || epoch), so the browser client and the authoritative server
+// reach the byte-identical world-state hash. Bounded (max_actions / max_catchup)
+// + fail-closed (rejected proposals consume zero prng). Pinned by
+// test_vectors/v3_3_epoch_tick.json.
+export {
+  deriveEpochPrng, tickEpoch, catchUpEpochs, DEFAULT_ACTOR_TAG, RESOURCE_WORLD_EPOCH,
+} from './runtime/world-epoch.js';
+export type {
+  WorldAction, Ruleset, WorldActionProposal, ProposalMap, SerializedMutation,
+  EpochActionEntry, EpochResolvedEvent, TickEpochInput, TickEpochResult,
+  CatchUpInput, CatchUpResult,
+} from './runtime/world-epoch.js';
 // 0.84.0 - declarative asset list + dependency graph.
 export { AssetManifest, RESOURCE_ASSET_MANIFEST } from './runtime/asset-manifest.js';
 export type {
