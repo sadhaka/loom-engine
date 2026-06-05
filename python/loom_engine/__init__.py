@@ -46,3 +46,7 @@ from .world_snapshot import (  # noqa: F401
     verify_world_snapshot, normalize_tags,
 )
 from .pcg32 import Pcg32, floor_div, floor_mod  # noqa: F401
+from .ruleset_ast import (  # noqa: F401
+    parse_dice, eval_expression, evaluate_action, apply_triggered_mutations,
+    make_context, validate_check, validate_triggered_mutations,
+)
