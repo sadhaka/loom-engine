@@ -155,11 +155,16 @@ def tick_conditions(track: dict) -> List[str]:
             conds[cid] = rem - 1
     for cid in expired:
         del conds[cid]
+    # Codex P1: SORTED by UTF-8 bytes so the result matches the Rust core's
+    # BTreeMap order - identical across languages, not insertion-dependent.
+    expired.sort(key=lambda s: s.encode("utf-8"))
     return expired
 
 
 def active_conditions(track: dict) -> List[str]:
-    return list(track["conditions"].keys())
+    """Active condition ids in canonical SORTED order (UTF-8 bytes), matching the
+    Rust core's BTreeMap - identical across languages."""
+    return sorted(track["conditions"].keys(), key=lambda s: s.encode("utf-8"))
 
 
 RESOURCE_RULESET = "ruleset"

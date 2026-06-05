@@ -36,12 +36,12 @@ def ck(label, cond):
 
 ck("RESOURCE key stable", RESOURCE_RANGE_BANDS == "rangeBands")
 
-# distance thresholds on the RAW float (parity with TS)
+# integer-feet contract: fractions truncate toward zero (parity with TS / Rust)
 ck("0 -> engaged", band_from_distance_ft(0) == RANGE_BAND_ENGAGED)
 ck("5 -> engaged", band_from_distance_ft(5) == RANGE_BAND_ENGAGED)
-ck("5.49 -> near (not rounded)", band_from_distance_ft(5.49) == RANGE_BAND_NEAR)
+ck("5.49 -> engaged (trunc 5)", band_from_distance_ft(5.49) == RANGE_BAND_ENGAGED)
 ck("30 -> near", band_from_distance_ft(30) == RANGE_BAND_NEAR)
-ck("30.49 -> far", band_from_distance_ft(30.49) == RANGE_BAND_FAR)
+ck("30.49 -> near (trunc 30)", band_from_distance_ft(30.49) == RANGE_BAND_NEAR)
 ck("31 -> far", band_from_distance_ft(31) == RANGE_BAND_FAR)
 ck("inf -> far", band_from_distance_ft(float("inf")) == RANGE_BAND_FAR)
 ck("-10 -> near (defensive)", band_from_distance_ft(-10) == RANGE_BAND_NEAR)

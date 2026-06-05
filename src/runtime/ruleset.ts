@@ -188,13 +188,18 @@ export function tickConditions(track: ConditionTrack): string[] {
     else track.conditions.set(id, rem - 1);
   }
   for (var e of expired) track.conditions.delete(e);
+  // Codex P1: SORTED order (UTF-8 bytes) so the returned ids match the Rust
+  // core's BTreeMap iteration - cross-language identical, not insertion-order.
+  expired.sort(utf8Compare);
   return expired;
 }
 
-// Active condition ids in insertion order (deterministic).
+// Active condition ids in canonical SORTED order (UTF-8 bytes), matching the
+// Rust core's BTreeMap - identical across languages, not insertion-dependent.
 export function activeConditions(track: ConditionTrack): string[] {
   var out: string[] = [];
   for (var entry of track.conditions) out.push(entry[0]);
+  out.sort(utf8Compare);
   return out;
 }
 

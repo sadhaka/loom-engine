@@ -11,6 +11,7 @@ Pure + deterministic: no RNG, no floats stored (distance is advisory).
 
 from __future__ import annotations
 
+import math
 from typing import Dict, List, Optional
 
 RANGE_BAND_ENGAGED = "engaged"
@@ -24,8 +25,10 @@ _BAND_ORDER: Dict[str, int] = {"engaged": 0, "near": 1, "far": 2}
 
 
 def band_from_distance_ft(feet) -> str:
-    """Map a distance in feet to a band, classifying on the RAW float (5.49 ft is
-    Near, not Engaged). Negative / NaN / unparseable -> the neutral Near."""
+    """Map a distance in feet to a band. The cross-language contract is INTEGER
+    feet (the Rust/WASM core takes i64), so a fractional input is TRUNCATED toward
+    zero first - trunc(5.49) == 5 -> Engaged - matching Math.trunc (TS) and
+    `feet as i64` (Rust). Negative / NaN / unparseable -> the neutral Near."""
     try:
         d = float(feet)
     except (TypeError, ValueError):
@@ -34,6 +37,9 @@ def band_from_distance_ft(feet) -> str:
         return RANGE_BAND_NEAR
     if d < 0:
         return RANGE_BAND_NEAR
+    if math.isinf(d):  # trunc(inf) would raise; +inf is past every threshold
+        return RANGE_BAND_FAR
+    d = math.trunc(d)  # integer-feet contract
     if d <= ENGAGED_MAX_FT:
         return RANGE_BAND_ENGAGED
     if d <= NEAR_MAX_FT:
@@ -100,6 +106,9 @@ class RangeBandField:
         for key, band in self.bands.items():
             if key.startswith(prefix) and band_within(band, max_band):
                 out.append(key[len(prefix):])
+        # Codex P1: canonical SORTED order (UTF-8 bytes) to match the Rust core's
+        # BTreeMap iteration - identical across languages.
+        out.sort(key=lambda s: s.encode("utf-8"))
         return out
 
     def engaged_with(self, source: str) -> List[str]:

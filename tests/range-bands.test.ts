@@ -28,13 +28,13 @@ test('range-bands: RESOURCE key is stable', () => {
 
 // ---------- bandFromDistanceFt (RAW float threshold) ----------
 
-test('range-bands: distance thresholds classify on the raw float', () => {
+test('range-bands: integer-feet contract (fractions truncate toward zero)', () => {
   assert.equal(bandFromDistanceFt(0), RANGE_BAND_ENGAGED);
   assert.equal(bandFromDistanceFt(5), RANGE_BAND_ENGAGED);
-  assert.equal(bandFromDistanceFt(5.49), RANGE_BAND_NEAR);   // NOT rounded to 5
+  assert.equal(bandFromDistanceFt(5.49), RANGE_BAND_ENGAGED); // trunc(5.49)=5 (Codex P1 parity)
   assert.equal(bandFromDistanceFt(6), RANGE_BAND_NEAR);
   assert.equal(bandFromDistanceFt(30), RANGE_BAND_NEAR);
-  assert.equal(bandFromDistanceFt(30.49), RANGE_BAND_FAR);   // NOT rounded to 30
+  assert.equal(bandFromDistanceFt(30.49), RANGE_BAND_NEAR);   // trunc(30.49)=30
   assert.equal(bandFromDistanceFt(31), RANGE_BAND_FAR);
   assert.equal(bandFromDistanceFt(Infinity), RANGE_BAND_FAR);
 });
