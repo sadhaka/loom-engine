@@ -112,6 +112,108 @@ fn sign_record(
         .map_err(|e| PyValueError::new_err(format!("non-canonicalizable payload: {:?}", e)))
 }
 
+// ============================================================================
+// v3.0 surface - the world-state snapshot hash, the ruleset AST, and the Epoch
+// world-tick, exposed JSON-in / JSON-out. The Python server runs the SAME compiled
+// Rust core as the browser (loom_wasm) and the native server - byte-identical by
+// construction. Mirrors the loom_wasm surface 1:1; verified against the same golden
+// vectors (python/tests/test_native_surface.py). Build: maturin develop.
+// ============================================================================
+
+fn py_parse(s: &str, what: &str) -> PyResult<serde_json::Value> {
+    serde_json::from_str(s).map_err(|e| PyValueError::new_err(format!("bad {} json: {}", what, e)))
+}
+
+fn epoch_actor_tags(v: &serde_json::Value) -> Vec<String> {
+    v.get("actorTags")
+        .and_then(|t| t.as_array())
+        .map(|a| a.iter().filter_map(|x| x.as_str().map(|s| s.to_string())).collect())
+        .unwrap_or_default()
+}
+
+/// HMAC-SHA-256 of the canonical world state (byte-identical to TS/Python worldStateHash).
+#[pyfunction]
+fn world_state_hash(key: &str, state_json: &str) -> PyResult<String> {
+    let state = py_parse(state_json, "state")?;
+    loom_snapshot::world_state_hash(key.as_bytes(), &state)
+        .map_err(|e| PyValueError::new_err(format!("hash: {:?}", e)))
+}
+
+/// Resolve a check action (roll vs DC -> degree -> mutations). Returns
+/// {state, degree, roll, natural, dc, delta} as a JSON string.
+#[pyfunction]
+#[pyo3(signature = (state_json, check_json, actor, target=None, seed=0))]
+fn evaluate_action(state_json: &str, check_json: &str, actor: &str, target: Option<String>, seed: u64) -> PyResult<String> {
+    let state = py_parse(state_json, "state")?;
+    let check = py_parse(check_json, "check")?;
+    let r = loom_ruleset::evaluate_action(&state, &check, actor, target.as_deref(), seed)
+        .map_err(PyValueError::new_err)?;
+    let out = serde_json::json!({
+        "state": r.state, "degree": r.degree, "roll": r.roll,
+        "natural": r.natural, "dc": r.dc, "delta": r.delta,
+    });
+    serde_json::to_string(&out).map_err(|e| PyValueError::new_err(format!("serialize: {}", e)))
+}
+
+/// Apply a flat mutation list (the trigger path). Returns the new state as a JSON string.
+#[pyfunction]
+#[pyo3(signature = (state_json, mutations_json, actor, target=None, seed=0))]
+fn apply_triggered_mutations(state_json: &str, mutations_json: &str, actor: &str, target: Option<String>, seed: u64) -> PyResult<String> {
+    let state = py_parse(state_json, "state")?;
+    let mutations = py_parse(mutations_json, "mutations")?;
+    let new_state = loom_ruleset::apply_triggered_mutations(&state, &mutations, actor, target.as_deref(), seed)
+        .map_err(PyValueError::new_err)?;
+    serde_json::to_string(&new_state).map_err(|e| PyValueError::new_err(format!("serialize: {}", e)))
+}
+
+/// Resolve one offline epoch. Input JSON: {worldId, state, epochNumber, proposals,
+/// ruleset, actorTags?, maxActions?}. Returns {state, event, resolved, rejected}.
+#[pyfunction]
+fn tick_epoch(input_json: &str) -> PyResult<String> {
+    let v = py_parse(input_json, "tick input")?;
+    let world_id = v["worldId"].as_str().ok_or_else(|| PyValueError::new_err("worldId must be a string"))?;
+    let epoch_number = v["epochNumber"].as_i64().ok_or_else(|| PyValueError::new_err("epochNumber must be an integer"))?;
+    let r = loom_epoch::tick_epoch(loom_epoch::TickEpochInput {
+        world_id,
+        state: &v["state"],
+        epoch_number,
+        proposals: &v["proposals"],
+        ruleset: &v["ruleset"],
+        actor_tags: epoch_actor_tags(&v),
+        max_actions: v.get("maxActions").and_then(|m| m.as_u64()),
+    });
+    let out = serde_json::json!({
+        "state": r.state, "event": r.event, "resolved": r.resolved, "rejected": r.rejected,
+    });
+    serde_json::to_string(&out).map_err(|e| PyValueError::new_err(format!("serialize: {}", e)))
+}
+
+/// Replay offline epochs up to currentEpoch, bounded by maxCatchup (excess voided).
+/// Input JSON: {worldId, state, currentEpoch, maxCatchup, ruleset, proposalsByEpoch?,
+/// actorTags?, maxActions?}. Returns {state, events, epochsResolved, epochsVoided}.
+#[pyfunction]
+fn catch_up_epochs(input_json: &str) -> PyResult<String> {
+    let v = py_parse(input_json, "catchup input")?;
+    let world_id = v["worldId"].as_str().ok_or_else(|| PyValueError::new_err("worldId must be a string"))?;
+    let current_epoch = v["currentEpoch"].as_i64().ok_or_else(|| PyValueError::new_err("currentEpoch must be an integer"))?;
+    let max_catchup = v["maxCatchup"].as_i64().ok_or_else(|| PyValueError::new_err("maxCatchup must be an integer"))?;
+    let r = loom_epoch::catch_up_epochs(loom_epoch::CatchUpInput {
+        world_id,
+        state: &v["state"],
+        current_epoch,
+        max_catchup,
+        ruleset: &v["ruleset"],
+        proposals_by_epoch: &v["proposalsByEpoch"],
+        actor_tags: epoch_actor_tags(&v),
+        max_actions: v.get("maxActions").and_then(|m| m.as_u64()),
+    });
+    let out = serde_json::json!({
+        "state": r.state, "events": r.events,
+        "epochsResolved": r.epochs_resolved, "epochsVoided": r.epochs_voided,
+    });
+    serde_json::to_string(&out).map_err(|e| PyValueError::new_err(format!("serialize: {}", e)))
+}
+
 /// The module name MUST equal the [lib] name (loom_engine_native).
 #[pymodule]
 fn loom_engine_native(m: &Bound<'_, PyModule>) -> PyResult<()> {
@@ -126,5 +228,11 @@ fn loom_engine_native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(initiative_order_ids, m)?)?;
     m.add_function(wrap_pyfunction!(hmac_sha256_hex, m)?)?;
     m.add_function(wrap_pyfunction!(sign_record, m)?)?;
+    // v3.0 surface
+    m.add_function(wrap_pyfunction!(world_state_hash, m)?)?;
+    m.add_function(wrap_pyfunction!(evaluate_action, m)?)?;
+    m.add_function(wrap_pyfunction!(apply_triggered_mutations, m)?)?;
+    m.add_function(wrap_pyfunction!(tick_epoch, m)?)?;
+    m.add_function(wrap_pyfunction!(catch_up_epochs, m)?)?;
     Ok(())
 }

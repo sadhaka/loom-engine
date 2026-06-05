@@ -52,6 +52,13 @@ npm-debug.log*
 coverage/
 .nyc_output/
 
+# Python (PyO3 surface build venv + caches/artifacts)
+.venv-loom/
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+
 # Temporary commit message files (use git -F to avoid heredoc quote issues)
 .commit-msg-*.txt
 
