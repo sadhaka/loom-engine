@@ -1,6 +1,6 @@
 {
   "name": "loom-engine",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "description": "Deterministic engine for AI-driven worlds and AI tabletop RPGs. v3.0 - the Living Persistent World: a data-driven Any-System rules AST (any tabletop system, no untrusted code), cross-session snapshot + replay, an offline Epoch world-tick, a fail-closed HMAC-verified suspend/resume lifecycle, and a real-time shared-world multiplayer core (server-authoritative command frames + client rollback reconciliation + region-hash interest management). One Rust core runs byte-identically in TypeScript, Python, Rust, WASM, PyO3, and a C ABI. The engine owns the dice and the state; the AI only narrates.",
   "type": "module",
   "main": "./dist/index.js",
