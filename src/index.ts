@@ -686,6 +686,19 @@ export {
 export type {
   WorldBundle, SuspendInput, ResumeInput, ResumeResult,
 } from './runtime/world-session.js';
+// 5.0 Phase 1 - the deterministic command-frame tick (real-time shared-world
+// multiplayer core). tickFrame resolves N players' commands for one server frame
+// in a canonical (numeric-aware playerId, then seq) order through the ruleset AST,
+// fail-closed + byte-identical on every surface - the authoritative substrate the
+// netcode (prediction / reconciliation) rides on. Pinned by
+// test_vectors/v5_1_command_frame.json.
+export {
+  tickFrame, RESOURCE_WORLD_FRAME,
+} from './runtime/world-frame.js';
+export type {
+  PlayerCommand, PlayerEntityMap, FrameActionEntry, FrameResolvedEvent,
+  TickFrameInput, TickFrameResult,
+} from './runtime/world-frame.js';
 // 0.84.0 - declarative asset list + dependency graph.
 export { AssetManifest, RESOURCE_ASSET_MANIFEST } from './runtime/asset-manifest.js';
 export type {
