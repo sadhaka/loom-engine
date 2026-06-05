@@ -650,6 +650,15 @@ export type { WorldEventReducer, ReplayResult } from './runtime/world-replay.js'
 // foundation of the ruleset AST.
 export { Pcg32 } from './runtime/pcg32.js';
 export { floorDiv, floorMod } from './runtime/integer-math.js';
+// 3.0 Phase 2 - the deterministic ruleset AST (the Any-System engine): evaluate
+// a data-driven JSON ruleset (5e / PF2e / homebrew) with no untrusted code.
+export {
+  parseDice, evalExpression, evaluateAction, applyTriggeredMutations, makeContext,
+} from './runtime/ruleset-ast.js';
+export type {
+  ExprNode, MutationNode, DegreeCond, DegreeBranch, CheckNode, EvalContext,
+  ActionResult, AppliedMutation, ParsedDice,
+} from './runtime/ruleset-ast.js';
 // 0.84.0 - declarative asset list + dependency graph.
 export { AssetManifest, RESOURCE_ASSET_MANIFEST } from './runtime/asset-manifest.js';
 export type {
