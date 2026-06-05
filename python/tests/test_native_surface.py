@@ -59,7 +59,19 @@ def test_native_epoch_surface_matches_golden():
             assert world_state_hash(key, r["events"]) == c["expect"]["events_hash"], c["label"] + " events"
 
 
+def test_native_session_surface_matches_golden():
+    v = _load("v3_4_world_session.json")
+    i = v["inputs"]
+    out = json.loads(native.resume_session(json.dumps(i)))
+    assert world_state_hash(i["key"], out["state"]) == v["expect"]["final_state_hash"], "final state"
+    assert world_state_hash(i["key"], out["newEvents"]) == v["expect"]["newEvents_hash"], "newEvents"
+    assert out["state"]["epoch"] == v["expect"]["final_epoch"], "final epoch"
+    assert out["epochsResolved"] == v["expect"]["epochsResolved"], "resolved"
+    assert out["epochsVoided"] == v["expect"]["epochsVoided"], "voided"
+
+
 if __name__ == "__main__":
     test_native_ast_surface_matches_golden()
     test_native_epoch_surface_matches_golden()
+    test_native_session_surface_matches_golden()
     print("loom_engine_native parity: all golden cases pass")

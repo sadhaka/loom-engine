@@ -193,6 +193,17 @@ pub fn catch_up_epochs_js(input_json: &str) -> Result<String, JsError> {
     catch_up_epochs_inner(input_json).map_err(|e| JsError::new(&e))
 }
 
+// ---- WorldSession suspend/resume (Phase 4) ----
+
+/// Reconstruct + verify + fast-forward a world from a bundle (fail-closed). Input:
+/// {key, bundle, currentEpoch, maxCatchup, ruleset, proposalsByEpoch?, actorTags?,
+/// maxActions?}. Returns {worldId, state, newEvents, epochsResolved, epochsVoided}.
+/// Throws on a corrupted snapshot, a tampered chain tail, or time-travel.
+#[wasm_bindgen(js_name = resumeSession)]
+pub fn resume_session_js(input_json: &str) -> Result<String, JsError> {
+    loom_session::resume_from_json(input_json).map_err(|e| JsError::new(&e))
+}
+
 #[cfg(test)]
 mod v3_surface_tests {
     use super::*;
@@ -255,5 +266,17 @@ mod v3_surface_tests {
                 assert_eq!(eh, c["expect"]["events_hash"].as_str().unwrap(), "{} events", label);
             }
         }
+    }
+
+    #[test]
+    fn session_surface_matches_golden() {
+        let v = read_vector("v3_4_world_session.json");
+        let inputs = &v["inputs"];
+        let key = inputs["key"].as_str().unwrap();
+        let out: Value = serde_json::from_str(&loom_session::resume_from_json(&inputs.to_string()).unwrap()).unwrap();
+        let sh = loom_snapshot::world_state_hash(key.as_bytes(), &out["state"]).unwrap();
+        assert_eq!(sh, v["expect"]["final_state_hash"].as_str().unwrap(), "final state");
+        let eh = loom_snapshot::world_state_hash(key.as_bytes(), &out["newEvents"]).unwrap();
+        assert_eq!(eh, v["expect"]["newEvents_hash"].as_str().unwrap(), "newEvents");
     }
 }

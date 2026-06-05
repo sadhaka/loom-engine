@@ -214,6 +214,15 @@ fn catch_up_epochs(input_json: &str) -> PyResult<String> {
     serde_json::to_string(&out).map_err(|e| PyValueError::new_err(format!("serialize: {}", e)))
 }
 
+/// Reconstruct + verify + fast-forward a world from a bundle (Phase 4, fail-closed).
+/// Input JSON: {key, bundle, currentEpoch, maxCatchup, ruleset, proposalsByEpoch?,
+/// actorTags?, maxActions?}. Returns {worldId, state, newEvents, epochsResolved,
+/// epochsVoided}. Raises ValueError on a corrupted snapshot, tampered tail, or time-travel.
+#[pyfunction]
+fn resume_session(input_json: &str) -> PyResult<String> {
+    loom_session::resume_from_json(input_json).map_err(PyValueError::new_err)
+}
+
 /// The module name MUST equal the [lib] name (loom_engine_native).
 #[pymodule]
 fn loom_engine_native(m: &Bound<'_, PyModule>) -> PyResult<()> {
@@ -234,5 +243,6 @@ fn loom_engine_native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(apply_triggered_mutations, m)?)?;
     m.add_function(wrap_pyfunction!(tick_epoch, m)?)?;
     m.add_function(wrap_pyfunction!(catch_up_epochs, m)?)?;
+    m.add_function(wrap_pyfunction!(resume_session, m)?)?;
     Ok(())
 }
