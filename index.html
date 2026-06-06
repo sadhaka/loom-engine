@@ -5,12 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#0a0805">
 <meta name="color-scheme" content="dark">
-<meta name="description" content="Loom Engine v2.2.5 - TS engine for AI-driven worlds: tamper-evident HMAC-SHA-256 EventChain, 14 Trinity Mainframe kernels, 4,087 tests, cross-session NPC memory, deterministic replay.">
-<meta property="og:title" content="Loom Engine // v2.2.5 - EventChain integrity layer">
-<meta property="og:description" content="Tamper-evident HMAC-SHA-256 EventChain for audit trails + anti-cheat, atop 14 Trinity Mainframe kernels. The same determinism powers LoomMaster, a live AI Dungeon Master. 4,087 tests green.">
+<meta name="description" content="Loom Engine v3.0.0 - a deterministic, server-authoritative world engine. ONE core proven byte-identical across TypeScript (npm), WASM, Python (PyO3) and a C ABI. Any-System ruleset AST, tamper-evident HMAC-SHA-256 EventChain, persistent-world snapshot/replay, real-time multiplayer core. 4,188 tests.">
+<meta property="og:title" content="Loom Engine // v3.0.0 - one deterministic core, every language">
+<meta property="og:description" content="A deterministic game engine proven byte-identical across TypeScript, WASM, Python and Rust from one seed. Any-System ruleset AST + tamper-evident HMAC EventChain. The same core powers LoomMaster, a live AI GM that cannot cheat. 4,188 tests green.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://loom-engine.pages.dev/">
-<title>Loom Engine // v2.2.5</title>
+<title>Loom Engine // v3.0.0</title>
 <style>
 :root {
   --bg: #0a0805;
@@ -338,32 +338,40 @@ footer a { color: var(--fg-dim); }
 <div class="wrap">
 
   <header class="banner">
-    <h1>LOOM ENGINE<span class="slash">//</span>v2.2.5</h1>
+    <h1>LOOM ENGINE<span class="slash">//</span>v3.0.0</h1>
     <div class="banner-meta">
-      <div><strong>4,087</strong> tests green</div>
-      <div><strong>140+</strong> versions since 0.10</div>
+      <div><strong>4,188</strong> tests green</div>
+      <div><strong>146</strong> versions since 0.10</div>
+      <div><strong>TS · WASM · Python · Rust · C ABI</strong></div>
       <div><strong>BUSL-1.1</strong> source-available</div>
     </div>
   </header>
 
   <p class="lede">
-    Uniquely adaptable TypeScript engine for <em>AI-driven worlds</em>. Cross-session
-    NPC memory via NarrativeMemory; asymmetric relationships via RelationshipGraph +
-    EmotionState; deterministic replay via mulberry32 + per-tick state hash.
-    <strong>Trinity Mainframe v2.0</strong> adds 14 pure-logic kernels (acoustic
-    propagation, voxel mesh, packet routing, AI Director governance, anti-cheat, more)
-    that drive a deferred WebGPU / WebTransport / WebCrypto / WASM-SIMD integration
-    layer. <strong>EventChain (v2.2.x)</strong> adds a tamper-evident,
-    HMAC-SHA-256-chained event log for audit trails, anti-cheat, and economy
-    ledgers - four independent security-audit rounds, fail-closed. The same
-    determinism ships in production: <strong>LoomMaster</strong>
+    A deterministic, server-authoritative engine for <em>AI-driven worlds</em>.
+    <strong>v3.0.0</strong> compiles one logic core to a Rust workspace and binds it to
+    TypeScript (npm), WASM (browser), a native Python wheel (PyO3), and a C ABI
+    (Unity / Godot / Go) - producing <strong>byte-identical results from the same seed
+    on every surface</strong>, pinned by a shared golden-vector suite. Bring any tabletop
+    system as DATA via the <strong>Any-System ruleset AST</strong> (5e / PF2e / homebrew:
+    roll vs DC -&gt; degree -&gt; mutations, fail-closed static validation before any RNG
+    draw, never untrusted code). Persist + reconstruct a world from a verified
+    <strong>snapshot + replay</strong> (HMAC over canonical integer-only state), advance it
+    between sessions with a deterministic <strong>epoch world-tick</strong>, and run shared
+    play on a <strong>real-time multiplayer core</strong> - a command-frame tick with
+    client rollback reconciliation and Merkle region hashing, where a client can predict
+    but can never forge an outcome. Underneath: 16 pure-logic kernels (acoustic
+    propagation, voxel mesh, packet routing, AI Director governance, the universal
+    Bestiary, and a tamper-evident HMAC-SHA-256 <strong>EventChain</strong> for audit
+    trails + anti-cheat). The same determinism ships in production:
+    <strong>LoomMaster</strong>
     (<a href="https://theworldtable.ai/loommaster.html">theworldtable.ai/loommaster.html</a>)
-    is a live AI Dungeon Master for D&amp;D 5e + Pathfinder 2e where every roll is
-    resolved server-side on a seeded PRNG and every turn is HMAC-chained - the LLM
-    only narrates. Try the live playground at
+    is a live AI Game Master for D&amp;D 5e + the Pathfinder 2e Remaster where every roll
+    is resolved server-side on a seeded PRNG and every turn is HMAC-chained - the LLM only
+    narrates. Try the live playground at
     <a href="https://theworldtable.ai/engine/">theworldtable.ai/engine</a>.
     Built from scratch for <a href="https://theworldtable.ai">TheWorldTable.ai</a>,
-    available standalone on npm.
+    open source and available on npm.
   </p>
 
   <section>
@@ -387,7 +395,7 @@ footer a { color: var(--fg-dim); }
       <a class="action" href="https://github.com/sadhaka/loom-engine">
         <div class="label">Source</div>
         <div class="target">github.com/sadhaka/loom-engine</div>
-        <div class="hint">247 source files / 69.5k LOC + 206 test files / 54.5k LOC. BUSL-1.1; converts to Apache 2.0 on 2030-05-08.</div>
+        <div class="hint">263 source files / 75.1k LOC + 219 test files / 57.1k LOC. BUSL-1.1; converts to Apache 2.0 on 2030-05-08.</div>
       </a>
       <a class="action" href="https://www.npmjs.com/package/loom-engine">
         <div class="label">Package</div>
@@ -420,18 +428,18 @@ requestAnimationFrame(tick);</div>
     <div class="stats">
       <div class="stat">
         <div class="stat-label">Tests</div>
-        <div class="stat-value">3,984</div>
-        <div class="stat-sub">3,984 / 3,984 green at v2.0.0</div>
+        <div class="stat-value">4,188</div>
+        <div class="stat-sub">green at v3.0.0 (shared golden vectors)</div>
       </div>
       <div class="stat">
         <div class="stat-label">Versions</div>
-        <div class="stat-value">136</div>
+        <div class="stat-value">146</div>
         <div class="stat-sub">since v0.10.0 / 2026</div>
       </div>
       <div class="stat">
         <div class="stat-label">Source</div>
-        <div class="stat-value">69,500</div>
-        <div class="stat-sub">LOC / 247 files</div>
+        <div class="stat-value">75,071</div>
+        <div class="stat-sub">LOC / 263 files (+ 219 test files)</div>
       </div>
       <div class="stat">
         <div class="stat-label">License</div>
@@ -476,9 +484,21 @@ requestAnimationFrame(tick);</div>
         <div class="v">v1.7.5</div>
         <div class="label">ChatChannel (networking complete)</div>
       </div>
-      <div class="milestone tip">
+      <div class="milestone">
         <div class="v">v2.0.0</div>
         <div class="label">Trinity Mainframe (14 kernels)</div>
+      </div>
+      <div class="milestone">
+        <div class="v">v2.1.0</div>
+        <div class="label">BestiaryKernel (universal NPC lifecycle)</div>
+      </div>
+      <div class="milestone">
+        <div class="v">v2.2.x</div>
+        <div class="label">EventChain (tamper-evident HMAC log)</div>
+      </div>
+      <div class="milestone tip">
+        <div class="v">v3.0.0</div>
+        <div class="label">Cross-language core (TS/WASM/PyO3/C ABI) + Any-System AST + persistent world + multiplayer</div>
       </div>
     </div>
   </section>
@@ -512,6 +532,25 @@ requestAnimationFrame(tick);</div>
     </div>
   </section>
 
+  <!-- v3.0.0 - cross-language deterministic core + persistent world + multiplayer. -->
+  <section>
+    <h2><span class="num">04B</span>Wave 3.0 - Living Persistent World + cross-language core</h2>
+    <p style="color:var(--fg-dim);font-size:12px;margin:0 0 12px 0;">
+      The engine becomes a deterministic, server-authoritative world engine: ONE logic
+      core, compiled to a Rust workspace and bound to four surfaces - byte-identical from
+      the same seed, pinned by shared golden vectors. Same invariants throughout: no RNG
+      outside the seeded PRNG, no wall clock, fail-closed at every boundary.
+    </p>
+    <div class="actions">
+      <div class="action"><div class="label">Any-System ruleset AST</div><div class="hint">Bring any tabletop system as DATA (5e / PF2e / homebrew): roll vs DC -&gt; degree -&gt; mutations, integer math + floor_div toward -inf, fail-closed static validation before any RNG draw. No untrusted code execution.</div></div>
+      <div class="action"><div class="label">Snapshot + replay</div><div class="hint">Pure content state_hash (HMAC over canonical, integer-only JSON). A world persists compactly and reconstructs from a verified snapshot + the events after it - provably equal to replay-from-genesis.</div></div>
+      <div class="action"><div class="label">Epoch world-tick</div><div class="hint">The between-session tick: offline factions act deterministically against a PRNG seeded purely from (worldId, epoch), fail-closed (a rejected proposal consumes zero RNG), bounded catch-up.</div></div>
+      <div class="action"><div class="label">WorldSession lifecycle</div><div class="hint">Suspend packs a world into a verifiable bundle; resume verifies the snapshot hash, replays the HMAC chain tail, rejects time-travel, and fast-forwards bounded offline epochs.</div></div>
+      <div class="action"><div class="label">Real-time multiplayer core</div><div class="hint">Server-authoritative command-frame tick (commands sorted by a numeric-aware player id, resolved through the AST, rate-capped), client-side rollback reconciliation, 2-level Merkle region hashing. The client can predict but never forge an outcome.</div></div>
+      <div class="action"><div class="label">Four binding surfaces</div><div class="hint">A Rust workspace (loom_math / loom_events / loom_snapshot / loom_ruleset / loom_epoch / loom_session / loom_frame) bound to WASM, a native PyO3 Python wheel, and a panic-guarded C ABI (Unity / Godot / Go) - each verified against the same golden vectors.</div></div>
+    </div>
+  </section>
+
   <section>
     <h2><span class="num">05</span>Authors</h2>
     <div class="author-block">
@@ -522,7 +561,7 @@ requestAnimationFrame(tick);</div>
         <ul>
           <li>Pair-engineered architecture, primitive design, code review</li>
           <li>Deterministic-replay-first stance, var-only browser source</li>
-          <li>136 commits since v0.10.0 land Pure Addition</li>
+          <li>146 versions since v0.10.0 land Pure Addition</li>
         </ul>
       </div>
       <div class="author-cell">
@@ -544,7 +583,7 @@ requestAnimationFrame(tick);</div>
     <div>
       <a href="https://github.com/sadhaka/loom-engine/blob/main/CHANGELOG.md">CHANGELOG</a>
       &nbsp;|&nbsp;
-      <a href="https://github.com/sadhaka/loom-engine/releases/tag/v2.0.0">v2.0.0 release</a>
+      <a href="https://github.com/sadhaka/loom-engine/releases/tag/v3.0.0">v3.0.0 release</a>
       &nbsp;|&nbsp;
       <a href="reference.html">API reference</a>
     </div>
