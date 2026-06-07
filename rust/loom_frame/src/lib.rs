@@ -16,7 +16,12 @@ use loom_ruleset::{
 };
 use serde_json::{json, Map, Value};
 use sha2::{Digest, Sha256};
-use std::collections::HashMap;
+// BTreeMap, never HashMap, in a deterministic path (Codex hardening audit
+// 2026-06-07): per_player below is only a counter (get/insert, never iterated or
+// serialized), so the iteration order does not currently affect output - but the
+// hardened cross-language spec bans HashMap from deterministic code outright, so
+// a future serialize/debug/order change cannot silently fork byte-parity.
+use std::collections::BTreeMap;
 
 // Structured domain label for the frame PRNG (length-prefixed via field(), NOT raw-
 // concatenated onto the world id - the old `worldId + "|loom.frame/1"` form let an
@@ -164,7 +169,7 @@ pub fn tick_frame(
     let mut entries: Vec<Value> = Vec::new();
     let mut resolved: u64 = 0;
     let mut rejected: u64 = 0;
-    let mut per_player: HashMap<String, u64> = HashMap::new();
+    let mut per_player: BTreeMap<String, u64> = BTreeMap::new();
 
     for cmd in ordered {
         if resolved >= max_commands {
