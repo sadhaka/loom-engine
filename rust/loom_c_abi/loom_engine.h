@@ -21,16 +21,6 @@
 
 #define LOOM_BAND_FAR 2
 
-/**
- * One initiative entry over the C ABI.
- */
-typedef struct LoomInitiativeEntry {
-  int64_t id;
-  int64_t total;
-  int64_t modifier;
-  int64_t d20;
-} LoomInitiativeEntry;
-
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
@@ -76,18 +66,34 @@ uint32_t loom_pcg32_next(uint64_t seed);
 int loom_floor_div(int64_t a, int64_t b, int64_t *out);
 
 /**
- * Order `n` entries; write the ordered ids into `out_ids` (capacity `out_cap`,
- * which MUST be >= n). Returns 0 on success, -1 on a null pointer / out_cap < n.
- * Tiebreak: total/modifier/d20 DESC, then a numeric-aware id compare.
+ * Order initiative entries supplied as a checked little-endian byte buffer; write
+ * the ordered ids into `out_ids` (capacity `out_cap`, which MUST be >= the entry
+ * count). Returns 0 on success; -1 on a null pointer / out_cap < count / count too
+ * large / header < 4 bytes; -4 on a truncated buffer (header count exceeds the
+ * bytes provided).
+ *
+ * Buffer layout (all little-endian, no padding):
+ *   [0..4)   u32  entry count C
+ *   then C records of 32 bytes each:
+ *     [+0..8)   i64  id        [+8..16)  i64  total
+ *     [+16..24) i64  modifier  [+24..32) i64  d20
+ *
+ * Codex hardening 2026-06-07: this REPLACES the old `#[repr(C)] LoomInitiativeEntry`
+ * struct-array ABI - the hardened FFI boundary passes only flat byte buffers + opaque
+ * handles, never raw structs by value (no padding/layout traps). The whole body is
+ * catch_unwind-guarded (a panic across extern "C" is UB) and every read is bounds-
+ * checked. Tiebreak: total/modifier/d20 DESC, then a numeric-aware id compare. (The
+ * value-returning primitive exports - band/roll/pcg32 - are total integer arithmetic
+ * with no panic surface and a non-c_int return, so they need no guard.)
  *
  * # Safety
- * `entries` must point to `n` initialized `LoomInitiativeEntry`; `out_ids` must
- * point to writable storage for at least `out_cap` `i64`, with `out_cap >= n`.
+ * `buf_ptr` points to `buf_len` readable bytes (null only if `buf_len == 0`);
+ * `out_ids` points to writable storage for at least `out_cap` `i64`.
  */
-int loom_initiative_order(const struct LoomInitiativeEntry *entries,
-                          uintptr_t n,
-                          int64_t *out_ids,
-                          uintptr_t out_cap);
+int loom_initiative_order_n(const uint8_t *buf_ptr,
+                            uintptr_t buf_len,
+                            int64_t *out_ids,
+                            uintptr_t out_cap);
 
 /**
  * HMAC-SHA256 of `message` under `key` -> 64-char lowercase hex written to `out`
@@ -137,6 +143,87 @@ int loom_sign_record(const uint8_t *key,
                      const char *prev_sig,
                      char *out,
                      uintptr_t out_cap);
+
+/**
+ * Bounded-read variant of `loom_world_state_hash` - `state_ptr` points to `state_len`
+ * JSON bytes (no NUL terminator required). The safe ABI for the world-state hash.
+ * Codex P1.
+ *
+ * # Safety
+ * `key` points to `key_len` bytes; `state_ptr` points to `state_len` readable bytes
+ * (null only if `state_len == 0`); `out` is writable for `out_cap` bytes.
+ */
+int loom_world_state_hash_n(const uint8_t *key,
+                            uintptr_t key_len,
+                            const uint8_t *state_ptr,
+                            uintptr_t state_len,
+                            char *out,
+                            uintptr_t out_cap);
+
+/**
+ * Bounded-read variant of `loom_global_region_hash` - `regions_ptr` points to
+ * `regions_len` JSON bytes (no NUL terminator required). The safe ABI. Codex P1.
+ *
+ * # Safety
+ * `key` points to `key_len` bytes; `regions_ptr` points to `regions_len` readable
+ * bytes (null only if `regions_len == 0`); `out` is writable for `out_cap` bytes.
+ */
+int loom_global_region_hash_n(const uint8_t *key,
+                              uintptr_t key_len,
+                              const uint8_t *regions_ptr,
+                              uintptr_t regions_len,
+                              char *out,
+                              uintptr_t out_cap);
+
+/**
+ * Bounded-read variant of `loom_tick_epoch` - `input_ptr` points to `input_len` JSON
+ * bytes (no NUL terminator required). Codex P1.
+ *
+ * # Safety
+ * `input_ptr` points to `input_len` readable bytes; `out` is writable for `out_cap`.
+ */
+int loom_tick_epoch_n(const uint8_t *input_ptr, uintptr_t input_len, char *out, uintptr_t out_cap);
+
+/**
+ * Bounded-read variant of `loom_catch_up_epochs`. Codex P1.
+ *
+ * # Safety
+ * `input_ptr` points to `input_len` readable bytes; `out` is writable for `out_cap`.
+ */
+int loom_catch_up_epochs_n(const uint8_t *input_ptr,
+                           uintptr_t input_len,
+                           char *out,
+                           uintptr_t out_cap);
+
+/**
+ * Bounded-read variant of `loom_resume_session`. Codex P1.
+ *
+ * # Safety
+ * `input_ptr` points to `input_len` readable bytes; `out` is writable for `out_cap`.
+ */
+int loom_resume_session_n(const uint8_t *input_ptr,
+                          uintptr_t input_len,
+                          char *out,
+                          uintptr_t out_cap);
+
+/**
+ * Bounded-read variant of `loom_tick_frame`. Codex P1.
+ *
+ * # Safety
+ * `input_ptr` points to `input_len` readable bytes; `out` is writable for `out_cap`.
+ */
+int loom_tick_frame_n(const uint8_t *input_ptr, uintptr_t input_len, char *out, uintptr_t out_cap);
+
+/**
+ * Bounded-read variant of `loom_reconcile_frames`. Codex P1.
+ *
+ * # Safety
+ * `input_ptr` points to `input_len` readable bytes; `out` is writable for `out_cap`.
+ */
+int loom_reconcile_frames_n(const uint8_t *input_ptr,
+                            uintptr_t input_len,
+                            char *out,
+                            uintptr_t out_cap);
 
 #ifdef __cplusplus
 }  // extern "C"
