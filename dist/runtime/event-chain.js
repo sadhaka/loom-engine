@@ -93,6 +93,15 @@ export function assertCleanString(s) {
             throw new Error('EventChain: lone low surrogate in a signed string');
         }
     }
+    // Hardening audit 2026-06-07: reject a non-NFC signed string. "e"+U+0301 and
+    // U+00E9 are the same grapheme but distinct UTF-16, so accepting both would let
+    // logically-equal content sign two ways and fork the chain across producers
+    // that normalize differently. REJECT (never silently normalize - that would
+    // mutate a player's raw text). Checked AFTER the surrogate scan so .normalize
+    // only ever sees well-formed UTF-16. Mirrors the Rust assert_nfc + Python guard.
+    if (s !== s.normalize('NFC')) {
+        throw new Error('EventChain: non-NFC string in a signed payload (normalize to NFC first)');
+    }
 }
 // 2.2.3 audit MED 1: an array's signed surface is EXACTLY its dense numeric
 // elements. Any other own property (a symbol, a non-index string key like
