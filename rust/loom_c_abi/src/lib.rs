@@ -115,52 +115,74 @@ pub unsafe extern "C" fn loom_floor_div(a: i64, b: i64, out: *mut i64) -> c_int 
     0
 }
 
-/// One initiative entry over the C ABI.
-#[repr(C)]
-pub struct LoomInitiativeEntry {
-    pub id: i64,
-    pub total: i64,
-    pub modifier: i64,
-    pub d20: i64,
-}
-
-/// Order `n` entries; write the ordered ids into `out_ids` (capacity `out_cap`,
-/// which MUST be >= n). Returns 0 on success, -1 on a null pointer / out_cap < n.
-/// Tiebreak: total/modifier/d20 DESC, then a numeric-aware id compare.
+/// Order initiative entries supplied as a checked little-endian byte buffer; write
+/// the ordered ids into `out_ids` (capacity `out_cap`, which MUST be >= the entry
+/// count). Returns 0 on success; -1 on a null pointer / out_cap < count / count too
+/// large / header < 4 bytes; -4 on a truncated buffer (header count exceeds the
+/// bytes provided).
+///
+/// Buffer layout (all little-endian, no padding):
+///   [0..4)   u32  entry count C
+///   then C records of 32 bytes each:
+///     [+0..8)   i64  id        [+8..16)  i64  total
+///     [+16..24) i64  modifier  [+24..32) i64  d20
+///
+/// Codex hardening 2026-06-07: this REPLACES the old `#[repr(C)] LoomInitiativeEntry`
+/// struct-array ABI - the hardened FFI boundary passes only flat byte buffers + opaque
+/// handles, never raw structs by value (no padding/layout traps). The whole body is
+/// catch_unwind-guarded (a panic across extern "C" is UB) and every read is bounds-
+/// checked. Tiebreak: total/modifier/d20 DESC, then a numeric-aware id compare. (The
+/// value-returning primitive exports - band/roll/pcg32 - are total integer arithmetic
+/// with no panic surface and a non-c_int return, so they need no guard.)
 ///
 /// # Safety
-/// `entries` must point to `n` initialized `LoomInitiativeEntry`; `out_ids` must
-/// point to writable storage for at least `out_cap` `i64`, with `out_cap >= n`.
+/// `buf_ptr` points to `buf_len` readable bytes (null only if `buf_len == 0`);
+/// `out_ids` points to writable storage for at least `out_cap` `i64`.
 #[no_mangle]
-pub unsafe extern "C" fn loom_initiative_order(
-    entries: *const LoomInitiativeEntry,
-    n: usize,
+pub unsafe extern "C" fn loom_initiative_order_n(
+    buf_ptr: *const u8,
+    buf_len: usize,
     out_ids: *mut i64,
     out_cap: usize,
 ) -> c_int {
-    // Codex hardening 2026-06-07: panic-guard the whole body so an alloc/parse/sort
-    // panic in the mapping cannot cross the extern "C" boundary (a panic across FFI
-    // is UB/abort). The bounds checks below already prevent any out-of-buffer write
-    // (Codex P0); this adds the missing catch_unwind. Byte-neutral on the no-panic
-    // path. (The value-returning primitive exports - band/roll/pcg32 - are total
-    // integer arithmetic with no panic surface and a non-c_int return, so they need
-    // no guard.)
     ffi_guard(|| {
-        if entries.is_null() || out_ids.is_null() || out_cap < n || n > 1_000_000 {
+        let buf = match checked_u8_slice(buf_ptr, buf_len) {
+            Some(b) => b,
+            None => return -1,
+        };
+        if out_ids.is_null() || buf.len() < 4 {
             return -1;
         }
-        let slice = std::slice::from_raw_parts(entries, n);
-        let mapped: Vec<ruleset::InitiativeEntry> = slice
-            .iter()
-            .map(|e| ruleset::InitiativeEntry {
-                id: e.id.to_string(),
-                total: e.total,
-                modifier: e.modifier,
-                d20: e.d20,
-            })
-            .collect();
+        let count = u32::from_le_bytes([buf[0], buf[1], buf[2], buf[3]]) as usize;
+        if count > 1_000_000 || out_cap < count {
+            return -1;
+        }
+        // Each record is 4 i64 = 32 bytes; reject a truncated buffer (overflow-safe).
+        let need = match count.checked_mul(32).and_then(|b| b.checked_add(4)) {
+            Some(n) => n,
+            None => return -1,
+        };
+        if buf.len() < need {
+            return -4;
+        }
+        let rd = |o: usize| -> i64 {
+            let mut a = [0u8; 8];
+            a.copy_from_slice(&buf[o..o + 8]);
+            i64::from_le_bytes(a)
+        };
+        let mut mapped: Vec<ruleset::InitiativeEntry> = Vec::with_capacity(count);
+        let mut cur = 4usize;
+        for _ in 0..count {
+            mapped.push(ruleset::InitiativeEntry {
+                id: rd(cur).to_string(),
+                total: rd(cur + 8),
+                modifier: rd(cur + 16),
+                d20: rd(cur + 24),
+            });
+            cur += 32;
+        }
         let ordered = ruleset::initiative_order(mapped);
-        let out = std::slice::from_raw_parts_mut(out_ids, n);
+        let out = std::slice::from_raw_parts_mut(out_ids, count);
         for (i, e) in ordered.iter().enumerate() {
             out[i] = e.id.parse::<i64>().unwrap_or(0);
         }
@@ -545,30 +567,51 @@ mod tests {
 
     #[test]
     fn initiative_order_writes_ids() {
-        let entries = [
-            LoomInitiativeEntry { id: 7, total: 18, modifier: 2, d20: 16 },
-            LoomInitiativeEntry { id: 3, total: 18, modifier: 5, d20: 13 },
-            LoomInitiativeEntry { id: 4, total: 21, modifier: 3, d20: 18 },
-        ];
+        // Build the LE byte buffer: u32 count, then per entry [id,total,modifier,d20] i64.
+        fn push_i64(v: &mut Vec<u8>, x: i64) {
+            v.extend_from_slice(&x.to_le_bytes());
+        }
+        let rows: [(i64, i64, i64, i64); 3] =
+            [(7, 18, 2, 16), (3, 18, 5, 13), (4, 21, 3, 18)];
+        let mut buf: Vec<u8> = Vec::new();
+        buf.extend_from_slice(&(rows.len() as u32).to_le_bytes());
+        for (id, total, modifier, d20) in rows.iter() {
+            push_i64(&mut buf, *id);
+            push_i64(&mut buf, *total);
+            push_i64(&mut buf, *modifier);
+            push_i64(&mut buf, *d20);
+        }
         let mut out = [0i64; 3];
         unsafe {
             assert_eq!(
-                loom_initiative_order(entries.as_ptr(), 3, out.as_mut_ptr(), 3),
+                loom_initiative_order_n(buf.as_ptr(), buf.len(), out.as_mut_ptr(), 3),
                 0
             );
         }
         // 4 (total 21) first, then 3 (mod 5 > 2), then 7.
         assert_eq!(out, [4, 3, 7]);
 
-        // Codex P0: out_cap < n must be refused, never write past the buffer.
+        // Codex P0: out_cap < count must be refused, never write past the buffer.
         let mut small = [0i64; 1];
         unsafe {
             assert_eq!(
-                loom_initiative_order(entries.as_ptr(), 3, small.as_mut_ptr(), 1),
+                loom_initiative_order_n(buf.as_ptr(), buf.len(), small.as_mut_ptr(), 1),
                 -1
             );
         }
         assert_eq!(small, [0]); // untouched
+
+        // A truncated buffer (header says 3, only 1 record present) is rejected (-4).
+        let mut trunc = buf.clone();
+        trunc.truncate(4 + 32);
+        let mut o2 = [0i64; 3];
+        unsafe {
+            assert_eq!(
+                loom_initiative_order_n(trunc.as_ptr(), trunc.len(), o2.as_mut_ptr(), 3),
+                -4
+            );
+        }
+        assert_eq!(o2, [0, 0, 0]);
     }
 
     #[test]
