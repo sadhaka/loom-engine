@@ -213,6 +213,23 @@ test('event-chain: lone surrogate is rejected on append (no seq advance)', () =>
   assert.equal(chain.append('ok', { s: 'fine' })!.seq, 1); // seq not burned by rejects
 });
 
+test('event-chain: a non-NFC string is rejected on append (value + key)', () => {
+  const chain = EventChain.create({ key: KEY });
+  // 'cafe' + U+0301 (combining acute) is NFD; precomposed U+00E9 is NFC - same
+  // grapheme, distinct UTF-16. Built via fromCharCode so this source stays
+  // pure-ASCII + unambiguous on disk. Mirrors the Rust assert_nfc + Python guard.
+  const base = 'cafe' + String.fromCharCode(0x301);
+  const decomposed = base.normalize('NFD');
+  const precomposed = base.normalize('NFC');
+  assert.notEqual(decomposed, precomposed);
+  assert.equal(chain.append('t', { name: decomposed }), null); // non-NFC value
+  const k: Record<string, number> = {};
+  k[decomposed] = 1;
+  assert.equal(chain.append('t', k), null);                    // non-NFC key
+  assert.equal(chain.size(), 0);                               // no seq burned
+  assert.ok(chain.append('t', { name: precomposed }));         // NFC form accepted
+});
+
 test('event-chain: surrogate collision cannot pass verify', () => {
   const chain = EventChain.create({ key: KEY });
   chain.append('rec', { s: '�' });

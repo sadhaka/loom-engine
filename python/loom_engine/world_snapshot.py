@@ -24,6 +24,7 @@ which sorts by code point and escapes non-ASCII, both of which diverge from the 
 import hashlib as _hashlib
 import hmac as _hmac
 import math as _math
+import unicodedata as _unicodedata
 
 # Namespace tag for snapshot HMACs. MUST match the TS/Rust SNAPSHOT_DOMAIN verbatim.
 SNAPSHOT_DOMAIN = "loom.snapshot/1"
@@ -45,6 +46,16 @@ def _utf16_len(s):
 def _field(s):
     # Length-prefixed '<utf16len>:<value>' - matches the TS/Rust field().
     return str(_utf16_len(s)) + ":" + s
+
+
+def _assert_nfc(s):
+    # Hardening audit 2026-06-07: reject a non-NFC signed string (mirrors the Rust
+    # assert_nfc + the TS assertCleanString NFC guard). "e"+U+0301 and U+00E9 are
+    # the same grapheme but distinct bytes; accepting both would let equal content
+    # sign two ways and fork the chain. REJECT, never normalize - a player's raw
+    # text must not be silently mutated.
+    if not _unicodedata.is_normalized("NFC", s):
+        raise ValueError("WorldStateSnapshot: non-NFC string in a signed payload")
 
 
 def _js_json_string(s):
@@ -73,6 +84,7 @@ def _canonical(value, depth):
     if value is False:
         return "false"
     if isinstance(value, str):
+        _assert_nfc(value)
         return _js_json_string(value)
     if isinstance(value, int):
         if abs(value) > MAX_SAFE_INT:
@@ -101,6 +113,7 @@ def _canonical(value, depth):
         for k in keys:
             if not isinstance(k, str):
                 raise ValueError("WorldStateSnapshot: object keys must be strings")
+            _assert_nfc(k)
             parts.append(_js_json_string(k) + ":" + _canonical(value[k], depth + 1))
         return "{" + ",".join(parts) + "}"
     raise ValueError("WorldStateSnapshot: unsupported value type %r" % type(value))

@@ -68,6 +68,15 @@ pub enum CanonError {
     ForbiddenKey,
     /// Payload nesting exceeds MAX_CANONICAL_DEPTH.
     DepthExceeded,
+    /// A signed string (payload string value or object key) that is NOT in
+    /// Unicode NFC. "e"+U+0301 and U+00E9 are the same grapheme but distinct byte
+    /// strings, so accepting both would let logically-equal content sign two ways
+    /// and fork the chain across producers that normalize differently. We REJECT
+    /// (never silently normalize - that would mutate a player's text). Mirrors the
+    /// TS assertCleanString NFC guard + the Python canonical guard (hardening
+    /// audit 2026-06-07). All existing golden fixtures are already NFC (verified
+    /// by tools/check_fixtures_nfc.py), so this changes no published hash.
+    NonNfc,
 }
 
 // ---------------------------------------------------------------------------
@@ -108,6 +117,19 @@ pub fn field(s: &str) -> String {
     out.push(':');
     out.push_str(s);
     out
+}
+
+/// Reject a signed string that is not Unicode NFC (CanonError::NonNfc). We REJECT
+/// rather than normalize so a player's raw text is never silently mutated. A Rust
+/// &str is always valid UTF-8 (so, unlike the TS path, there are no lone
+/// surrogates to reject here) - NFC is the only normalization check needed.
+/// Mirrors the TS assertCleanString NFC guard + the Python canonical guard.
+fn assert_nfc(s: &str) -> Result<(), CanonError> {
+    if unicode_normalization::is_nfc(s) {
+        Ok(())
+    } else {
+        Err(CanonError::NonNfc)
+    }
 }
 
 /// Exactly JS `JSON.stringify(s)` for a string (including the surrounding quotes):
@@ -200,7 +222,10 @@ pub fn canonical_json(value: &Value, depth: usize) -> Result<String, CanonError>
     match value {
         Value::Null => Ok("null".to_string()),
         Value::Bool(b) => Ok(if *b { "true" } else { "false" }.to_string()),
-        Value::String(s) => Ok(js_json_string(s)),
+        Value::String(s) => {
+            assert_nfc(s)?;
+            Ok(js_json_string(s))
+        }
         Value::Number(n) => canonical_number(n),
         Value::Array(arr) => {
             let mut items: Vec<String> = Vec::with_capacity(arr.len());
@@ -219,6 +244,7 @@ pub fn canonical_json(value: &Value, depth: usize) -> Result<String, CanonError>
             keys.sort_by(|a, b| a.encode_utf16().cmp(b.encode_utf16()));
             let mut pairs: Vec<String> = Vec::with_capacity(keys.len());
             for k in keys {
+                assert_nfc(k)?;
                 let mut pair = js_json_string(k);
                 pair.push(':');
                 pair.push_str(&canonical_json(&map[k], depth + 1)?);
@@ -238,6 +264,13 @@ fn canonical_message(
     payload: &Value,
     prev_sig: &str,
 ) -> Result<String, CanonError> {
+    // type_ + prev_sig are signed strings too; the TS canonicalMessage runs them
+    // through assertCleanString (which now includes the NFC guard). In practice
+    // both are ASCII (an ACCEPTED_KINDS event kind and a 64-hex sig / ""), so the
+    // check is a no-op, but we mirror the TS surface exactly so the rejected-set
+    // is byte-identical across runtimes.
+    assert_nfc(type_)?;
+    assert_nfc(prev_sig)?;
     let mut msg = String::new();
     msg.push_str(&field(RECORD_DOMAIN));
     msg.push_str(&field(&seq.to_string()));
@@ -452,6 +485,32 @@ mod tests {
         assert_eq!(canonical_json(&proto, 0), Err(CanonError::ForbiddenKey));
         // sign_record surfaces the rejection (no signature for a forbidden payload).
         assert!(sign_record(b"k", 1, "t", &json!(-0.0), "").is_err());
+    }
+
+    #[test]
+    fn rejects_non_nfc_strings() {
+        // Hardening audit: "e" + U+0301 (combining acute) is the SAME grapheme as
+        // U+00E9 but a distinct byte string. Accepting both would let equal content
+        // sign two ways and fork the chain. We reject the decomposed (non-NFC) form
+        // as a string VALUE and as an object KEY; the precomposed NFC form is fine.
+        let decomposed = "cafe\u{0301}"; // café in NFD
+        let precomposed = "caf\u{00e9}"; // café in NFC
+        assert!(unicode_normalization::is_nfc(precomposed));
+        assert!(!unicode_normalization::is_nfc(decomposed));
+        // value
+        assert_eq!(canonical_json(&json!(decomposed), 0), Err(CanonError::NonNfc));
+        assert!(canonical_json(&json!(precomposed), 0).is_ok());
+        // key
+        let mut m = serde_json::Map::new();
+        m.insert(decomposed.to_string(), json!(1));
+        assert_eq!(canonical_json(&Value::Object(m), 0), Err(CanonError::NonNfc));
+        // sign_record surfaces the rejection
+        assert_eq!(
+            sign_record(b"k", 1, "t", &json!({ "msg": decomposed }), ""),
+            Err(CanonError::NonNfc)
+        );
+        // an NFC payload still signs
+        assert!(sign_record(b"k", 1, "t", &json!({ "msg": precomposed }), "").is_ok());
     }
 
     #[test]

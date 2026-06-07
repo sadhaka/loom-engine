@@ -20,6 +20,13 @@ sha2 = "0.10"
 # canonical form (we hand-write one that matches JS JSON.stringify exactly) -
 # Value is only the typed input + parse path.
 serde_json = "1"
+# UAX #15 Unicode normalization. Used ONLY to REJECT (never normalize) a non-NFC
+# signed string at the canonical boundary, so "e"+U+0301 and U+00E9 cannot sign
+# as two distinct byte strings across producers that normalize differently. NFC
+# is a Unicode-standard algorithm, so is_nfc() agrees with JS `s===s.normalize
+# ("NFC")` and Python `unicodedata.is_normalized("NFC", s)` on the same Unicode
+# data; the cross-language golden vector pins the tested inputs.
+unicode-normalization = "0.1"
 
 [lints.clippy]
 # This crate does integer + byte work only; floats in a signed payload are

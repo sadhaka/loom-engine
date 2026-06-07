@@ -56,8 +56,30 @@ def test_fail_closed():
         assert raised, "expected ValueError for %r" % (bad,)
 
 
+def test_rejects_non_nfc():
+    # Hardening audit: "e"+U+0301 (NFD) is the same grapheme as U+00E9 (NFC)
+    # but a distinct byte string. Reject the non-NFC form as a string VALUE and
+    # as an object KEY (mirrors the Rust assert_nfc + TS assertCleanString NFC
+    # guard); the precomposed NFC form is accepted. Built from chr() so the
+    # source stays pure-ASCII + unambiguous regardless of file normalization.
+    import unicodedata as _ud
+    base = "cafe" + chr(0x301)
+    decomposed = _ud.normalize("NFD", base)
+    precomposed = _ud.normalize("NFC", base)
+    assert decomposed != precomposed
+    for bad in ({"name": decomposed}, {decomposed: 1}):
+        raised = False
+        try:
+            world_state_hash("k", bad)
+        except ValueError:
+            raised = True
+        assert raised, "expected ValueError for non-NFC %r" % (bad,)
+    assert isinstance(world_state_hash("k", {"name": precomposed}), str)
+
+
 if __name__ == "__main__":
     test_golden_vector_byte_parity()
     test_verify_and_normalize_tags()
     test_fail_closed()
+    test_rejects_non_nfc()
     print("world_snapshot Python parity: all tests pass")
