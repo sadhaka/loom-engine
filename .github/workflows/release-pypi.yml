@@ -30,7 +30,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Trust workspace (git safe.directory)
         run: git config --global --add safe.directory '*'
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.x'
       - run: python -m pip install --upgrade build
