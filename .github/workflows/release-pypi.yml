@@ -27,7 +27,7 @@ jobs:
   build-rpg:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Trust workspace (git safe.directory)
         run: git config --global --add safe.directory '*'
       - uses: actions/setup-python@v6
@@ -49,7 +49,7 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Trust workspace (git safe.directory)
         run: git config --global --add safe.directory '*'
       - name: Build abi3 wheel
@@ -67,7 +67,7 @@ jobs:
   build-native-sdist:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Trust workspace (git safe.directory)
         run: git config --global --add safe.directory '*'
       - name: Build sdist
