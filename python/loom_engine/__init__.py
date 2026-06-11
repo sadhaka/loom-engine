@@ -78,6 +78,14 @@ from .event_chain import (  # noqa: F401
 from .world_session import (  # noqa: F401
     suspend, resume, replay_epoch_event, RESOURCE_WORLD_SESSION,
 )
+from .region_hash import (  # noqa: F401
+    region_hash, region_leaves, global_region_hash, verify_region,
+    RESOURCE_REGION_HASH,
+)
+from .region_sync import (  # noqa: F401
+    DEFAULT_REGION_TAG_PREFIX, partition_regions, diff_region_leaves,
+    apply_partial_sync, RESOURCE_REGION_SYNC,
+)
 from .srd5e_pack import (  # noqa: F401
     CANTRIPS, CLASS_CANTRIPS, LEVELED_SPELLS, CLASS_LEVELED_SPELLS,
     class_can_cast, cantrip_dice_count, eldritch_blast_beams, scaled_cantrip_dice,

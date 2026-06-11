@@ -2,17 +2,33 @@
 //!
 //! The native sibling of the TS `src/runtime/world-session.ts`. On resume it is
 //! fail-closed in strict order: (1) verify the snapshot hash; (2) load; (3) verify
-//! the HMAC chain tail; (4) replay the tail via a RECORDED-MUTATION reducer (NOT
-//! the AST - the chain records what happened, so a later ruleset re-balance cannot
-//! rewrite history); (5) reject time-travel; (6) run bounded Epoch catch-up.
+//! the chain seal + the HMAC chain tail; (4) replay the tail via a
+//! RECORDED-MUTATION reducer (NOT the AST - the chain records what happened, so a
+//! later ruleset re-balance cannot rewrite history); (5) reject time-travel;
+//! (6) run bounded Epoch catch-up.
 //!
-//! Built on loom_events (verify_records), loom_snapshot (world_state_hash +
+//! THE STRUCTURAL SEAL (bundle format v2 - BREAKING, mirrors the TS reference).
+//! A bare hash chain cannot see records dropped off its END, so a pre-seal bundle
+//! whose chainTail lost its trailing records verified clean and the lost events
+//! were silently replaced by re-simulated catch-up. The bundle now CARRIES the
+//! chain's ChainSeal: `suspend` signs the (count, head) commitment via
+//! `EventChain::seal`, and `resume` rejects any bundle whose seal is missing,
+//! forged, or disagrees with the tail (head or count). NO compatibility escape
+//! hatch - bundles produced before the seal field existed are rejected;
+//! re-suspend with the current engine. KNOWN RESIDUAL (same as TS): the snapshot
+//! hash binds the STATE but not its claimed chain POSITION, so a forger who
+//! rewrites snapshot.eventIndex + tailGenesis together and drops LEADING tail
+//! records still presents a structurally consistent bundle; binding
+//! state-to-position needs the snapshot commitment to fold in
+//! (worldId, eventIndex) - a future format revision.
+//!
+//! Built on loom_events (verify_records + seal), loom_snapshot (world_state_hash +
 //! normalize_tags), and loom_epoch (catch_up_epochs), so it reproduces the TS
 //! reference byte-for-byte. Pinned by test_vectors/v3_4_world_session.json. The
 //! WASM (loom_wasm) and Python (loom_py) surfaces bind `resume_from_json` - Phase 4
 //! is the first primitive consumed from the one Rust core on every non-TS surface.
 
-use loom_events::{ChainedRecord, EventChain};
+use loom_events::{ChainSeal, ChainedRecord, EventChain};
 use loom_snapshot::{normalize_tags, world_state_hash};
 use serde_json::{json, Map, Value};
 
@@ -99,6 +115,79 @@ pub fn replay_epoch_event(state: &Value, event: &Value) -> Value {
     work
 }
 
+// ---- suspend ---------------------------------------------------------------
+
+/// Pack a world into a verifiable WorldBundle (format v2). The tail is every
+/// chain record after the snapshot index; tailGenesis is the head signature at
+/// that index (so the tail links cleanly under verify_records on resume); the
+/// seal is the chain's signed (count, head) commitment so resume() can detect an
+/// end-truncated tail. FAIL-CLOSED, mirroring the TS `suspend()` exactly:
+/// snapshot_event_index is validated against the chain's last seq - an index
+/// past the end would yield a bundle claiming a snapshot at a nonexistent event
+/// (and a tail/seal accounting that can never verify). Errors, never panics.
+pub fn suspend(
+    key: &[u8],
+    world_id: &str,
+    snapshot_state: &Value,
+    snapshot_event_index: i64,
+    chain: &EventChain,
+) -> Result<Value, String> {
+    if snapshot_event_index < 0 || !loom_epoch::is_safe_epoch(snapshot_event_index) {
+        return Err("world-session: snapshotEventIndex must be a JS-safe integer >= 0".to_string());
+    }
+    let idx = snapshot_event_index as u64;
+    let records = chain.records();
+    let last_seq = records.last().map(|r| r.seq).unwrap_or(0);
+    if idx > last_seq {
+        return Err(format!(
+            "world-session: snapshotEventIndex {} is past the end of the chain (last seq {}) - the snapshot would claim a nonexistent event",
+            idx, last_seq
+        ));
+    }
+    let mut tail: Vec<Value> = Vec::new();
+    for rec in records {
+        if rec.seq > idx {
+            tail.push(json!({
+                "seq": rec.seq,
+                "type": rec.type_,
+                "payload": rec.payload,
+                "prevSig": rec.prev_sig,
+                "sig": rec.sig,
+            }));
+        }
+    }
+    // Seal/index alignment: the resume-side invariant is seal.count ==
+    // snapshot.eventIndex + chainTail.length, which holds only when exactly idx
+    // records sit at-or-before the snapshot index (dense 1-based seqs - what
+    // append() produces). A chain with gapped/odd seq numbering cannot be packed
+    // into a bundle that verifies, so refuse to produce one.
+    let at_or_before = records.len() - tail.len();
+    if at_or_before as u64 != idx {
+        return Err(format!(
+            "world-session: snapshotEventIndex {} does not align with the chain seq numbering ({} records at or before it)",
+            idx, at_or_before
+        ));
+    }
+    let tail_genesis = match tail.first() {
+        Some(first) => first["prevSig"].as_str().unwrap_or("").to_string(),
+        None => chain.head().to_string(),
+    };
+    let state_hash =
+        world_state_hash(key, snapshot_state).map_err(|e| format!("world-session: hash: {:?}", e))?;
+    let seal = chain.seal();
+    Ok(json!({
+        "worldId": world_id,
+        "snapshot": {
+            "eventIndex": idx,
+            "stateHash": state_hash,
+            "state": snapshot_state,
+        },
+        "chainTail": tail,
+        "tailGenesis": tail_genesis,
+        "seal": { "count": seal.count, "head": seal.head, "sig": seal.sig },
+    }))
+}
+
 // ---- resume ----------------------------------------------------------------
 
 pub struct ResumeOutput {
@@ -149,7 +238,61 @@ pub fn resume(
     let empty: Vec<Value> = Vec::new();
     let tail = bundle.get("chainTail").and_then(|x| x.as_array()).unwrap_or(&empty);
 
-    // (3) tail chain integrity.
+    // (3) chain seal + tail chain integrity - FAIL-CLOSED, no escape hatch.
+    //
+    // (3a) the structural seal (bundle format v2). A bare hash chain cannot see
+    // records dropped off its END, so before trusting the tail at all, the
+    // bundle must carry a valid ChainSeal and the tail must MATCH it: the sealed
+    // head is the last tail record's sig (or tailGenesis when the snapshot is
+    // current), and the sealed count equals snapshot.eventIndex +
+    // chainTail.length. Pre-seal bundles are rejected outright - re-suspend with
+    // the current engine. Rejection reasons mirror the TS reference exactly.
+    let seal_v = match bundle.get("seal") {
+        Some(s) if s.is_object() => s,
+        _ => {
+            return Err("world-session: bundle carries no chain seal (pre-seal bundle format rejected; re-suspend with the current engine)".to_string());
+        }
+    };
+    let seal = match (
+        seal_v.get("count").and_then(|x| x.as_u64()),
+        seal_v.get("head").and_then(|x| x.as_str()),
+        seal_v.get("sig").and_then(|x| x.as_str()),
+    ) {
+        (Some(count), Some(head), Some(sig)) => ChainSeal {
+            count,
+            head: head.to_string(),
+            sig: sig.to_string(),
+        },
+        // A type-malformed seal can never carry a valid signature - the same
+        // rejection the TS verifySeal() type guards collapse into.
+        _ => return Err("world-session: chain seal signature invalid (forged seal or wrong key)".to_string()),
+    };
+    if !EventChain::verify_seal(key, &seal) {
+        return Err("world-session: chain seal signature invalid (forged seal or wrong key)".to_string());
+    }
+    let event_index = match snapshot.get("eventIndex").and_then(|x| x.as_i64()) {
+        Some(i) if i >= 0 && loom_epoch::is_safe_epoch(i) => i as u64,
+        _ => return Err("world-session: snapshot.eventIndex must be a JS-safe integer >= 0".to_string()),
+    };
+    // The tail's head: the last tail record's sig, or tailGenesis when the tail
+    // is empty. None (missing field) never equals a sealed head - fail closed.
+    let tail_head: Option<&str> = match tail.last() {
+        Some(rec) => rec.get("sig").and_then(|x| x.as_str()),
+        None => bundle.get("tailGenesis").and_then(|x| x.as_str()),
+    };
+    if tail_head != Some(seal.head.as_str()) {
+        return Err("world-session: chain tail head does not match the seal (trailing records dropped or replaced - end-truncation detected)".to_string());
+    }
+    if seal.count != event_index + tail.len() as u64 {
+        return Err(format!(
+            "world-session: chain tail length does not match the seal (sealed count {} != eventIndex {} + tail {})",
+            seal.count,
+            event_index,
+            tail.len()
+        ));
+    }
+
+    // (3b) per-record HMAC signatures + linkage against the anchor.
     if !tail.is_empty() {
         let records: Vec<ChainedRecord> = tail.iter().map(parse_record).collect::<Result<_, _>>()?;
         if !EventChain::verify_records(key, &records, tail_genesis) {

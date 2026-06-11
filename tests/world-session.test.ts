@@ -1,9 +1,12 @@
-// WorldSession lifecycle tests - v3.0 Phase 4.
+// WorldSession lifecycle tests - v3.0 Phase 4 (+ the structural bundle seal).
 //
-// Pins the golden vector (snapshot verify -> HMAC tail verify -> recorded-mutation
-// reducer -> bounded catch-up) AND covers the fail-closed gates directly: a
-// corrupted snapshot, a tampered chain tail, and time-travel are all rejected; the
-// reducer reconstructs tickEpoch's own output; and a no-tail resume just catches up.
+// Pins the golden vector (snapshot verify -> structural seal verify -> HMAC tail
+// verify -> recorded-mutation reducer -> bounded catch-up) AND covers the
+// fail-closed gates directly: a corrupted snapshot, a tampered chain tail,
+// time-travel, an END-TRUNCATED tail (caught by the bundle's embedded ChainSeal -
+// bundle format v2), a missing seal, a forged seal, and an out-of-range
+// snapshotEventIndex are all rejected; the reducer reconstructs tickEpoch's own
+// output; and a no-tail resume just catches up.
 
 import { test } from 'node:test';
 import assert from 'node:assert';
@@ -62,4 +65,61 @@ test('no-tail resume: a current snapshot just catches up', function () {
   assert.strictEqual(r.epochsResolved, 2, 'caught up 2 epochs');
   assert.strictEqual(r.epochsVoided, 0, 'none voided');
   assert.strictEqual(r.state.epoch, 4, 'advanced to clock');
+});
+
+// ---- bundle format v2: the structural seal (fail-closed, no escape hatch) ----
+
+test('fail-closed: an END-TRUNCATED tail is rejected by the structural seal', function () {
+  // The exact attack the seal closes: the vector bundle's tail loses its
+  // trailing record. Before bundle format v2 this verified CLEAN and resume()
+  // silently replaced the dropped history with re-simulated catch-up.
+  var truncated = JSON.parse(JSON.stringify(vec.inputs.bundle));
+  truncated.chainTail = truncated.chainTail.slice(0, truncated.chainTail.length - 1);
+  assert.throws(function () { doResume(truncated, vec.inputs.currentEpoch); }, /does not match the seal/);
+});
+
+test('fail-closed: a bundle without a seal (pre-seal format) is rejected', function () {
+  var sealless = JSON.parse(JSON.stringify(vec.inputs.bundle));
+  delete sealless.seal;
+  assert.throws(function () { doResume(sealless, vec.inputs.currentEpoch); }, /carries no chain seal/);
+});
+
+test('fail-closed: a forged seal signature is rejected', function () {
+  var forged = JSON.parse(JSON.stringify(vec.inputs.bundle));
+  var sig = forged.seal.sig;
+  forged.seal.sig = sig.slice(0, -2) + (sig.slice(-2) === '00' ? '11' : '00');
+  assert.throws(function () { doResume(forged, vec.inputs.currentEpoch); }, /seal signature invalid/);
+});
+
+test('fail-closed: a re-signed seal that disagrees with the tail length is rejected', function () {
+  // A VALID seal taken from a different chain state (here: an empty chain's
+  // seal) cannot be swapped in - the sealed head no longer matches the tail.
+  var i = vec.inputs;
+  var swapped = JSON.parse(JSON.stringify(i.bundle));
+  var empty = EventChain.create({ key: i.key, genesis: swapped.tailGenesis });
+  swapped.seal = empty.seal(); // count 0, head == tailGenesis - validly signed
+  assert.throws(function () { doResume(swapped, i.currentEpoch); }, /does not match the seal/);
+});
+
+test('fail-closed: suspend rejects a snapshotEventIndex past the end of the chain', function () {
+  // The recon finding: an index past the chain end yields a bundle claiming a
+  // snapshot at a nonexistent event. suspend() now refuses to pack it.
+  var i = vec.inputs;
+  var state = { epoch: 2, worldSeed: 0, entities: { faction_1: { properties: { power: 0 }, tags: ['faction'] } } };
+  var chain = EventChain.create({ key: i.key, genesis: 'g' }); // empty chain: last seq 0
+  assert.throws(function () {
+    suspend({ key: i.key, worldId: 'w', snapshotState: state, snapshotEventIndex: 1, chain: chain });
+  }, /past the end of the chain/);
+});
+
+test('fail-closed: suspend rejects a negative or non-integer snapshotEventIndex', function () {
+  var i = vec.inputs;
+  var state = { epoch: 2, worldSeed: 0, entities: { faction_1: { properties: { power: 0 }, tags: ['faction'] } } };
+  var chain = EventChain.create({ key: i.key, genesis: 'g' });
+  assert.throws(function () {
+    suspend({ key: i.key, worldId: 'w', snapshotState: state, snapshotEventIndex: -1, chain: chain });
+  }, /JS-safe integer/);
+  assert.throws(function () {
+    suspend({ key: i.key, worldId: 'w', snapshotState: state, snapshotEventIndex: 0.5, chain: chain });
+  }, /JS-safe integer/);
 });

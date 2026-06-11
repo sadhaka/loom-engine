@@ -58,7 +58,7 @@ from __future__ import annotations
 import copy
 import math
 import re
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 from .srd5e_spell_slots import (
     MAX_SLOT_LEVEL, caster_kind, spend_lowest_available, spell_base_level,

@@ -1,9 +1,12 @@
 """Cross-language parity: the Python WorldSession suspend/resume lifecycle must
 reproduce the TS-generated golden vector (test_vectors/v3_4_world_session.json)
-byte-for-byte - the verified-snapshot load, the HMAC tail verify, the
-recorded-mutation reducer (pinned via the intermediate post-tail hash), the
-bounded catch-up, and the final state/events hashes - AND fail closed on a
-corrupted snapshot, a tampered tail, and time travel."""
+byte-for-byte - the verified-snapshot load, the STRUCTURAL seal verify (bundle
+format v2), the HMAC tail verify, the recorded-mutation reducer (pinned via the
+intermediate post-tail hash), the bounded catch-up, and the final state/events
+hashes - AND fail closed on a corrupted snapshot, a tampered tail, time travel,
+an END-TRUNCATED tail (caught by the bundle's embedded ChainSeal), a missing
+seal, a forged seal, a swapped valid seal, and an out-of-range
+snapshotEventIndex - mirroring tests/world-session.test.ts one-for-one."""
 
 import copy
 import json
@@ -109,6 +112,72 @@ def test_no_tail_resume_catches_up():
     assert r["state"]["epoch"] == 4, "advanced to clock"
 
 
+# ---- bundle format v2: the structural seal (fail-closed, no escape hatch) ----
+
+def test_fail_closed_end_truncated_tail_rejected_by_seal():
+    # The exact attack the seal closes: the vector bundle's tail loses its
+    # trailing record. Before bundle format v2 this verified CLEAN and resume()
+    # silently replaced the dropped history with re-simulated catch-up.
+    v = _vec()
+    truncated = copy.deepcopy(v["inputs"]["bundle"])
+    truncated["chainTail"] = truncated["chainTail"][:-1]
+    _expect_raises(lambda: _do_resume(v, truncated, v["inputs"]["currentEpoch"]),
+                   "does not match the seal", "end-truncated tail")
+
+
+def test_fail_closed_missing_seal_rejected():
+    v = _vec()
+    sealless = copy.deepcopy(v["inputs"]["bundle"])
+    del sealless["seal"]
+    _expect_raises(lambda: _do_resume(v, sealless, v["inputs"]["currentEpoch"]),
+                   "carries no chain seal", "seal-less (pre-v2 format) bundle")
+
+
+def test_fail_closed_forged_seal_rejected():
+    v = _vec()
+    forged = copy.deepcopy(v["inputs"]["bundle"])
+    sig = forged["seal"]["sig"]
+    forged["seal"]["sig"] = sig[:-2] + ("11" if sig[-2:] == "00" else "00")
+    _expect_raises(lambda: _do_resume(v, forged, v["inputs"]["currentEpoch"]),
+                   "seal signature invalid", "forged seal signature")
+
+
+def test_fail_closed_swapped_valid_seal_rejected():
+    # A VALID seal taken from a different chain state (here: an empty chain's
+    # seal) cannot be swapped in - the sealed head no longer matches the tail.
+    v = _vec()
+    i = v["inputs"]
+    swapped = copy.deepcopy(i["bundle"])
+    empty = EventChain.create(key=i["key"], genesis=swapped["tailGenesis"])
+    swapped["seal"] = empty.seal()  # count 0, head == tailGenesis - validly signed
+    _expect_raises(lambda: _do_resume(v, swapped, i["currentEpoch"]),
+                   "does not match the seal", "swapped valid seal")
+
+
+def test_fail_closed_suspend_rejects_index_past_chain_end():
+    # The recon finding: an index past the chain end yields a bundle claiming a
+    # snapshot at a nonexistent event. suspend() now refuses to pack it.
+    v = _vec()
+    i = v["inputs"]
+    state = {"epoch": 2, "worldSeed": 0,
+             "entities": {"faction_1": {"properties": {"power": 0}, "tags": ["faction"]}}}
+    chain = EventChain.create(key=i["key"], genesis="g")  # empty chain: last seq 0
+    _expect_raises(lambda: suspend(i["key"], "w", state, 1, chain),
+                   "past the end of the chain", "snapshotEventIndex past chain end")
+
+
+def test_fail_closed_suspend_rejects_bad_index():
+    v = _vec()
+    i = v["inputs"]
+    state = {"epoch": 2, "worldSeed": 0,
+             "entities": {"faction_1": {"properties": {"power": 0}, "tags": ["faction"]}}}
+    chain = EventChain.create(key=i["key"], genesis="g")
+    _expect_raises(lambda: suspend(i["key"], "w", state, -1, chain),
+                   "JS-safe integer", "negative snapshotEventIndex")
+    _expect_raises(lambda: suspend(i["key"], "w", state, 0.5, chain),
+                   "JS-safe integer", "fractional snapshotEventIndex")
+
+
 if __name__ == "__main__":
     test_golden_vector_resume_pipeline()
     test_reducer_reproduces_post_tail_hash()
@@ -116,4 +185,10 @@ if __name__ == "__main__":
     test_fail_closed_tampered_tail()
     test_fail_closed_time_travel()
     test_no_tail_resume_catches_up()
-    print("world_session Python parity: all 6 tests pass")
+    test_fail_closed_end_truncated_tail_rejected_by_seal()
+    test_fail_closed_missing_seal_rejected()
+    test_fail_closed_forged_seal_rejected()
+    test_fail_closed_swapped_valid_seal_rejected()
+    test_fail_closed_suspend_rejects_index_past_chain_end()
+    test_fail_closed_suspend_rejects_bad_index()
+    print("world_session Python parity: all 12 tests pass")

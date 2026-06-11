@@ -58,7 +58,12 @@
           "sig": "4516bf6d4db981694bc7072d334ce3c616188a8998fca02ab0a1681313fc908e"
         }
       ],
-      "tailGenesis": "loom.world/persephone"
+      "tailGenesis": "loom.world/persephone",
+      "seal": {
+        "count": 1,
+        "head": "4516bf6d4db981694bc7072d334ce3c616188a8998fca02ab0a1681313fc908e",
+        "sig": "2bc4f322d6c86a296747d02d0607634438b7058d9ee202df7c83caeeb1144c1c"
+      }
     },
     "currentEpoch": 9,
     "maxCatchup": 2,

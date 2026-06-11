@@ -26,7 +26,7 @@ from __future__ import annotations
 
 import math
 import re
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional
 
 MAX_SLOT_LEVEL = 9
 PACT_KEY = "pact"

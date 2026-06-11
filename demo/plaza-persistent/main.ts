@@ -7,12 +7,14 @@
 //
 //   1. BUILD     - S0: 12 villagers across 4 regions (region:<id> tags).
 //   2. LIVE PLAY - tickEpoch epochs 1..2, both events onto an HMAC EventChain.
-//   3. SUSPEND   - suspend() packs {snapshot @ index 0, chain tail}, plus
-//                  chain.seal() so a truncated tail cannot hide (a bare hash
-//                  chain passes a cut tail; the seal's count+head catches it).
-//   4. RESUME    - resume() verifies the snapshot hash, the tail HMAC + seal,
-//                  replays the tail via the recorded-mutation reducer, then
-//                  resolves 12 offline epochs deterministically (0 voided).
+//   3. SUSPEND   - suspend() packs {snapshot @ index 0, chain tail} and EMBEDS
+//                  the chain's seal in the bundle (bundle format v2) so a
+//                  truncated tail cannot hide (a bare hash chain passes a cut
+//                  tail; the structural seal's count+head catches it).
+//   4. RESUME    - resume() verifies the snapshot hash, the STRUCTURAL seal +
+//                  tail HMAC fail-closed, replays the tail via the
+//                  recorded-mutation reducer, then resolves 12 offline epochs
+//                  deterministically (0 voided).
 //   5. PARTIAL SYNC - the page plays server AND client: partitionRegions on
 //                  both sides, diffRegionLeaves finds EXACTLY the 2 regions the
 //                  offline proposals touched, the client pulls only those 2
@@ -143,9 +145,10 @@ function runScenario(vec: PlazaVector): ScenarioRun {
   const rec2 = chain.append('EpochResolved', t2.event);
   if (!rec1 || !rec2) throw new Error('chain rejected a live event');
 
-  // (3) SUSPEND - bundle + seal (the seal closes the tail-truncation hole).
+  // (3) SUSPEND - the bundle CARRIES its seal structurally (bundle format v2);
+  // the embedded seal closes the tail-truncation hole and resume() verifies it.
   const bundle = suspend({ key: i.key, worldId: i.worldId, snapshotState: s0, snapshotEventIndex: i.snapshotEventIndex, chain });
-  const seal = chain.seal();
+  const seal = bundle.seal;
   const tailVerify = EventChain.verifyRecords<EpochResolvedEvent>(i.key, bundle.chainTail, bundle.tailGenesis, seal);
   const truncated = bundle.chainTail.slice(0, 1);
   const truncatedBare = EventChain.verifyRecords<EpochResolvedEvent>(i.key, truncated, bundle.tailGenesis);
