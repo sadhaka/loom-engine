@@ -29,6 +29,17 @@ above.
 (Equivalent material from SRD 5.2, also CC-BY-4.0, may be used; see
 https://www.dndbeyond.com/srd.)
 
+The SRD 5e action content pack (`src/runtime/srd5e-spell-slots.ts`,
+`srd5e-concentration.ts`, `srd5e-conditions.ts`, `srd5e-pack.ts`, and the
+generated `packs/srd5e/srd5e_actions_v1.json`) derives the following
+mechanics-only tables and values from the SRD 5.1: the full/half/pact-caster
+spell-slot tables and rest rules; the concentration save rule
+(DC = max(10, half damage)); the condition-to-advantage/auto-fail/no-reaction
+mappings; cantrip tier scaling (extra dice at character levels 5/11/17);
+spell attack/save/damage/healing dice, save abilities, and "At Higher Levels"
+upcast scaling for the cantrips and leveled spells named in those catalogs.
+Mechanics and numbers only - no SRD descriptive prose is reproduced.
+
 ## Pathfinder Second Edition Remaster (ORC License)
 
 This product is licensed under the ORC License located at the Library of
