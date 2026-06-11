@@ -204,6 +204,13 @@ export { tickFrame, reconcileFrames, deriveFramePrng, RESOURCE_WORLD_FRAME, } fr
 // world-state hashes, so a partial-sync client verifies only its own region's leaf
 // plus the root. Pinned by test_vectors/v5_3_region_hash.json.
 export { regionHash, regionLeaves, globalRegionHash, verifyRegion, RESOURCE_REGION_HASH, } from './runtime/region-hash.js';
+// 6.0 - the partial-sync CLIENT consumer of the region-hash leaves: partition a
+// world into per-region partitions, diff cached vs server leaves to find exactly
+// which regions changed, then fail-closed apply: verify each pulled region's
+// leaf, recombine with the kept cached regions, and constant-time compare the
+// recomputed root to the server root. Pinned by test_vectors/v5_3_region_hash.json
+// (diff) + test_vectors/v6_1_plaza_persistent.json (full pipeline).
+export { partitionRegions, diffRegionLeaves, applyPartialSync, DEFAULT_REGION_TAG_PREFIX, RESOURCE_REGION_SYNC, } from './runtime/region-sync.js';
 // 0.84.0 - declarative asset list + dependency graph.
 export { AssetManifest, RESOURCE_ASSET_MANIFEST } from './runtime/asset-manifest.js';
 // 0.85.0 - keybinding profile manager (M9 0.85 milestone).

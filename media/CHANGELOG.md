@@ -9,6 +9,47 @@ contract yet.
 
 ## Unreleased
 
+- **Persistent world proven, not promised - session soak + partial-sync client +
+  the plaza-persistent end-to-end demo** (`runtime/region-sync`,
+  `demo/plaza-persistent`, `test_vectors/v3_5_session_soak.json`,
+  `test_vectors/v6_1_plaza_persistent.json`): the two "reference flow is
+  planned" labels are now real code. (1) v3.5 SESSION SOAK golden vectors
+  (`tools/gen-session-soak-vectors.ts`) pin the composed long-horizon flows a
+  public audit flagged as unexercised: 120-epoch catch-up run both single-shot
+  and in four 30-epoch chunks (byte-identical, checkpoint-pinned), the
+  zero-catch-up resume boundary + mid-chain suspend, three
+  suspend -> resume -> re-suspend cycles on ONE accumulating chain equal to a
+  single 21-epoch resume, chain seal verification across the whole gap
+  including the negative space (tail truncation verifies CLEAN without a seal -
+  the documented WorldBundle hole - and is caught with one), and void-at-scale
+  (400 of 500 epochs lost) with a deterministic second resume across the void
+  boundary. Driven on all three surfaces: `tests/world-session-soak.test.ts`,
+  `python/tests/test_world_session_soak.py`, and
+  `rust/loom_session/tests/golden_session_soak.rs` (14 tests each). (2) The
+  partial-sync CLIENT consumer (`partitionRegions` / `diffRegionLeaves` /
+  `applyPartialSync`): partition a world into per-region world-shaped
+  partitions (each entity carries exactly one `region:<id>` tag, fail-closed;
+  partition epoch pinned to 0 so a leaf is a content address, not a time
+  address), diff cached vs server leaves, then fail-closed assembly - verify
+  every pulled region's leaf, recombine with kept cached regions, and
+  constant-time compare the recomputed Merkle root to the server root, so a
+  stale or tampered cached region can never ride the cheap path. (3) The
+  Python port of the persistence lifecycle (`loom_engine.event_chain` +
+  `loom_engine.world_session` - HMAC chain with seal commitments, suspend /
+  resume / recorded-mutation replay) and detailed Rust chain verification
+  (`verify_records_detailed` returning per-record mismatch reasons, TS-parity
+  `sig_mismatch` / `broken_chain_link` / `seal_mismatch`). (4) The
+  [Plaza Persistent demo](demo/plaza-persistent/) - one seeded end-to-end run:
+  12 villagers in 4 regions live 2 epochs on an HMAC chain, suspend into a
+  sealed bundle, resume through full verification + 12 offline epochs, then a
+  client pulls only the 2 changed regions and proves the recombined root.
+  Every on-screen value asserts against `vector.json`, byte-identical to the
+  canonical `test_vectors/v6_1_plaza_persistent.json` that
+  `tests/plaza-persistent.test.ts` drives headlessly in `npm test` - the demo
+  and the suite pin the same hashes, so neither can rot. README + landing
+  labels that said the end-to-end flow "is planned" now point at the real
+  demo. Persistence + partial sync proven end-to-end; still no sharding or
+  instancing claims.
 - **SRD 5e action pack - a playable 5e core, actions as data**
   (`runtime/srd5e-spell-slots`, `runtime/srd5e-concentration`,
   `runtime/srd5e-conditions`, `runtime/srd5e-pack`): production-proven

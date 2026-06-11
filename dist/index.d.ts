@@ -160,6 +160,8 @@ export type { WorldBundle, SuspendInput, ResumeInput, ResumeResult, } from './ru
 export { tickFrame, reconcileFrames, deriveFramePrng, RESOURCE_WORLD_FRAME, } from './runtime/world-frame.js';
 export type { PlayerCommand, PlayerEntityMap, FrameActionEntry, FrameResolvedEvent, TickFrameInput, TickFrameResult, FrameReconcileInput, FrameReconcileResult, } from './runtime/world-frame.js';
 export { regionHash, regionLeaves, globalRegionHash, verifyRegion, RESOURCE_REGION_HASH, } from './runtime/region-hash.js';
+export { partitionRegions, diffRegionLeaves, applyPartialSync, DEFAULT_REGION_TAG_PREFIX, RESOURCE_REGION_SYNC, } from './runtime/region-sync.js';
+export type { RegionLeafDiff, PartialSyncInput, PartialSyncResult, } from './runtime/region-sync.js';
 export { AssetManifest, RESOURCE_ASSET_MANIFEST } from './runtime/asset-manifest.js';
 export type { AssetEntry, AssetManifestOptions, ResolveResult as AssetResolveResult, } from './runtime/asset-manifest.js';
 export { HotKeyProfileManager, RESOURCE_HOTKEY_PROFILE } from './runtime/hotkey-profile.js';
