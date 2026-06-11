@@ -85,4 +85,14 @@ snap = f3.snapshot()
 ck("snapshot shape", len(snap) == 1 and snap[0] == {"source": "pc", "target": "g", "band": RANGE_BAND_ENGAGED})
 
 print("\npassed=%d failed=%d" % (PASS, FAIL))
-sys.exit(1 if FAIL else 0)
+
+
+def test_all_module_checks_passed():
+    """pytest entry: the ck() checks above run at import; assert none failed.
+    (The module-level sys.exit is __main__-guarded so pytest collection of
+    the directory does not abort with SystemExit.)"""
+    assert FAIL == 0, "%d golden check(s) failed - see captured stdout" % FAIL
+
+
+if __name__ == "__main__":
+    sys.exit(1 if FAIL else 0)

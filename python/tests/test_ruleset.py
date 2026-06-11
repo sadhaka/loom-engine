@@ -74,4 +74,14 @@ ck("tick expires frightened", tick_conditions(t2) == ["frightened"])
 ck("until-removed survives", active_conditions(t2) == ["doomed"])
 
 print("\npassed=%d failed=%d" % (PASS, FAIL))
-sys.exit(1 if FAIL else 0)
+
+
+def test_all_module_checks_passed():
+    """pytest entry: the ck() checks above run at import; assert none failed.
+    (The module-level sys.exit is __main__-guarded so pytest collection of
+    the directory does not abort with SystemExit.)"""
+    assert FAIL == 0, "%d golden check(s) failed - see captured stdout" % FAIL
+
+
+if __name__ == "__main__":
+    sys.exit(1 if FAIL else 0)

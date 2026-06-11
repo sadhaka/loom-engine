@@ -1,5 +1,7 @@
 {
   "meta": {
+    "generator": "tools/gen-snapshot-vectors.ts",
+    "generated_note": "Regenerate with: npx tsx tools/gen-snapshot-vectors.ts (runs the real TS canonicalJson + world-state HMAC).",
     "engine_version": "2.3.0",
     "vector": "v3.0 world-state snapshot",
     "domain": "loom.snapshot/1",

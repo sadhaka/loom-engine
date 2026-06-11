@@ -2,6 +2,10 @@ name: Publish to npm
 
 # Phase 11B.3: tag-triggered publish to npm.
 #
+# Cross-language parity is enforced by determinism-gate.yml (TS + Python + Rust
+# golden vectors at the same commit, on every push/PR) - this workflow only
+# gates the TS surface at publish time.
+#
 # Trigger: a tag matching `v*` (e.g. `v0.10.0`) pushed to `main`.
 # The workflow runs the test suite and full TS build, then
 # `npm publish --access public` (scopes default to private; flag

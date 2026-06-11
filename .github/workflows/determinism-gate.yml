@@ -1,0 +1,132 @@
+# Cross-language determinism gate.
+#
+# THE invariant of the Loom Engine: the TypeScript port, the pure-Python port,
+# and the Rust core (plus its PyO3 surface) must all resolve the SHARED
+# test_vectors/*.json byte-identically. Before this workflow, each surface was
+# only tested inside its own publish pipeline (npm-publish.yml / release-pypi.yml),
+# never all three at the same commit - and rust/loom_py was excluded from the
+# cargo workspace, so its parity tests were silently skipped everywhere.
+#
+# This gate runs all three surfaces against the same checkout on every push and
+# PR, then a final job requires all of them. No publish, no caching tricks -
+# just the golden vectors, three times.
+#
+# Every command below was run locally before being written here:
+#   ts     : npm ci && npm test
+#   python : python python/tests/test_<each>.py   (NOT pytest - four of the
+#            files are script-style and call sys.exit at module import, which
+#            makes pytest INTERNALERROR on collection; verified locally)
+#   rust   : cargo test --workspace               (in rust/)
+#   loom_py: pip install ./rust/loom_py           (PEP 517 -> maturin builds the
+#            abi3 wheel), then the two parity scripts against the fresh wheel.
+#            loom_py stays OUT of the cargo workspace on purpose: it has zero
+#            Rust #[test] items, and its `extension-module` feature does not
+#            link libpython for a plain cargo build (see rust/Cargo.toml). Its
+#            real tests are the Python parity scripts run here.
+
+name: Determinism Gate
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: determinism-gate-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Opt Node-20 JS actions into Node 24 ahead of GitHub's forced migration
+  # (June 2026) - same as npm-publish.yml / release-pypi.yml.
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  # ---- TypeScript surface ----------------------------------------------------
+  ts:
+    name: TS golden vectors
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+      - name: Install dependencies
+        run: npm ci
+      - name: Run TS test suite (includes golden-vectors + golden-event-chain)
+        run: npm test
+
+  # ---- pure-Python surface ---------------------------------------------------
+  python:
+    name: Python golden vectors
+    runs-on: ubuntu-latest
+    env:
+      # The deterministic paths never rely on hash() ordering, but the port's
+      # README pins PYTHONHASHSEED=0 for any cross-language hashing - honor it.
+      PYTHONHASHSEED: '0'
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Run every python/tests file as a script
+        # Each file is a self-contained runner that exits non-zero on failure.
+        # test_native_surface.py self-SKIPS here (the native module is not
+        # installed in this job); the rust job runs it against a fresh wheel.
+        run: |
+          set -e
+          for f in python/tests/test_*.py; do
+            echo "== $f"
+            python "$f"
+          done
+
+  # ---- Rust core + the PyO3 surface (loom_py) --------------------------------
+  rust:
+    name: Rust golden vectors + loom_py parity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Toolchain versions
+        run: |
+          rustc --version
+          cargo --version
+      - name: Run Rust workspace test suite (all core-crate golden tests)
+        working-directory: rust
+        run: cargo test --workspace
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      # loom_py is workspace-excluded (no Rust #[test] items; extension-module
+      # cannot link a plain cargo test harness). Build the real artifact - the
+      # abi3 wheel - and run its parity tests so they are no longer skipped.
+      - name: Build + install the loom_py wheel (maturin via PEP 517)
+        run: python -m pip install ./rust/loom_py
+      - name: Native parity - loom_py golden vectors
+        env:
+          PYTHONHASHSEED: '0'
+        run: |
+          python rust/loom_py/test_native_parity.py
+          python python/tests/test_native_surface.py
+
+  # ---- the gate ----------------------------------------------------------------
+  determinism-gate:
+    name: All surfaces agree
+    needs: [ts, python, rust]
+    # always() so a failed surface produces a FAILED gate, not a skipped one
+    # (a skipped required check can be mistaken for green in some UIs).
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require all three surfaces at the same commit
+        run: |
+          echo "ts:     ${{ needs.ts.result }}"
+          echo "python: ${{ needs.python.result }}"
+          echo "rust:   ${{ needs.rust.result }}"
+          if [ "${{ needs.ts.result }}" != "success" ] || \
+             [ "${{ needs.python.result }}" != "success" ] || \
+             [ "${{ needs.rust.result }}" != "success" ]; then
+            echo "Determinism gate FAILED - the surfaces did not all pass at ${{ github.sha }}"
+            exit 1
+          fi
+          echo "Determinism gate PASSED - TS, Python, and Rust all resolved the golden vectors at ${{ github.sha }}"
