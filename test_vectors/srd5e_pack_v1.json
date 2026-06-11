@@ -1,0 +1,4472 @@
+{
+  "meta": {
+    "generator": "tools/gen-srd5e-vectors.ts",
+    "generated_note": "Regenerate with: npx tsx tools/gen-srd5e-vectors.ts (runs the real srd5e modules + the ruleset-AST evaluator over every case and asserts the hand-computed expectation before writing).",
+    "vector": "SRD 5e action-pack golden vectors: builder documents on scripted dice streams + slot-economy transitions (incl. the widen-merge) + concentration flows",
+    "spec": "docs/specs/AST-V2-SPEC.md",
+    "note": "Harness rules for kind 'action' follow AST-V2-SPEC sections 1.3/1.5 (scripted rollDie pops stream entries in order; accept vectors consume the stream fully; entities not listed in a *_after field are asserted unchanged). The harness MUST also rebuild each action's document via build.fn/build.args and assert deep equality with the embedded ast/mutations - that is the builder-drift pin. Kinds 'slots' and 'concentration' are pure op cases compared with deep equality; op inputs must never be mutated."
+  },
+  "cases": [
+    {
+      "label": "W1 weapon attack (str 1d8) plain hit: 13+3 vs ac 13, damage 5+3",
+      "context": "check",
+      "actor": "hero",
+      "target": "goblin",
+      "state": {
+        "epoch": 0,
+        "worldSeed": 0,
+        "entities": {
+          "hero": {
+            "properties": {
+              "str_mod": 3
+            },
+            "tags": []
+          },
+          "goblin": {
+            "properties": {
+              "hp": 20,
+              "ac": 13
+            },
+            "tags": []
+          }
+        }
+      },
+      "build": {
+        "fn": "weapon_attack",
+        "args": [
+          {
+            "modProp": "str_mod",
+            "damageDice": "1d8",
+            "addModToDamage": true
+          }
+        ]
+      },
+      "dice_stream": [
+        13,
+        5
+      ],
+      "expect": {
+        "degree": "success",
+        "roll": 16,
+        "natural": 13,
+        "dc": 13,
+        "delta": 3,
+        "hp_after": {
+          "goblin": 12
+        },
+        "applied_count": 1
+      },
+      "kind": "action",
+      "ast": {
+        "type": "check",
+        "roll": {
+          "type": "math",
+          "op": "add",
+          "left": {
+            "type": "dice",
+            "equation": "1d20"
+          },
+          "right": {
+            "type": "prop_ref",
+            "target": "actor",
+            "property": "str_mod"
+          }
+        },
+        "dc": {
+          "type": "prop_ref",
+          "target": "target",
+          "property": "ac"
+        },
+        "degrees": {
+          "critical_success": {
+            "condition": {
+              "type": "nat_roll_eq",
+              "value": 20
+            },
+            "mutations": [
+              {
+                "type": "sub_prop",
+                "target": "target",
+                "property": "hp",
+                "value": {
+                  "type": "math",
+                  "op": "add",
+                  "left": {
+                    "type": "dice",
+                    "equation": "2d8"
+                  },
+                  "right": {
+                    "type": "prop_ref",
+                    "target": "actor",
+                    "property": "str_mod"
+                  }
+                }
+              }
+            ]
+          },
+          "success": {
+            "condition": {
+              "type": "and",
+              "conditions": [
+                {
+                  "type": "delta_gte",
+                  "value": 0
+                },
+                {
+                  "type": "nat_roll_gte",
+                  "value": 2
+                }
+              ]
+            },
+            "mutations": [
+              {
+                "type": "sub_prop",
+                "target": "target",
+                "property": "hp",
+                "value": {
+                  "type": "math",
+                  "op": "add",
+                  "left": {
+                    "type": "dice",
+                    "equation": "1d8"
+                  },
+                  "right": {
+                    "type": "prop_ref",
+                    "target": "actor",
+                    "property": "str_mod"
+                  }
+                }
+              }
+            ]
+          },
+          "failure": {
+            "condition": {
+              "type": "or",
+              "conditions": [
+                {
+                  "type": "delta_lte",
+                  "value": -1
+                },
+                {
+                  "type": "nat_roll_lte",
+                  "value": 1
+                }
+              ]
+            },
+            "mutations": [
+              {
+                "type": "add_tag",
+                "target": "actor",
+                "tag": "missed"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "label": "W2 weapon attack nat-20 crit: doubled DICE (2d8), mod once",
+      "context": "check",
+      "actor": "hero",
+      "target": "goblin",
+      "state": {
+        "epoch": 0,
+        "worldSeed": 0,
+        "entities": {
+          "hero": {
+            "properties": {
+              "str_mod": 3
+            },
+            "tags": []
+          },
+          "goblin": {
+            "properties": {
+              "hp": 20,
+              "ac": 13
+            },
+            "tags": []
+          }
+        }
+      },
+      "build": {
+        "fn": "weapon_attack",
+        "args": [
+          {
+            "modProp": "str_mod",
+            "damageDice": "1d8",
+            "addModToDamage": true
+          }
+        ]
+      },
+      "dice_stream": [
+        20,
+        6,
+        2
+      ],
+      "expect": {
+        "degree": "critical_success",
+        "roll": 23,
+        "natural": 20,
+        "dc": 13,
+        "delta": 10,
+        "hp_after": {
+          "goblin": 9
+        },
+        "applied_count": 1
+      },
+      "kind": "action",
+      "ast": {
+        "type": "check",
+        "roll": {
+          "type": "math",
+          "op": "add",
+          "left": {
+            "type": "dice",
+            "equation": "1d20"
+          },
+          "right": {
+            "type": "prop_ref",
+            "target": "actor",
+            "property": "str_mod"
+          }
+        },
+        "dc": {
+          "type": "prop_ref",
+          "target": "target",
+          "property": "ac"
+        },
+        "degrees": {
+          "critical_success": {
+            "condition": {
+              "type": "nat_roll_eq",
+              "value": 20
+            },
+            "mutations": [
+              {
+                "type": "sub_prop",
+                "target": "target",
+                "property": "hp",
+                "value": {
+                  "type": "math",
+                  "op": "add",
+                  "left": {
+                    "type": "dice",
+                    "equation": "2d8"
+                  },
+                  "right": {
+                    "type": "prop_ref",
+                    "target": "actor",
+                    "property": "str_mod"
+                  }
+                }
+              }
+            ]
+          },
+          "success": {
+            "condition": {
+              "type": "and",
+              "conditions": [
+                {
+                  "type": "delta_gte",
+                  "value": 0
+                },
+                {
+                  "type": "nat_roll_gte",
+                  "value": 2
+                }
+              ]
+            },
+            "mutations": [
+              {
+                "type": "sub_prop",
+                "target": "target",
+                "property": "hp",
+                "value": {
+                  "type": "math",
+                  "op": "add",
+                  "left": {
+                    "type": "dice",
+                    "equation": "1d8"
+                  },
+                  "right": {
+                    "type": "prop_ref",
+                    "target": "actor",
+                    "property": "str_mod"
+                  }
+                }
+              }
+            ]
+          },
+          "failure": {
+            "condition": {
+              "type": "or",
+              "conditions": [
+                {
+                  "type": "delta_lte",
+                  "value": -1
+                },
+                {
+                  "type": "nat_roll_lte",
+                  "value": 1
+                }
+              ]
+            },
+            "mutations": [
+              {
+                "type": "add_tag",
+                "target": "actor",
+                "tag": "missed"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "label": "W3 weapon attack nat-1 auto-miss even though the total beats ac 2",
+      "context": "check",
+      "actor": "hero",
+      "target": "goblin",
+      "state": {
+        "epoch": 0,
+        "worldSeed": 0,
+        "entities": {
+          "hero": {
+            "properties": {
+              "str_mod": 3
+            },
+            "tags": []
+          },
+          "goblin": {
+            "properties": {
+              "hp": 20,
+              "ac": 2
+            },
+            "tags": []
+          }
+        }
+      },
+      "build": {
+        "fn": "weapon_attack",
+        "args": [
+          {
+            "modProp": "str_mod",
+            "damageDice": "1d8",
+            "addModToDamage": true
+          }
+        ]
+      },
+      "dice_stream": [
+        1
+      ],
+      "expect": {
+        "degree": "failure",
+        "roll": 4,
+        "natural": 1,
+        "dc": 2,
+        "delta": 2,
+        "hp_after": {
+          "goblin": 20
+        },
+        "tags_after": {
+          "hero": [
+            "missed"
+          ]
+        },
+        "applied_count": 1
+      },
+      "kind": "action",
+      "ast": {
+        "type": "check",
+        "roll": {
+          "type": "math",
+          "op": "add",
+          "left": {
+            "type": "dice",
+            "equation": "1d20"
+          },
+          "right": {
+            "type": "prop_ref",
+            "target": "actor",
+            "property": "str_mod"
+          }
+        },
+        "dc": {
+          "type": "prop_ref",
+          "target": "target",
+          "property": "ac"
+        },
+        "degrees": {
+          "critical_success": {
+            "condition": {
+              "type": "nat_roll_eq",
+              "value": 20
+            },
+            "mutations": [
+              {
+                "type": "sub_prop",
+                "target": "target",
+                "property": "hp",
+                "value": {
+                  "type": "math",
+                  "op": "add",
+                  "left": {
+                    "type": "dice",
+                    "equation": "2d8"
+                  },
+                  "right": {
+                    "type": "prop_ref",
+                    "target": "actor",
+                    "property": "str_mod"
+                  }
+                }
+              }
+            ]
+          },
+          "success": {
+            "condition": {
+              "type": "and",
+              "conditions": [
+                {
+                  "type": "delta_gte",
+                  "value": 0
+                },
+                {
+                  "type": "nat_roll_gte",
+                  "value": 2
+                }
+              ]
+            },
+            "mutations": [
+              {
+                "type": "sub_prop",
+                "target": "target",
+                "property": "hp",
+                "value": {
+                  "type": "math",
+                  "op": "add",
+                  "left": {
+                    "type": "dice",
+                    "equation": "1d8"
+                  },
+                  "right": {
+                    "type": "prop_ref",
+                    "target": "actor",
+                    "property": "str_mod"
+                  }
+                }
+              }
+            ]
+          },
+          "failure": {
+            "condition": {
+              "type": "or",
+              "conditions": [
+                {
+                  "type": "delta_lte",
+                  "value": -1
+                },
+                {
+                  "type": "nat_roll_lte",
+                  "value": 1
+                }
+              ]
+            },
+            "mutations": [
+              {
+                "type": "add_tag",
+                "target": "actor",
+                "tag": "missed"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "label": "W4 weapon attack plain miss: damage dice never rolled",
+      "context": "check",
+      "actor": "hero",
+      "target": "goblin",
+      "state": {
+        "epoch": 0,
+        "worldSeed": 0,
+        "entities": {
+          "hero": {
+            "properties": {
+              "str_mod": 3
+            },
+            "tags": []
+          },
+          "goblin": {
+            "properties": {
+              "hp": 20,
+              "ac": 13
+            },
+            "tags": []
+          }
+        }
+      },
+      "build": {
+        "fn": "weapon_attack",
+        "args": [
+          {
+            "modProp": "str_mod",
+            "damageDice": "1d8",
+            "addModToDamage": true
+          }
+        ]
+      },
+      "dice_stream": [
+        5
+      ],
+      "expect": {
+        "degree": "failure",
+        "roll": 8,
+        "natural": 5,
+        "dc": 13,
+        "delta": -5,
+        "hp_after": {
+          "goblin": 20
+        },
+        "tags_after": {
+          "hero": [
+            "missed"
+          ]
+        },
+        "applied_count": 1
+      },
+      "kind": "action",
+      "ast": {
+        "type": "check",
+        "roll": {
+          "type": "math",
+          "op": "add",
+          "left": {
+            "type": "dice",
+            "equation": "1d20"
+          },
+          "right": {
+            "type": "prop_ref",
+            "target": "actor",
+            "property": "str_mod"
+          }
+        },
+        "dc": {
+          "type": "prop_ref",
+          "target": "target",
+          "property": "ac"
+        },
+        "degrees": {
+          "critical_success": {
+            "condition": {
+              "type": "nat_roll_eq",
+              "value": 20
+            },
+            "mutations": [
+              {
+                "type": "sub_prop",
+                "target": "target",
+                "property": "hp",
+                "value": {
+                  "type": "math",
+                  "op": "add",
+                  "left": {
+                    "type": "dice",
+                    "equation": "2d8"
+                  },
+                  "right": {
+                    "type": "prop_ref",
+                    "target": "actor",
+                    "property": "str_mod"
+                  }
+                }
+              }
+            ]
+          },
+          "success": {
+            "condition": {
+              "type": "and",
+              "conditions": [
+                {
+                  "type": "delta_gte",
+                  "value": 0
+                },
+                {
+                  "type": "nat_roll_gte",
+                  "value": 2
+                }
+              ]
+            },
+            "mutations": [
+              {
+                "type": "sub_prop",
+                "target": "target",
+                "property": "hp",
+                "value": {
+                  "type": "math",
+                  "op": "add",
+                  "left": {
+                    "type": "dice",
+                    "equation": "1d8"
+                  },
+                  "right": {
+                    "type": "prop_ref",
+                    "target": "actor",
+                    "property": "str_mod"
+                  }
+                }
+              }
+            ]
+          },
+          "failure": {
+            "condition": {
+              "type": "or",
+              "conditions": [
+                {
+                  "type": "delta_lte",
+                  "value": -1
+                },
+                {
+                  "type": "nat_roll_lte",
+                  "value": 1
+                }
+              ]
+            },
+            "mutations": [
+              {
+                "type": "add_tag",
+                "target": "actor",
+                "tag": "missed"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "label": "FB1 fire_bolt tier 1: flat 1d10, no mod on cantrip damage",
+      "context": "check",
+      "actor": "mage",
+      "target": "orc",
+      "state": {
+        "epoch": 0,
+        "worldSeed": 0,
+        "entities": {
+          "mage": {
+            "properties": {
+              "spell_atk": 5
+            },
+            "tags": []
+          },
+          "orc": {
+            "properties": {
+              "hp": 20,
+              "ac": 15
+            },
+            "tags": []
+          }
+        }
+      },
+      "build": {
+        "fn": "attack_cantrip",
+        "args": [
+          "fire_bolt",
+          1
+        ]
+      },
+      "dice_stream": [
+        12,
+        7
+      ],
+      "expect": {
+        "degree": "success",
+        "roll": 17,
+        "natural": 12,
+        "dc": 15,
+        "delta": 2,
+        "hp_after": {
+          "orc": 13
+        },
+        "applied_count": 1
+      },
+      "kind": "action",
+      "ast": {
+        "type": "check",
+        "roll": {
+          "type": "math",
+          "op": "add",
+          "left": {
+            "type": "dice",
+            "equation": "1d20"
+          },
+          "right": {
+            "type": "prop_ref",
+            "target": "actor",
+            "property": "spell_atk"
+          }
+        },
+        "dc": {
+          "type": "prop_ref",
+          "target": "target",
+          "property": "ac"
+        },
+        "degrees": {
+          "critical_success": {
+            "condition": {
+              "type": "nat_roll_eq",
+              "value": 20
+            },
+            "mutations": [
+              {
+                "type": "sub_prop",
+                "target": "target",
+                "property": "hp",
+                "value": {
+                  "type": "dice",
+                  "equation": "2d10"
+                }
+              }
+            ]
+          },
+          "success": {
+            "condition": {
+              "type": "and",
+              "conditions": [
+                {
+                  "type": "delta_gte",
+                  "value": 0
+                },
+                {
+                  "type": "nat_roll_gte",
+                  "value": 2
+                }
+              ]
+            },
+            "mutations": [
+              {
+                "type": "sub_prop",
+                "target": "target",
+                "property": "hp",
+                "value": {
+                  "type": "dice",
+                  "equation": "1d10"
+                }
+              }
+            ]
+          },
+          "failure": {
+            "condition": {
+              "type": "or",
+              "conditions": [
+                {
+                  "type": "delta_lte",
+                  "value": -1
+                },
+                {
+                  "type": "nat_roll_lte",
+                  "value": 1
+                }
+              ]
+            },
+            "mutations": [
+              {
+                "type": "add_tag",
+                "target": "actor",
+                "tag": "missed"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "label": "FB2 fire_bolt tier 5: 2d10",
+      "context": "check",
+      "actor": "mage",
+      "target": "orc",
+      "state": {
+        "epoch": 0,
+        "worldSeed": 0,
+        "entities": {
+          "mage": {
+            "properties": {
+              "spell_atk": 5
+            },
+            "tags": []
+          },
+          "orc": {
+            "properties": {
+              "hp": 20,
+              "ac": 15
+            },
+            "tags": []
+          }
+        }
+      },
+      "build": {
+        "fn": "attack_cantrip",
+        "args": [
+          "fire_bolt",
+          5
+        ]
+      },
+      "dice_stream": [
+        12,
+        7,
+        3
+      ],
+      "expect": {
+        "degree": "success",
+        "roll": 17,
+        "natural": 12,
+        "dc": 15,
+        "delta": 2,
+        "hp_after": {
+          "orc": 10
+        },
+        "applied_count": 1
+      },
+      "kind": "action",
+      "ast": {
+        "type": "check",
+        "roll": {
+          "type": "math",
+          "op": "add",
+          "left": {
+            "type": "dice",
+            "equation": "1d20"
+          },
+          "right": {
+            "type": "prop_ref",
+            "target": "actor",
+            "property": "spell_atk"
+          }
+        },
+        "dc": {
+          "type": "prop_ref",
+          "target": "target",
+          "property": "ac"
+        },
+        "degrees": {
+          "critical_success": {
+            "condition": {
+              "type": "nat_roll_eq",
+              "value": 20
+            },
+            "mutations": [
+              {
+                "type": "sub_prop",
+                "target": "target",
+                "property": "hp",
+                "value": {
+                  "type": "dice",
+                  "equation": "4d10"
+                }
+              }
+            ]
+          },
+          "success": {
+            "condition": {
+              "type": "and",
+              "conditions": [
+                {
+                  "type": "delta_gte",
+                  "value": 0
+                },
+                {
+                  "type": "nat_roll_gte",
+                  "value": 2
+                }
+              ]
+            },
+            "mutations": [
+              {
+                "type": "sub_prop",
+                "target": "target",
+                "property": "hp",
+                "value": {
+                  "type": "dice",
+                  "equation": "2d10"
+                }
+              }
+            ]
+          },
+          "failure": {
+            "condition": {
+              "type": "or",
+              "conditions": [
+                {
+                  "type": "delta_lte",
+                  "value": -1
+                },
+                {
+                  "type": "nat_roll_lte",
+                  "value": 1
+                }
+              ]
+            },
+            "mutations": [
+              {
+                "type": "add_tag",
+                "target": "actor",
+                "tag": "missed"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "label": "FB3 fire_bolt tier 11: 3d10",
+      "context": "check",
+      "actor": "mage",
+      "target": "orc",
+      "state": {
+        "epoch": 0,
+        "worldSeed": 0,
+        "entities": {
+          "mage": {
+            "properties": {
+              "spell_atk": 5
+            },
+            "tags": []
+          },
+          "orc": {
+            "properties": {
+              "hp": 20,
+              "ac": 15
+            },
+            "tags": []
+          }
+        }
+      },
+      "build": {
+        "fn": "attack_cantrip",
+        "args": [
+          "fire_bolt",
+          11
+        ]
+      },
+      "dice_stream": [
+        12,
+        5,
+        5,
+        5
+      ],
+      "expect": {
+        "degree": "success",
+        "roll": 17,
+        "natural": 12,
+        "dc": 15,
+        "delta": 2,
+        "hp_after": {
+          "orc": 5
+        },
+        "applied_count": 1
+      },
+      "kind": "action",
+      "ast": {
+        "type": "check",
+        "roll": {
+          "type": "math",
+          "op": "add",
+          "left": {
+            "type": "dice",
+            "equation": "1d20"
+          },
+          "right": {
+            "type": "prop_ref",
+            "target": "actor",
+            "property": "spell_atk"
+          }
+        },
+        "dc": {
+          "type": "prop_ref",
+          "target": "target",
+          "property": "ac"
+        },
+        "degrees": {
+          "critical_success": {
+            "condition": {
+              "type": "nat_roll_eq",
+              "value": 20
+            },
+            "mutations": [
+              {
+                "type": "sub_prop",
+                "target": "target",
+                "property": "hp",
+                "value": {
+                  "type": "dice",
+                  "equation": "6d10"
+                }
+              }
+            ]
+          },
+          "success": {
+            "condition": {
+              "type": "and",
+              "conditions": [
+                {
+                  "type": "delta_gte",
+                  "value": 0
+                },
+                {
+                  "type": "nat_roll_gte",
+                  "value": 2
+                }
+              ]
+            },
+            "mutations": [
+              {
+                "type": "sub_prop",
+                "target": "target",
+                "property": "hp",
+                "value": {
+                  "type": "dice",
+                  "equation": "3d10"
+                }
+              }
+            ]
+          },
+          "failure": {
+            "condition": {
+              "type": "or",
+              "conditions": [
+                {
+                  "type": "delta_lte",
+                  "value": -1
+                },
+                {
+                  "type": "nat_roll_lte",
+                  "value": 1
+                }
+              ]
+            },
+            "mutations": [
+              {
+                "type": "add_tag",
+                "target": "actor",
+                "tag": "missed"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "label": "FB4 fire_bolt tier 17 nat-20 crit: 4d10 doubles to 8d10",
+      "context": "check",
+      "actor": "mage",
+      "target": "orc",
+      "state": {
+        "epoch": 0,
+        "worldSeed": 0,
+        "entities": {
+          "mage": {
+            "properties": {
+              "spell_atk": 5
+            },
+            "tags": []
+          },
+          "orc": {
+            "properties": {
+              "hp": 50,
+              "ac": 15
+            },
+            "tags": []
+          }
+        }
+      },
+      "build": {
+        "fn": "attack_cantrip",
+        "args": [
+          "fire_bolt",
+          17
+        ]
+      },
+      "dice_stream": [
+        20,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "expect": {
+        "degree": "critical_success",
+        "roll": 25,
+        "natural": 20,
+        "dc": 15,
+        "delta": 10,
+        "hp_after": {
+          "orc": 14
+        },
+        "applied_count": 1
+      },
+      "kind": "action",
+      "ast": {
+        "type": "check",
+        "roll": {
+          "type": "math",
+          "op": "add",
+          "left": {
+            "type": "dice",
+            "equation": "1d20"
+          },
+          "right": {
+            "type": "prop_ref",
+            "target": "actor",
+            "property": "spell_atk"
+          }
+        },
+        "dc": {
+          "type": "prop_ref",
+          "target": "target",
+          "property": "ac"
+        },
+        "degrees": {
+          "critical_success": {
+            "condition": {
+              "type": "nat_roll_eq",
+              "value": 20
+            },
+            "mutations": [
+              {
+                "type": "sub_prop",
+                "target": "target",
+                "property": "hp",
+                "value": {
+                  "type": "dice",
+                  "equation": "8d10"
+                }
+              }
+            ]
+          },
+          "success": {
+            "condition": {
+              "type": "and",
+              "conditions": [
+                {
+                  "type": "delta_gte",
+                  "value": 0
+                },
+                {
+                  "type": "nat_roll_gte",
+                  "value": 2
+                }
+              ]
+            },
+            "mutations": [
+              {
+                "type": "sub_prop",
+                "target": "target",
+                "property": "hp",
+                "value": {
+                  "type": "dice",
+                  "equation": "4d10"
+                }
+              }
+            ]
+          },
+          "failure": {
+            "condition": {
+              "type": "or",
+              "conditions": [
+                {
+                  "type": "delta_lte",
+                  "value": -1
+                },
+                {
+                  "type": "nat_roll_lte",
+                  "value": 1
+                }
+              ]
+            },
+            "mutations": [
+              {
+                "type": "add_tag",
+                "target": "actor",
+                "tag": "missed"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "label": "FB5 ray_of_frost hit applies the slowed_10ft rider tag",
+      "context": "check",
+      "actor": "mage",
+      "target": "orc",
+      "state": {
+        "epoch": 0,
+        "worldSeed": 0,
+        "entities": {
+          "mage": {
+            "properties": {
+              "spell_atk": 5
+            },
+            "tags": []
+          },
+          "orc": {
+            "properties": {
+              "hp": 20,
+              "ac": 15
+            },
+            "tags": []
+          }
+        }
+      },
+      "build": {
+        "fn": "attack_cantrip",
+        "args": [
+          "ray_of_frost",
+          1
+        ]
+      },
+      "dice_stream": [
+        15,
+        4
+      ],
+      "expect": {
+        "degree": "success",
+        "roll": 20,
+        "natural": 15,
+        "dc": 15,
+        "delta": 5,
+        "hp_after": {
+          "orc": 16
+        },
+        "tags_after": {
+          "orc": [
+            "slowed_10ft"
+          ]
+        },
+        "applied_count": 2
+      },
+      "kind": "action",
+      "ast": {
+        "type": "check",
+        "roll": {
+          "type": "math",
+          "op": "add",
+          "left": {
+            "type": "dice",
+            "equation": "1d20"
+          },
+          "right": {
+            "type": "prop_ref",
+            "target": "actor",
+            "property": "spell_atk"
+          }
+        },
+        "dc": {
+          "type": "prop_ref",
+          "target": "target",
+          "property": "ac"
+        },
+        "degrees": {
+          "critical_success": {
+            "condition": {
+              "type": "nat_roll_eq",
+              "value": 20
+            },
+            "mutations": [
+              {
+                "type": "sub_prop",
+                "target": "target",
+                "property": "hp",
+                "value": {
+                  "type": "dice",
+                  "equation": "2d8"
+                }
+              },
+              {
+                "type": "add_tag",
+                "target": "target",
+                "tag": "slowed_10ft"
+              }
+            ]
+          },
+          "success": {
+            "condition": {
+              "type": "and",
+              "conditions": [
+                {
+                  "type": "delta_gte",
+                  "value": 0
+                },
+                {
+                  "type": "nat_roll_gte",
+                  "value": 2
+                }
+              ]
+            },
+            "mutations": [
+              {
+                "type": "sub_prop",
+                "target": "target",
+                "property": "hp",
+                "value": {
+                  "type": "dice",
+                  "equation": "1d8"
+                }
+              },
+              {
+                "type": "add_tag",
+                "target": "target",
+                "tag": "slowed_10ft"
+              }
+            ]
+          },
+          "failure": {
+            "condition": {
+              "type": "or",
+              "conditions": [
+                {
+                  "type": "delta_lte",
+                  "value": -1
+                },
+                {
+                  "type": "nat_roll_lte",
+                  "value": 1
+                }
+              ]
+            },
+            "mutations": [
+              {
+                "type": "add_tag",
+                "target": "actor",
+                "tag": "missed"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "label": "EB1 eldritch_blast one beam, agonizing: 1d10 + cha_mod",
+      "context": "check",
+      "actor": "warlock",
+      "target": "imp",
+      "state": {
+        "epoch": 0,
+        "worldSeed": 0,
+        "entities": {
+          "warlock": {
+            "properties": {
+              "spell_atk": 5,
+              "cha_mod": 4
+            },
+            "tags": []
+          },
+          "imp": {
+            "properties": {
+              "hp": 20,
+              "ac": 12
+            },
+            "tags": []
+          }
+        }
+      },
+      "build": {
+        "fn": "attack_cantrip",
+        "args": [
+          "eldritch_blast",
+          5,
+          {
+            "agonizing": true
+          }
+        ]
+      },
+      "dice_stream": [
+        10,
+        8
+      ],
+      "expect": {
+        "degree": "success",
+        "roll": 15,
+        "natural": 10,
+        "dc": 12,
+        "delta": 3,
+        "hp_after": {
+          "imp": 8
+        },
+        "applied_count": 1
+      },
+      "kind": "action",
+      "ast": {
+        "type": "check",
+        "roll": {
+          "type": "math",
+          "op": "add",
+          "left": {
+            "type": "dice",
+            "equation": "1d20"
+          },
+          "right": {
+            "type": "prop_ref",
+            "target": "actor",
+            "property": "spell_atk"
+          }
+        },
+        "dc": {
+          "type": "prop_ref",
+          "target": "target",
+          "property": "ac"
+        },
+        "degrees": {
+          "critical_success": {
+            "condition": {
+              "type": "nat_roll_eq",
+              "value": 20
+            },
+            "mutations": [
+              {
+                "type": "sub_prop",
+                "target": "target",
+                "property": "hp",
+                "value": {
+                  "type": "math",
+                  "op": "add",
+                  "left": {
+                    "type": "dice",
+                    "equation": "2d10"
+                  },
+                  "right": {
+                    "type": "prop_ref",
+                    "target": "actor",
+                    "property": "cha_mod"
+                  }
+                }
+              }
+            ]
+          },
+          "success": {
+            "condition": {
+              "type": "and",
+              "conditions": [
+                {
+                  "type": "delta_gte",
+                  "value": 0
+                },
+                {
+                  "type": "nat_roll_gte",
+                  "value": 2
+                }
+              ]
+            },
+            "mutations": [
+              {
+                "type": "sub_prop",
+                "target": "target",
+                "property": "hp",
+                "value": {
+                  "type": "math",
+                  "op": "add",
+                  "left": {
+                    "type": "dice",
+                    "equation": "1d10"
+                  },
+                  "right": {
+                    "type": "prop_ref",
+                    "target": "actor",
+                    "property": "cha_mod"
+                  }
+                }
+              }
+            ]
+          },
+          "failure": {
+            "condition": {
+              "type": "or",
+              "conditions": [
+                {
+                  "type": "delta_lte",
+                  "value": -1
+                },
+                {
+                  "type": "nat_roll_lte",
+                  "value": 1
+                }
+              ]
+            },
+            "mutations": [
+              {
+                "type": "add_tag",
+                "target": "actor",
+                "tag": "missed"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "label": "SF1 sacred_flame lands: target save 11 under dc 13",
+      "context": "check",
+      "actor": "cleric",
+      "target": "zombie",
+      "state": {
+        "epoch": 0,
+        "worldSeed": 0,
+        "entities": {
+          "cleric": {
+            "properties": {
+              "spell_dc": 13
+            },
+            "tags": []
+          },
+          "zombie": {
+            "properties": {
+              "hp": 20,
+              "dex_save": 2
+            },
+            "tags": []
+          }
+        }
+      },
+      "build": {
+        "fn": "save_cantrip",
+        "args": [
+          "sacred_flame",
+          1
+        ]
+      },
+      "dice_stream": [
+        9,
+        6
+      ],
+      "expect": {
+        "degree": "success",
+        "roll": 11,
+        "natural": 9,
+        "dc": 13,
+        "delta": -2,
+        "hp_after": {
+          "zombie": 14
+        },
+        "applied_count": 1
+      },
+      "kind": "action",
+      "ast": {
+        "type": "check",
+        "roll": {
+          "type": "math",
+          "op": "add",
+          "left": {
+            "type": "dice",
+            "equation": "1d20"
+          },
+          "right": {
+            "type": "prop_ref",
+            "target": "target",
+            "property": "dex_save"
+          }
+        },
+        "dc": {
+          "type": "prop_ref",
+          "target": "actor",
+          "property": "spell_dc"
+        },
+        "degrees": {
+          "success": {
+            "condition": {
+              "type": "or",
+              "conditions": [
+                {
+                  "type": "delta_lte",
+                  "value": -1
+                },
+                {
+                  "type": "has_tag",
+                  "target": "target",
+                  "tag": "paralyzed"
+                },
+                {
+                  "type": "has_tag",
+                  "target": "target",
+                  "tag": "stunned"
+                },
+                {
+                  "type": "has_tag",
+                  "target": "target",
+                  "tag": "unconscious"
+                }
+              ]
+            },
+            "mutations": [
+              {
+                "type": "sub_prop",
+                "target": "target",
+                "property": "hp",
+                "value": {
+                  "type": "dice",
+                  "equation": "1d8"
+                }
+              }
+            ]
+          },
+          "failure": {
+            "condition": {
+              "type": "delta_gte",
+              "value": 0
+            },
+            "mutations": []
+          }
+        }
+      }
+    },
+    {
+      "label": "SF2 sacred_flame saved: nothing on a save, damage dice never rolled",
+      "context": "check",
+      "actor": "cleric",
+      "target": "zombie",
+      "state": {
+        "epoch": 0,
+        "worldSeed": 0,
+        "entities": {
+          "cleric": {
+            "properties": {
+              "spell_dc": 13
+            },
+            "tags": []
+          },
+          "zombie": {
+            "properties": {
+              "hp": 20,
+              "dex_save": 2
+            },
+            "tags": []
+          }
+        }
+      },
+      "build": {
+        "fn": "save_cantrip",
+        "args": [
+          "sacred_flame",
+          1
+        ]
+      },
+      "dice_stream": [
+        18
+      ],
+      "expect": {
+        "degree": "failure",
+        "roll": 20,
+        "natural": 18,
+        "dc": 13,
+        "delta": 7,
+        "hp_after": {
+          "zombie": 20
+        },
+        "applied_count": 0
+      },
+      "kind": "action",
+      "ast": {
+        "type": "check",
+        "roll": {
+          "type": "math",
+          "op": "add",
+          "left": {
+            "type": "dice",
+            "equation": "1d20"
+          },
+          "right": {
+            "type": "prop_ref",
+            "target": "target",
+            "property": "dex_save"
+          }
+        },
+        "dc": {
+          "type": "prop_ref",
+          "target": "actor",
+          "property": "spell_dc"
+        },
+        "degrees": {
+          "success": {
+            "condition": {
+              "type": "or",
+              "conditions": [
+                {
+                  "type": "delta_lte",
+                  "value": -1
+                },
+                {
+                  "type": "has_tag",
+                  "target": "target",
+                  "tag": "paralyzed"
+                },
+                {
+                  "type": "has_tag",
+                  "target": "target",
+                  "tag": "stunned"
+                },
+                {
+                  "type": "has_tag",
+                  "target": "target",
+                  "tag": "unconscious"
+                }
+              ]
+            },
+            "mutations": [
+              {
+                "type": "sub_prop",
+                "target": "target",
+                "property": "hp",
+                "value": {
+                  "type": "dice",
+                  "equation": "1d8"
+                }
+              }
+            ]
+          },
+          "failure": {
+            "condition": {
+              "type": "delta_gte",
+              "value": 0
+            },
+            "mutations": []
+          }
+        }
+      }
+    },
+    {
+      "label": "SF3 sacred_flame auto-fail: paralyzed target lands the spell despite save 20 (the save d20 is still drawn)",
+      "context": "check",
+      "actor": "cleric",
+      "target": "zombie",
+      "state": {
+        "epoch": 0,
+        "worldSeed": 0,
+        "entities": {
+          "cleric": {
+            "properties": {
+              "spell_dc": 13
+            },
+            "tags": []
+          },
+          "zombie": {
+            "properties": {
+              "hp": 20,
+              "dex_save": 2
+            },
+            "tags": [
+              "paralyzed"
+            ]
+          }
+        }
+      },
+      "build": {
+        "fn": "save_cantrip",
+        "args": [
+          "sacred_flame",
+          1
+        ]
+      },
+      "dice_stream": [
+        18,
+        6
+      ],
+      "expect": {
+        "degree": "success",
+        "roll": 20,
+        "natural": 18,
+        "dc": 13,
+        "delta": 7,
+        "hp_after": {
+          "zombie": 14
+        },
+        "tags_after": {
+          "zombie": [
+            "paralyzed"
+          ]
+        },
+        "applied_count": 1
+      },
+      "kind": "action",
+      "ast": {
+        "type": "check",
+        "roll": {
+          "type": "math",
+          "op": "add",
+          "left": {
+            "type": "dice",
+            "equation": "1d20"
+          },
+          "right": {
+            "type": "prop_ref",
+            "target": "target",
+            "property": "dex_save"
+          }
+        },
+        "dc": {
+          "type": "prop_ref",
+          "target": "actor",
+          "property": "spell_dc"
+        },
+        "degrees": {
+          "success": {
+            "condition": {
+              "type": "or",
+              "conditions": [
+                {
+                  "type": "delta_lte",
+                  "value": -1
+                },
+                {
+                  "type": "has_tag",
+                  "target": "target",
+                  "tag": "paralyzed"
+                },
+                {
+                  "type": "has_tag",
+                  "target": "target",
+                  "tag": "stunned"
+                },
+                {
+                  "type": "has_tag",
+                  "target": "target",
+                  "tag": "unconscious"
+                }
+              ]
+            },
+            "mutations": [
+              {
+                "type": "sub_prop",
+                "target": "target",
+                "property": "hp",
+                "value": {
+                  "type": "dice",
+                  "equation": "1d8"
+                }
+              }
+            ]
+          },
+          "failure": {
+            "condition": {
+              "type": "delta_gte",
+              "value": 0
+            },
+            "mutations": []
+          }
+        }
+      }
+    },
+    {
+      "label": "TD1 toll_the_dead vs a wounded target: live hp < hp_max read upgrades to d12",
+      "context": "check",
+      "actor": "cleric",
+      "target": "ghoul",
+      "state": {
+        "epoch": 0,
+        "worldSeed": 0,
+        "entities": {
+          "cleric": {
+            "properties": {
+              "spell_dc": 13
+            },
+            "tags": []
+          },
+          "ghoul": {
+            "properties": {
+              "hp": 10,
+              "hp_max": 20,
+              "wis_save": 1
+            },
+            "tags": []
+          }
+        }
+      },
+      "build": {
+        "fn": "save_cantrip",
+        "args": [
+          "toll_the_dead",
+          1
+        ]
+      },
+      "dice_stream": [
+        5,
+        9
+      ],
+      "expect": {
+        "degree": "success",
+        "roll": 6,
+        "natural": 5,
+        "dc": 13,
+        "delta": -7,
+        "hp_after": {
+          "ghoul": 1
+        },
+        "applied_count": 1
+      },
+      "kind": "action",
+      "ast": {
+        "type": "check",
+        "roll": {
+          "type": "math",
+          "op": "add",
+          "left": {
+            "type": "dice",
+            "equation": "1d20"
+          },
+          "right": {
+            "type": "prop_ref",
+            "target": "target",
+            "property": "wis_save"
+          }
+        },
+        "dc": {
+          "type": "prop_ref",
+          "target": "actor",
+          "property": "spell_dc"
+        },
+        "degrees": {
+          "success": {
+            "condition": {
+              "type": "delta_lte",
+              "value": -1
+            },
+            "mutations": [
+              {
+                "type": "if",
+                "condition": {
+                  "type": "compare",
+                  "op": "lt",
+                  "left": {
+                    "source": "prop",
+                    "target": "target",
+                    "property": "hp"
+                  },
+                  "right": {
+                    "source": "prop",
+                    "target": "target",
+                    "property": "hp_max"
+                  }
+                },
+                "then": [
+                  {
+                    "type": "sub_prop",
+                    "target": "target",
+                    "property": "hp",
+                    "value": {
+                      "type": "dice",
+                      "equation": "1d12"
+                    }
+                  }
+                ],
+                "else": [
+                  {
+                    "type": "sub_prop",
+                    "target": "target",
+                    "property": "hp",
+                    "value": {
+                      "type": "dice",
+                      "equation": "1d8"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "failure": {
+            "condition": {
+              "type": "delta_gte",
+              "value": 0
+            },
+            "mutations": []
+          }
+        }
+      }
+    },
+    {
+      "label": "TD2 toll_the_dead vs an unwounded target: d8 branch",
+      "context": "check",
+      "actor": "cleric",
+      "target": "ghoul",
+      "state": {
+        "epoch": 0,
+        "worldSeed": 0,
+        "entities": {
+          "cleric": {
+            "properties": {
+              "spell_dc": 13
+            },
+            "tags": []
+          },
+          "ghoul": {
+            "properties": {
+              "hp": 20,
+              "hp_max": 20,
+              "wis_save": 1
+            },
+            "tags": []
+          }
+        }
+      },
+      "build": {
+        "fn": "save_cantrip",
+        "args": [
+          "toll_the_dead",
+          1
+        ]
+      },
+      "dice_stream": [
+        5,
+        7
+      ],
+      "expect": {
+        "degree": "success",
+        "roll": 6,
+        "natural": 5,
+        "dc": 13,
+        "delta": -7,
+        "hp_after": {
+          "ghoul": 13
+        },
+        "applied_count": 1
+      },
+      "kind": "action",
+      "ast": {
+        "type": "check",
+        "roll": {
+          "type": "math",
+          "op": "add",
+          "left": {
+            "type": "dice",
+            "equation": "1d20"
+          },
+          "right": {
+            "type": "prop_ref",
+            "target": "target",
+            "property": "wis_save"
+          }
+        },
+        "dc": {
+          "type": "prop_ref",
+          "target": "actor",
+          "property": "spell_dc"
+        },
+        "degrees": {
+          "success": {
+            "condition": {
+              "type": "delta_lte",
+              "value": -1
+            },
+            "mutations": [
+              {
+                "type": "if",
+                "condition": {
+                  "type": "compare",
+                  "op": "lt",
+                  "left": {
+                    "source": "prop",
+                    "target": "target",
+                    "property": "hp"
+                  },
+                  "right": {
+                    "source": "prop",
+                    "target": "target",
+                    "property": "hp_max"
+                  }
+                },
+                "then": [
+                  {
+                    "type": "sub_prop",
+                    "target": "target",
+                    "property": "hp",
+                    "value": {
+                      "type": "dice",
+                      "equation": "1d12"
+                    }
+                  }
+                ],
+                "else": [
+                  {
+                    "type": "sub_prop",
+                    "target": "target",
+                    "property": "hp",
+                    "value": {
+                      "type": "dice",
+                      "equation": "1d8"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "failure": {
+            "condition": {
+              "type": "delta_gte",
+              "value": 0
+            },
+            "mutations": []
+          }
+        }
+      }
+    },
+    {
+      "label": "VM1 vicious_mockery lands: 1d4 psychic + the disadv_next_attack rider tag",
+      "context": "check",
+      "actor": "bard",
+      "target": "thug",
+      "state": {
+        "epoch": 0,
+        "worldSeed": 0,
+        "entities": {
+          "bard": {
+            "properties": {
+              "spell_dc": 13
+            },
+            "tags": []
+          },
+          "thug": {
+            "properties": {
+              "hp": 10,
+              "wis_save": 0
+            },
+            "tags": []
+          }
+        }
+      },
+      "build": {
+        "fn": "save_cantrip",
+        "args": [
+          "vicious_mockery",
+          1
+        ]
+      },
+      "dice_stream": [
+        3,
+        2
+      ],
+      "expect": {
+        "degree": "success",
+        "roll": 3,
+        "natural": 3,
+        "dc": 13,
+        "delta": -10,
+        "hp_after": {
+          "thug": 8
+        },
+        "tags_after": {
+          "thug": [
+            "disadv_next_attack"
+          ]
+        },
+        "applied_count": 2
+      },
+      "kind": "action",
+      "ast": {
+        "type": "check",
+        "roll": {
+          "type": "math",
+          "op": "add",
+          "left": {
+            "type": "dice",
+            "equation": "1d20"
+          },
+          "right": {
+            "type": "prop_ref",
+            "target": "target",
+            "property": "wis_save"
+          }
+        },
+        "dc": {
+          "type": "prop_ref",
+          "target": "actor",
+          "property": "spell_dc"
+        },
+        "degrees": {
+          "success": {
+            "condition": {
+              "type": "delta_lte",
+              "value": -1
+            },
+            "mutations": [
+              {
+                "type": "sub_prop",
+                "target": "target",
+                "property": "hp",
+                "value": {
+                  "type": "dice",
+                  "equation": "1d4"
+                }
+              },
+              {
+                "type": "add_tag",
+                "target": "target",
+                "tag": "disadv_next_attack"
+              }
+            ]
+          },
+          "failure": {
+            "condition": {
+              "type": "delta_gte",
+              "value": 0
+            },
+            "mutations": []
+          }
+        }
+      }
+    },
+    {
+      "label": "MM1 magic_missile slot 1: 3 darts, each a fresh 1d4+1 (auto-hit, no check)",
+      "context": "trigger",
+      "actor": "mage",
+      "target": "imp",
+      "state": {
+        "epoch": 0,
+        "worldSeed": 0,
+        "entities": {
+          "mage": {
+            "properties": {},
+            "tags": []
+          },
+          "imp": {
+            "properties": {
+              "hp": 20
+            },
+            "tags": []
+          }
+        }
+      },
+      "build": {
+        "fn": "magic_missile_trigger",
+        "args": [
+          1
+        ]
+      },
+      "dice_stream": [
+        2,
+        4,
+        1
+      ],
+      "expect": {
+        "hp_after": {
+          "imp": 10
+        },
+        "applied": [
+          {
+            "target": "imp",
+            "property": "hp",
+            "op": "sub_prop",
+            "previous": 20,
+            "next": 17
+          },
+          {
+            "target": "imp",
+            "property": "hp",
+            "op": "sub_prop",
+            "previous": 17,
+            "next": 12
+          },
+          {
+            "target": "imp",
+            "property": "hp",
+            "op": "sub_prop",
+            "previous": 12,
+            "next": 10
+          }
+        ]
+      },
+      "kind": "action",
+      "mutations": [
+        {
+          "type": "repeat",
+          "count": 3,
+          "mutations": [
+            {
+              "type": "sub_prop",
+              "target": "target",
+              "property": "hp",
+              "value": {
+                "type": "dice",
+                "equation": "1d4+1"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "MM2 magic_missile slot 5: 7 darts",
+      "context": "trigger",
+      "actor": "mage",
+      "target": "imp",
+      "state": {
+        "epoch": 0,
+        "worldSeed": 0,
+        "entities": {
+          "mage": {
+            "properties": {},
+            "tags": []
+          },
+          "imp": {
+            "properties": {
+              "hp": 20
+            },
+            "tags": []
+          }
+        }
+      },
+      "build": {
+        "fn": "magic_missile_trigger",
+        "args": [
+          5
+        ]
+      },
+      "dice_stream": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "expect": {
+        "hp_after": {
+          "imp": 6
+        },
+        "applied_count": 7
+      },
+      "kind": "action",
+      "mutations": [
+        {
+          "type": "repeat",
+          "count": 7,
+          "mutations": [
+            {
+              "type": "sub_prop",
+              "target": "target",
+              "property": "hp",
+              "value": {
+                "type": "dice",
+                "equation": "1d4+1"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "FBL1 fireball slot 3 multi-target: g_a saves (half, floor_div), g_b fails (full), per-target fresh 8d6",
+      "context": "trigger",
+      "actor": "hero",
+      "state": {
+        "epoch": 0,
+        "worldSeed": 0,
+        "entities": {
+          "hero": {
+            "properties": {
+              "spell_dc": 13
+            },
+            "tags": []
+          },
+          "g_a": {
+            "properties": {
+              "hp": 40,
+              "dex_save": 5
+            },
+            "tags": [
+              "in_blast"
+            ]
+          },
+          "g_b": {
+            "properties": {
+              "hp": 40,
+              "dex_save": 0
+            },
+            "tags": [
+              "in_blast"
+            ]
+          }
+        }
+      },
+      "build": {
+        "fn": "multi_save_trigger",
+        "args": [
+          "fireball",
+          3
+        ]
+      },
+      "dice_stream": [
+        9,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        1,
+        2,
+        7,
+        6,
+        6,
+        6,
+        6,
+        1,
+        1,
+        1,
+        1
+      ],
+      "expect": {
+        "props_after": {
+          "g_a": {
+            "hp": 28,
+            "dex_save": 5,
+            "save_roll": 14
+          },
+          "g_b": {
+            "hp": 12,
+            "dex_save": 0,
+            "save_roll": 7
+          }
+        },
+        "applied_count": 4
+      },
+      "kind": "action",
+      "mutations": [
+        {
+          "type": "foreach_target",
+          "select": {
+            "tag": "in_blast",
+            "limit": 6
+          },
+          "mutations": [
+            {
+              "type": "set_prop",
+              "target": "each",
+              "property": "save_roll",
+              "value": {
+                "type": "math",
+                "op": "add",
+                "left": {
+                  "type": "dice",
+                  "equation": "1d20"
+                },
+                "right": {
+                  "type": "prop_ref",
+                  "target": "each",
+                  "property": "dex_save"
+                }
+              }
+            },
+            {
+              "type": "if",
+              "condition": {
+                "type": "or",
+                "conditions": [
+                  {
+                    "type": "compare",
+                    "op": "lt",
+                    "left": {
+                      "source": "prop",
+                      "target": "each",
+                      "property": "save_roll"
+                    },
+                    "right": {
+                      "source": "prop",
+                      "target": "actor",
+                      "property": "spell_dc"
+                    }
+                  },
+                  {
+                    "type": "has_tag",
+                    "target": "each",
+                    "tag": "paralyzed"
+                  },
+                  {
+                    "type": "has_tag",
+                    "target": "each",
+                    "tag": "stunned"
+                  },
+                  {
+                    "type": "has_tag",
+                    "target": "each",
+                    "tag": "unconscious"
+                  }
+                ]
+              },
+              "then": [
+                {
+                  "type": "sub_prop",
+                  "target": "each",
+                  "property": "hp",
+                  "value": {
+                    "type": "dice",
+                    "equation": "8d6"
+                  }
+                }
+              ],
+              "else": [
+                {
+                  "type": "sub_prop",
+                  "target": "each",
+                  "property": "hp",
+                  "value": {
+                    "type": "math",
+                    "op": "floor_div",
+                    "left": {
+                      "type": "dice",
+                      "equation": "8d6"
+                    },
+                    "right": {
+                      "type": "literal",
+                      "value": 2
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "FBL2 fireball slot 5 single-target check variant: failed save takes the full 10d6",
+      "context": "check",
+      "actor": "mage",
+      "target": "troll",
+      "state": {
+        "epoch": 0,
+        "worldSeed": 0,
+        "entities": {
+          "mage": {
+            "properties": {
+              "spell_dc": 13
+            },
+            "tags": []
+          },
+          "troll": {
+            "properties": {
+              "hp": 50,
+              "dex_save": 0
+            },
+            "tags": []
+          }
+        }
+      },
+      "build": {
+        "fn": "save_spell",
+        "args": [
+          "fireball",
+          5
+        ]
+      },
+      "dice_stream": [
+        4,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "expect": {
+        "degree": "success",
+        "roll": 4,
+        "natural": 4,
+        "dc": 13,
+        "delta": -9,
+        "hp_after": {
+          "troll": 20
+        },
+        "applied_count": 1
+      },
+      "kind": "action",
+      "ast": {
+        "type": "check",
+        "roll": {
+          "type": "math",
+          "op": "add",
+          "left": {
+            "type": "dice",
+            "equation": "1d20"
+          },
+          "right": {
+            "type": "prop_ref",
+            "target": "target",
+            "property": "dex_save"
+          }
+        },
+        "dc": {
+          "type": "prop_ref",
+          "target": "actor",
+          "property": "spell_dc"
+        },
+        "degrees": {
+          "success": {
+            "condition": {
+              "type": "or",
+              "conditions": [
+                {
+                  "type": "delta_lte",
+                  "value": -1
+                },
+                {
+                  "type": "has_tag",
+                  "target": "target",
+                  "tag": "paralyzed"
+                },
+                {
+                  "type": "has_tag",
+                  "target": "target",
+                  "tag": "stunned"
+                },
+                {
+                  "type": "has_tag",
+                  "target": "target",
+                  "tag": "unconscious"
+                }
+              ]
+            },
+            "mutations": [
+              {
+                "type": "sub_prop",
+                "target": "target",
+                "property": "hp",
+                "value": {
+                  "type": "dice",
+                  "equation": "10d6"
+                }
+              }
+            ]
+          },
+          "failure": {
+            "condition": {
+              "type": "delta_gte",
+              "value": 0
+            },
+            "mutations": [
+              {
+                "type": "sub_prop",
+                "target": "target",
+                "property": "hp",
+                "value": {
+                  "type": "math",
+                  "op": "floor_div",
+                  "left": {
+                    "type": "dice",
+                    "equation": "10d6"
+                  },
+                  "right": {
+                    "type": "literal",
+                    "value": 2
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "label": "TW1 thunderwave slot 1 multi (CON save - no auto-fail arms): one target fails, takes full 2d8",
+      "context": "trigger",
+      "actor": "druid",
+      "state": {
+        "epoch": 0,
+        "worldSeed": 0,
+        "entities": {
+          "druid": {
+            "properties": {
+              "spell_dc": 12
+            },
+            "tags": []
+          },
+          "r_a": {
+            "properties": {
+              "hp": 10,
+              "con_save": 1
+            },
+            "tags": [
+              "in_burst"
+            ]
+          }
+        }
+      },
+      "build": {
+        "fn": "multi_save_trigger",
+        "args": [
+          "thunderwave",
+          1,
+          {
+            "selectTag": "in_burst"
+          }
+        ]
+      },
+      "dice_stream": [
+        10,
+        4,
+        5
+      ],
+      "expect": {
+        "props_after": {
+          "r_a": {
+            "hp": 1,
+            "con_save": 1,
+            "save_roll": 11
+          }
+        },
+        "applied_count": 2
+      },
+      "kind": "action",
+      "mutations": [
+        {
+          "type": "foreach_target",
+          "select": {
+            "tag": "in_burst",
+            "limit": 6
+          },
+          "mutations": [
+            {
+              "type": "set_prop",
+              "target": "each",
+              "property": "save_roll",
+              "value": {
+                "type": "math",
+                "op": "add",
+                "left": {
+                  "type": "dice",
+                  "equation": "1d20"
+                },
+                "right": {
+                  "type": "prop_ref",
+                  "target": "each",
+                  "property": "con_save"
+                }
+              }
+            },
+            {
+              "type": "if",
+              "condition": {
+                "type": "or",
+                "conditions": [
+                  {
+                    "type": "compare",
+                    "op": "lt",
+                    "left": {
+                      "source": "prop",
+                      "target": "each",
+                      "property": "save_roll"
+                    },
+                    "right": {
+                      "source": "prop",
+                      "target": "actor",
+                      "property": "spell_dc"
+                    }
+                  }
+                ]
+              },
+              "then": [
+                {
+                  "type": "sub_prop",
+                  "target": "each",
+                  "property": "hp",
+                  "value": {
+                    "type": "dice",
+                    "equation": "2d8"
+                  }
+                }
+              ],
+              "else": [
+                {
+                  "type": "sub_prop",
+                  "target": "each",
+                  "property": "hp",
+                  "value": {
+                    "type": "math",
+                    "op": "floor_div",
+                    "left": {
+                      "type": "dice",
+                      "equation": "2d8"
+                    },
+                    "right": {
+                      "type": "literal",
+                      "value": 2
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "HR1 hellish_rebuke saved: half damage via floor_div on a FRESH 2d10",
+      "context": "check",
+      "actor": "warlock",
+      "target": "knight",
+      "state": {
+        "epoch": 0,
+        "worldSeed": 0,
+        "entities": {
+          "warlock": {
+            "properties": {
+              "spell_dc": 13
+            },
+            "tags": []
+          },
+          "knight": {
+            "properties": {
+              "hp": 20,
+              "dex_save": 2
+            },
+            "tags": []
+          }
+        }
+      },
+      "build": {
+        "fn": "save_spell",
+        "args": [
+          "hellish_rebuke",
+          1
+        ]
+      },
+      "dice_stream": [
+        16,
+        5,
+        6
+      ],
+      "expect": {
+        "degree": "failure",
+        "roll": 18,
+        "natural": 16,
+        "dc": 13,
+        "delta": 5,
+        "hp_after": {
+          "knight": 15
+        },
+        "applied_count": 1
+      },
+      "kind": "action",
+      "ast": {
+        "type": "check",
+        "roll": {
+          "type": "math",
+          "op": "add",
+          "left": {
+            "type": "dice",
+            "equation": "1d20"
+          },
+          "right": {
+            "type": "prop_ref",
+            "target": "target",
+            "property": "dex_save"
+          }
+        },
+        "dc": {
+          "type": "prop_ref",
+          "target": "actor",
+          "property": "spell_dc"
+        },
+        "degrees": {
+          "success": {
+            "condition": {
+              "type": "or",
+              "conditions": [
+                {
+                  "type": "delta_lte",
+                  "value": -1
+                },
+                {
+                  "type": "has_tag",
+                  "target": "target",
+                  "tag": "paralyzed"
+                },
+                {
+                  "type": "has_tag",
+                  "target": "target",
+                  "tag": "stunned"
+                },
+                {
+                  "type": "has_tag",
+                  "target": "target",
+                  "tag": "unconscious"
+                }
+              ]
+            },
+            "mutations": [
+              {
+                "type": "sub_prop",
+                "target": "target",
+                "property": "hp",
+                "value": {
+                  "type": "dice",
+                  "equation": "2d10"
+                }
+              }
+            ]
+          },
+          "failure": {
+            "condition": {
+              "type": "delta_gte",
+              "value": 0
+            },
+            "mutations": [
+              {
+                "type": "sub_prop",
+                "target": "target",
+                "property": "hp",
+                "value": {
+                  "type": "math",
+                  "op": "floor_div",
+                  "left": {
+                    "type": "dice",
+                    "equation": "2d10"
+                  },
+                  "right": {
+                    "type": "literal",
+                    "value": 2
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "label": "CW1 cure_wounds slot 1: 1d8 + spell_mod, then the hp_max overheal clamp",
+      "context": "trigger",
+      "actor": "cleric",
+      "target": "ally",
+      "state": {
+        "epoch": 0,
+        "worldSeed": 0,
+        "entities": {
+          "cleric": {
+            "properties": {
+              "spell_mod": 3
+            },
+            "tags": []
+          },
+          "ally": {
+            "properties": {
+              "hp": 18,
+              "hp_max": 20
+            },
+            "tags": []
+          }
+        }
+      },
+      "build": {
+        "fn": "heal_trigger",
+        "args": [
+          "cure_wounds",
+          1
+        ]
+      },
+      "dice_stream": [
+        7
+      ],
+      "expect": {
+        "props_after": {
+          "ally": {
+            "hp": 20,
+            "hp_max": 20
+          }
+        },
+        "applied": [
+          {
+            "target": "ally",
+            "property": "hp",
+            "op": "add_prop",
+            "previous": 18,
+            "next": 28
+          },
+          {
+            "target": "ally",
+            "property": "hp",
+            "op": "set_prop",
+            "previous": 28,
+            "next": 20
+          }
+        ]
+      },
+      "kind": "action",
+      "mutations": [
+        {
+          "type": "add_prop",
+          "target": "target",
+          "property": "hp",
+          "value": {
+            "type": "math",
+            "op": "add",
+            "left": {
+              "type": "dice",
+              "equation": "1d8"
+            },
+            "right": {
+              "type": "prop_ref",
+              "target": "actor",
+              "property": "spell_mod"
+            }
+          }
+        },
+        {
+          "type": "if",
+          "condition": {
+            "type": "compare",
+            "op": "gt",
+            "left": {
+              "source": "prop",
+              "target": "target",
+              "property": "hp"
+            },
+            "right": {
+              "source": "prop",
+              "target": "target",
+              "property": "hp_max"
+            }
+          },
+          "then": [
+            {
+              "type": "set_prop",
+              "target": "target",
+              "property": "hp",
+              "value": {
+                "type": "prop_ref",
+                "target": "target",
+                "property": "hp_max"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "HW1 healing_word slot 3: 3d4 + spell_mod, clamp branch untaken",
+      "context": "trigger",
+      "actor": "bard",
+      "target": "ally",
+      "state": {
+        "epoch": 0,
+        "worldSeed": 0,
+        "entities": {
+          "bard": {
+            "properties": {
+              "spell_mod": 2
+            },
+            "tags": []
+          },
+          "ally": {
+            "properties": {
+              "hp": 5,
+              "hp_max": 30
+            },
+            "tags": []
+          }
+        }
+      },
+      "build": {
+        "fn": "heal_trigger",
+        "args": [
+          "healing_word",
+          3
+        ]
+      },
+      "dice_stream": [
+        2,
+        3,
+        1
+      ],
+      "expect": {
+        "props_after": {
+          "ally": {
+            "hp": 13,
+            "hp_max": 30
+          }
+        },
+        "applied_count": 1
+      },
+      "kind": "action",
+      "mutations": [
+        {
+          "type": "add_prop",
+          "target": "target",
+          "property": "hp",
+          "value": {
+            "type": "math",
+            "op": "add",
+            "left": {
+              "type": "dice",
+              "equation": "3d4"
+            },
+            "right": {
+              "type": "prop_ref",
+              "target": "actor",
+              "property": "spell_mod"
+            }
+          }
+        },
+        {
+          "type": "if",
+          "condition": {
+            "type": "compare",
+            "op": "gt",
+            "left": {
+              "source": "prop",
+              "target": "target",
+              "property": "hp"
+            },
+            "right": {
+              "source": "prop",
+              "target": "target",
+              "property": "hp_max"
+            }
+          },
+          "then": [
+            {
+              "type": "set_prop",
+              "target": "target",
+              "property": "hp",
+              "value": {
+                "type": "prop_ref",
+                "target": "target",
+                "property": "hp_max"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "HP1 hold_person lands: paralyzed tag, zero damage by construction",
+      "context": "check",
+      "actor": "cleric",
+      "target": "bandit",
+      "state": {
+        "epoch": 0,
+        "worldSeed": 0,
+        "entities": {
+          "cleric": {
+            "properties": {
+              "spell_dc": 13
+            },
+            "tags": []
+          },
+          "bandit": {
+            "properties": {
+              "hp": 10,
+              "wis_save": 1
+            },
+            "tags": []
+          }
+        }
+      },
+      "build": {
+        "fn": "condition_spell",
+        "args": [
+          "hold_person",
+          2
+        ]
+      },
+      "dice_stream": [
+        5
+      ],
+      "expect": {
+        "degree": "success",
+        "roll": 6,
+        "natural": 5,
+        "dc": 13,
+        "delta": -7,
+        "hp_after": {
+          "bandit": 10
+        },
+        "tags_after": {
+          "bandit": [
+            "paralyzed"
+          ]
+        },
+        "applied_count": 1
+      },
+      "kind": "action",
+      "ast": {
+        "type": "check",
+        "roll": {
+          "type": "math",
+          "op": "add",
+          "left": {
+            "type": "dice",
+            "equation": "1d20"
+          },
+          "right": {
+            "type": "prop_ref",
+            "target": "target",
+            "property": "wis_save"
+          }
+        },
+        "dc": {
+          "type": "prop_ref",
+          "target": "actor",
+          "property": "spell_dc"
+        },
+        "degrees": {
+          "success": {
+            "condition": {
+              "type": "delta_lte",
+              "value": -1
+            },
+            "mutations": [
+              {
+                "type": "add_tag",
+                "target": "target",
+                "tag": "paralyzed"
+              }
+            ]
+          },
+          "failure": {
+            "condition": {
+              "type": "delta_gte",
+              "value": 0
+            },
+            "mutations": []
+          }
+        }
+      }
+    },
+    {
+      "label": "WB1 web lands via the DEX auto-fail or-arm: stunned target is restrained despite save 23",
+      "context": "check",
+      "actor": "wizard",
+      "target": "ogre",
+      "state": {
+        "epoch": 0,
+        "worldSeed": 0,
+        "entities": {
+          "wizard": {
+            "properties": {
+              "spell_dc": 13
+            },
+            "tags": []
+          },
+          "ogre": {
+            "properties": {
+              "hp": 30,
+              "dex_save": 4
+            },
+            "tags": [
+              "stunned"
+            ]
+          }
+        }
+      },
+      "build": {
+        "fn": "condition_spell",
+        "args": [
+          "web",
+          2
+        ]
+      },
+      "dice_stream": [
+        19
+      ],
+      "expect": {
+        "degree": "success",
+        "roll": 23,
+        "natural": 19,
+        "dc": 13,
+        "delta": 10,
+        "hp_after": {
+          "ogre": 30
+        },
+        "tags_after": {
+          "ogre": [
+            "restrained",
+            "stunned"
+          ]
+        },
+        "applied_count": 1
+      },
+      "kind": "action",
+      "ast": {
+        "type": "check",
+        "roll": {
+          "type": "math",
+          "op": "add",
+          "left": {
+            "type": "dice",
+            "equation": "1d20"
+          },
+          "right": {
+            "type": "prop_ref",
+            "target": "target",
+            "property": "dex_save"
+          }
+        },
+        "dc": {
+          "type": "prop_ref",
+          "target": "actor",
+          "property": "spell_dc"
+        },
+        "degrees": {
+          "success": {
+            "condition": {
+              "type": "or",
+              "conditions": [
+                {
+                  "type": "delta_lte",
+                  "value": -1
+                },
+                {
+                  "type": "has_tag",
+                  "target": "target",
+                  "tag": "paralyzed"
+                },
+                {
+                  "type": "has_tag",
+                  "target": "target",
+                  "tag": "stunned"
+                },
+                {
+                  "type": "has_tag",
+                  "target": "target",
+                  "tag": "unconscious"
+                }
+              ]
+            },
+            "mutations": [
+              {
+                "type": "add_tag",
+                "target": "target",
+                "tag": "restrained"
+              }
+            ]
+          },
+          "failure": {
+            "condition": {
+              "type": "delta_gte",
+              "value": 0
+            },
+            "mutations": []
+          }
+        }
+      }
+    },
+    {
+      "label": "SR1 scorching_ray one ray nat-20 crit: 2d6 doubles to 4d6",
+      "context": "check",
+      "actor": "mage",
+      "target": "imp",
+      "state": {
+        "epoch": 0,
+        "worldSeed": 0,
+        "entities": {
+          "mage": {
+            "properties": {
+              "spell_atk": 5
+            },
+            "tags": []
+          },
+          "imp": {
+            "properties": {
+              "hp": 20,
+              "ac": 12
+            },
+            "tags": []
+          }
+        }
+      },
+      "build": {
+        "fn": "attack_spell",
+        "args": [
+          "scorching_ray",
+          2
+        ]
+      },
+      "dice_stream": [
+        20,
+        4,
+        2,
+        1,
+        6
+      ],
+      "expect": {
+        "degree": "critical_success",
+        "roll": 25,
+        "natural": 20,
+        "dc": 12,
+        "delta": 13,
+        "hp_after": {
+          "imp": 7
+        },
+        "applied_count": 1
+      },
+      "kind": "action",
+      "ast": {
+        "type": "check",
+        "roll": {
+          "type": "math",
+          "op": "add",
+          "left": {
+            "type": "dice",
+            "equation": "1d20"
+          },
+          "right": {
+            "type": "prop_ref",
+            "target": "actor",
+            "property": "spell_atk"
+          }
+        },
+        "dc": {
+          "type": "prop_ref",
+          "target": "target",
+          "property": "ac"
+        },
+        "degrees": {
+          "critical_success": {
+            "condition": {
+              "type": "nat_roll_eq",
+              "value": 20
+            },
+            "mutations": [
+              {
+                "type": "sub_prop",
+                "target": "target",
+                "property": "hp",
+                "value": {
+                  "type": "dice",
+                  "equation": "4d6"
+                }
+              }
+            ]
+          },
+          "success": {
+            "condition": {
+              "type": "and",
+              "conditions": [
+                {
+                  "type": "delta_gte",
+                  "value": 0
+                },
+                {
+                  "type": "nat_roll_gte",
+                  "value": 2
+                }
+              ]
+            },
+            "mutations": [
+              {
+                "type": "sub_prop",
+                "target": "target",
+                "property": "hp",
+                "value": {
+                  "type": "dice",
+                  "equation": "2d6"
+                }
+              }
+            ]
+          },
+          "failure": {
+            "condition": {
+              "type": "or",
+              "conditions": [
+                {
+                  "type": "delta_lte",
+                  "value": -1
+                },
+                {
+                  "type": "nat_roll_lte",
+                  "value": 1
+                }
+              ]
+            },
+            "mutations": [
+              {
+                "type": "add_tag",
+                "target": "actor",
+                "tag": "missed"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "label": "S1 wizard 1 fresh pool",
+      "kind": "slots",
+      "op": "spell_slots_for",
+      "args": {
+        "class": "wizard",
+        "level": 1
+      },
+      "expect": {
+        "pool": {
+          "1": {
+            "max": 2,
+            "used": 0
+          }
+        }
+      }
+    },
+    {
+      "label": "S2 wizard 5 fresh pool",
+      "kind": "slots",
+      "op": "spell_slots_for",
+      "args": {
+        "class": "wizard",
+        "level": 5
+      },
+      "expect": {
+        "pool": {
+          "1": {
+            "max": 4,
+            "used": 0
+          },
+          "2": {
+            "max": 3,
+            "used": 0
+          },
+          "3": {
+            "max": 2,
+            "used": 0
+          }
+        }
+      }
+    },
+    {
+      "label": "S3 wizard 20 fresh pool (the full SRD row)",
+      "kind": "slots",
+      "op": "spell_slots_for",
+      "args": {
+        "class": "wizard",
+        "level": 20
+      },
+      "expect": {
+        "pool": {
+          "1": {
+            "max": 4,
+            "used": 0
+          },
+          "2": {
+            "max": 3,
+            "used": 0
+          },
+          "3": {
+            "max": 3,
+            "used": 0
+          },
+          "4": {
+            "max": 3,
+            "used": 0
+          },
+          "5": {
+            "max": 3,
+            "used": 0
+          },
+          "6": {
+            "max": 2,
+            "used": 0
+          },
+          "7": {
+            "max": 2,
+            "used": 0
+          },
+          "8": {
+            "max": 1,
+            "used": 0
+          },
+          "9": {
+            "max": 1,
+            "used": 0
+          }
+        }
+      }
+    },
+    {
+      "label": "S4 paladin 1 has no slots yet",
+      "kind": "slots",
+      "op": "spell_slots_for",
+      "args": {
+        "class": "paladin",
+        "level": 1
+      },
+      "expect": {
+        "pool": {}
+      }
+    },
+    {
+      "label": "S5 paladin 5 half-caster row",
+      "kind": "slots",
+      "op": "spell_slots_for",
+      "args": {
+        "class": "paladin",
+        "level": 5
+      },
+      "expect": {
+        "pool": {
+          "1": {
+            "max": 4,
+            "used": 0
+          },
+          "2": {
+            "max": 2,
+            "used": 0
+          }
+        }
+      }
+    },
+    {
+      "label": "S6 warlock 5 pact slots",
+      "kind": "slots",
+      "op": "spell_slots_for",
+      "args": {
+        "class": "warlock",
+        "level": 5
+      },
+      "expect": {
+        "pool": {
+          "pact": {
+            "slot_level": 3,
+            "max": 2,
+            "used": 0
+          }
+        }
+      }
+    },
+    {
+      "label": "S7 fighter has no pool",
+      "kind": "slots",
+      "op": "spell_slots_for",
+      "args": {
+        "class": "fighter",
+        "level": 10
+      },
+      "expect": {
+        "pool": {}
+      }
+    },
+    {
+      "label": "S8 spend an open level-3 slot",
+      "kind": "slots",
+      "op": "spend",
+      "args": {
+        "pool": {
+          "1": {
+            "max": 4,
+            "used": 0
+          },
+          "2": {
+            "max": 3,
+            "used": 0
+          },
+          "3": {
+            "max": 2,
+            "used": 0
+          }
+        },
+        "slot_level": 3
+      },
+      "expect": {
+        "ok": true,
+        "reason": "ok",
+        "slot_level": 3,
+        "pool": {
+          "1": {
+            "max": 4,
+            "used": 0
+          },
+          "2": {
+            "max": 3,
+            "used": 0
+          },
+          "3": {
+            "max": 2,
+            "used": 1
+          }
+        }
+      }
+    },
+    {
+      "label": "S9 spend a dry level: no_slot, pool unchanged",
+      "kind": "slots",
+      "op": "spend",
+      "args": {
+        "pool": {
+          "1": {
+            "max": 2,
+            "used": 2
+          }
+        },
+        "slot_level": 1
+      },
+      "expect": {
+        "ok": false,
+        "reason": "no_slot",
+        "slot_level": null,
+        "pool": {
+          "1": {
+            "max": 2,
+            "used": 2
+          }
+        }
+      }
+    },
+    {
+      "label": "S10 spend slot 0 is not a slot (a cantrip)",
+      "kind": "slots",
+      "op": "spend",
+      "args": {
+        "pool": {
+          "1": {
+            "max": 2,
+            "used": 0
+          }
+        },
+        "slot_level": 0
+      },
+      "expect": {
+        "ok": false,
+        "reason": "not_a_slot",
+        "slot_level": null,
+        "pool": {
+          "1": {
+            "max": 2,
+            "used": 0
+          }
+        }
+      }
+    },
+    {
+      "label": "S11 spend slot 10 is a bad slot level",
+      "kind": "slots",
+      "op": "spend",
+      "args": {
+        "pool": {
+          "1": {
+            "max": 2,
+            "used": 0
+          }
+        },
+        "slot_level": 10
+      },
+      "expect": {
+        "ok": false,
+        "reason": "bad_slot_level",
+        "slot_level": null,
+        "pool": {
+          "1": {
+            "max": 2,
+            "used": 0
+          }
+        }
+      }
+    },
+    {
+      "label": "S12 spend_lowest auto-upcasts when the base tier is dry (5e RAW)",
+      "kind": "slots",
+      "op": "spend_lowest",
+      "args": {
+        "pool": {
+          "1": {
+            "max": 2,
+            "used": 2
+          },
+          "2": {
+            "max": 3,
+            "used": 0
+          }
+        },
+        "min_level": 1
+      },
+      "expect": {
+        "ok": true,
+        "reason": "ok",
+        "slot_level": 2,
+        "pool": {
+          "1": {
+            "max": 2,
+            "used": 2
+          },
+          "2": {
+            "max": 3,
+            "used": 1
+          }
+        }
+      }
+    },
+    {
+      "label": "S13 spend_lowest with the whole walk dry: no_higher_slot",
+      "kind": "slots",
+      "op": "spend_lowest",
+      "args": {
+        "pool": {
+          "1": {
+            "max": 2,
+            "used": 2
+          },
+          "2": {
+            "max": 3,
+            "used": 3
+          }
+        },
+        "min_level": 1
+      },
+      "expect": {
+        "ok": false,
+        "reason": "no_higher_slot",
+        "slot_level": null,
+        "pool": {
+          "1": {
+            "max": 2,
+            "used": 2
+          },
+          "2": {
+            "max": 3,
+            "used": 3
+          }
+        }
+      }
+    },
+    {
+      "label": "S14 spend a pact slot at its level",
+      "kind": "slots",
+      "op": "spend",
+      "args": {
+        "pool": {
+          "pact": {
+            "slot_level": 3,
+            "max": 2,
+            "used": 0
+          }
+        },
+        "slot_level": 3
+      },
+      "expect": {
+        "ok": true,
+        "reason": "ok",
+        "slot_level": 3,
+        "pool": {
+          "pact": {
+            "slot_level": 3,
+            "max": 2,
+            "used": 1
+          }
+        }
+      }
+    },
+    {
+      "label": "S15 spend_lowest walks up to the pact tier",
+      "kind": "slots",
+      "op": "spend_lowest",
+      "args": {
+        "pool": {
+          "pact": {
+            "slot_level": 3,
+            "max": 2,
+            "used": 0
+          }
+        },
+        "min_level": 1
+      },
+      "expect": {
+        "ok": true,
+        "reason": "ok",
+        "slot_level": 3,
+        "pool": {
+          "pact": {
+            "slot_level": 3,
+            "max": 2,
+            "used": 1
+          }
+        }
+      }
+    },
+    {
+      "label": "S16 restore 2 spent level-2 slots",
+      "kind": "slots",
+      "op": "restore",
+      "args": {
+        "pool": {
+          "2": {
+            "max": 3,
+            "used": 2
+          }
+        },
+        "slot_level": 2,
+        "count": 2
+      },
+      "expect": {
+        "pool": {
+          "2": {
+            "max": 3,
+            "used": 0
+          }
+        }
+      }
+    },
+    {
+      "label": "S17 restore floors used at 0",
+      "kind": "slots",
+      "op": "restore",
+      "args": {
+        "pool": {
+          "1": {
+            "max": 2,
+            "used": 1
+          }
+        },
+        "slot_level": 1,
+        "count": 5
+      },
+      "expect": {
+        "pool": {
+          "1": {
+            "max": 2,
+            "used": 0
+          }
+        }
+      }
+    },
+    {
+      "label": "S18 widen-merge level-up (THE P0): shape derives fresh, used carries over",
+      "kind": "slots",
+      "op": "widen",
+      "args": {
+        "stored": {
+          "1": {
+            "max": 4,
+            "used": 4
+          },
+          "2": {
+            "max": 3,
+            "used": 1
+          }
+        },
+        "class": "wizard",
+        "level": 5
+      },
+      "expect": {
+        "pool": {
+          "1": {
+            "max": 4,
+            "used": 4
+          },
+          "2": {
+            "max": 3,
+            "used": 1
+          },
+          "3": {
+            "max": 2,
+            "used": 0
+          }
+        }
+      }
+    },
+    {
+      "label": "S19 widen-merge caps carried used at the new max",
+      "kind": "slots",
+      "op": "widen",
+      "args": {
+        "stored": {
+          "1": {
+            "max": 2,
+            "used": 7
+          }
+        },
+        "class": "wizard",
+        "level": 1
+      },
+      "expect": {
+        "pool": {
+          "1": {
+            "max": 2,
+            "used": 2
+          }
+        }
+      }
+    },
+    {
+      "label": "S20 widen for a non-caster returns the stored pool untouched",
+      "kind": "slots",
+      "op": "widen",
+      "args": {
+        "stored": {
+          "1": {
+            "max": 4,
+            "used": 2
+          }
+        },
+        "class": "fighter",
+        "level": 5
+      },
+      "expect": {
+        "pool": {
+          "1": {
+            "max": 4,
+            "used": 2
+          }
+        }
+      }
+    },
+    {
+      "label": "S21 widen with null stored returns the fresh pool",
+      "kind": "slots",
+      "op": "widen",
+      "args": {
+        "stored": null,
+        "class": "wizard",
+        "level": 3
+      },
+      "expect": {
+        "pool": {
+          "1": {
+            "max": 4,
+            "used": 0
+          },
+          "2": {
+            "max": 2,
+            "used": 0
+          }
+        }
+      }
+    },
+    {
+      "label": "S22 widen-merge re-derives the pact shape, carrying pact used",
+      "kind": "slots",
+      "op": "widen",
+      "args": {
+        "stored": {
+          "pact": {
+            "slot_level": 1,
+            "max": 2,
+            "used": 1
+          }
+        },
+        "class": "warlock",
+        "level": 5
+      },
+      "expect": {
+        "pool": {
+          "pact": {
+            "slot_level": 3,
+            "max": 2,
+            "used": 1
+          }
+        }
+      }
+    },
+    {
+      "label": "S23 short rest refreshes pact slots (warlock)",
+      "kind": "slots",
+      "op": "short_rest",
+      "args": {
+        "class": "warlock",
+        "level": 5,
+        "pool": {
+          "pact": {
+            "slot_level": 3,
+            "max": 2,
+            "used": 2
+          }
+        }
+      },
+      "expect": {
+        "pool": {
+          "pact": {
+            "slot_level": 3,
+            "max": 2,
+            "used": 0
+          }
+        }
+      }
+    },
+    {
+      "label": "S24 short rest is a no-op for a wizard",
+      "kind": "slots",
+      "op": "short_rest",
+      "args": {
+        "class": "wizard",
+        "level": 5,
+        "pool": {
+          "1": {
+            "max": 4,
+            "used": 3
+          }
+        }
+      },
+      "expect": {
+        "pool": {
+          "1": {
+            "max": 4,
+            "used": 3
+          }
+        }
+      }
+    },
+    {
+      "label": "S25 long rest refreshes everything",
+      "kind": "slots",
+      "op": "long_rest",
+      "args": {
+        "class": "wizard",
+        "level": 4
+      },
+      "expect": {
+        "pool": {
+          "1": {
+            "max": 4,
+            "used": 0
+          },
+          "2": {
+            "max": 3,
+            "used": 0
+          }
+        }
+      }
+    },
+    {
+      "label": "S26 upcast fireball at slot 5: +2d6",
+      "kind": "slots",
+      "op": "upcast",
+      "args": {
+        "spell": "fireball",
+        "cast_level": 5
+      },
+      "expect": {
+        "info": {
+          "spell_id": "fireball",
+          "base_level": 3,
+          "cast_level": 5,
+          "levels_above": 2,
+          "effect": "damage",
+          "concentration": false,
+          "added_dice": "2d6",
+          "extra_instances": 0,
+          "note": "+1d6 damage per slot level above 3rd"
+        }
+      }
+    },
+    {
+      "label": "S27 upcast magic_missile at slot 9: 8 extra darts",
+      "kind": "slots",
+      "op": "upcast",
+      "args": {
+        "spell": "magic_missile",
+        "cast_level": 9
+      },
+      "expect": {
+        "info": {
+          "spell_id": "magic_missile",
+          "base_level": 1,
+          "cast_level": 9,
+          "levels_above": 8,
+          "effect": "damage",
+          "concentration": false,
+          "added_dice": "",
+          "extra_instances": 8,
+          "note": "one extra dart per slot level above 1st"
+        }
+      }
+    },
+    {
+      "label": "S28 upcast spiritual_weapon at slot 5: one even step (+1d8)",
+      "kind": "slots",
+      "op": "upcast",
+      "args": {
+        "spell": "spiritual_weapon",
+        "cast_level": 5
+      },
+      "expect": {
+        "info": {
+          "spell_id": "spiritual_weapon",
+          "base_level": 2,
+          "cast_level": 5,
+          "levels_above": 3,
+          "effect": "damage",
+          "concentration": false,
+          "added_dice": "1d8",
+          "extra_instances": 0,
+          "note": "+1d8 damage per TWO slot levels above 2nd - generated variants exist only at even slot levels"
+        }
+      }
+    },
+    {
+      "label": "S29 upcast hold_person at slot 4: 2 extra targets, concentration",
+      "kind": "slots",
+      "op": "upcast",
+      "args": {
+        "spell": "hold_person",
+        "cast_level": 4
+      },
+      "expect": {
+        "info": {
+          "spell_id": "hold_person",
+          "base_level": 2,
+          "cast_level": 4,
+          "levels_above": 2,
+          "effect": "utility",
+          "concentration": true,
+          "added_dice": "",
+          "extra_instances": 2,
+          "note": "one extra humanoid target per slot level above 2nd (host enumerates targets)"
+        }
+      }
+    },
+    {
+      "label": "S30 upcast of an unknown spell is null",
+      "kind": "slots",
+      "op": "upcast",
+      "args": {
+        "spell": "wish",
+        "cast_level": 9
+      },
+      "expect": {
+        "info": null
+      }
+    },
+    {
+      "label": "S31 total dice: fireball 8d6 at slot 5 is 10d6",
+      "kind": "slots",
+      "op": "total_dice",
+      "args": {
+        "base": "8d6",
+        "spell": "fireball",
+        "cast_level": 5
+      },
+      "expect": {
+        "dice": "10d6"
+      }
+    },
+    {
+      "label": "S32 total dice: spiritual_weapon 1d8 at slot 6 is 3d8 (two even steps)",
+      "kind": "slots",
+      "op": "total_dice",
+      "args": {
+        "base": "1d8",
+        "spell": "spiritual_weapon",
+        "cast_level": 6
+      },
+      "expect": {
+        "dice": "3d8"
+      }
+    },
+    {
+      "label": "S33 total dice: magic_missile dice never scale (darts do)",
+      "kind": "slots",
+      "op": "total_dice",
+      "args": {
+        "base": "1d4",
+        "spell": "magic_missile",
+        "cast_level": 9
+      },
+      "expect": {
+        "dice": "1d4"
+      }
+    },
+    {
+      "label": "C1 dc floors at 10 for small hits",
+      "kind": "concentration",
+      "op": "maintain_dc",
+      "args": {
+        "damage": 7
+      },
+      "expect": {
+        "dc": 10
+      }
+    },
+    {
+      "label": "C2 dc is half damage above the floor",
+      "kind": "concentration",
+      "op": "maintain_dc",
+      "args": {
+        "damage": 22
+      },
+      "expect": {
+        "dc": 11
+      }
+    },
+    {
+      "label": "C3 dc 18 at damage 36",
+      "kind": "concentration",
+      "op": "maintain_dc",
+      "args": {
+        "damage": 36
+      },
+      "expect": {
+        "dc": 18
+      }
+    },
+    {
+      "label": "C4 dc floors at 10 even at damage 21 (floor_div)",
+      "kind": "concentration",
+      "op": "maintain_dc",
+      "args": {
+        "damage": 21
+      },
+      "expect": {
+        "dc": 10
+      }
+    },
+    {
+      "label": "C5 dc at the boundary: damage 23 -> 11",
+      "kind": "concentration",
+      "op": "maintain_dc",
+      "args": {
+        "damage": 23
+      },
+      "expect": {
+        "dc": 11
+      }
+    },
+    {
+      "label": "C6 start concentrating from idle",
+      "kind": "concentration",
+      "op": "start",
+      "args": {
+        "current": null,
+        "spell_id": "hold_person",
+        "spell_name": "Hold Person",
+        "slot_level": 2
+      },
+      "expect": {
+        "concentration": {
+          "spell_id": "hold_person",
+          "spell_name": "Hold Person",
+          "slot_level": 2
+        },
+        "dropped": null
+      }
+    },
+    {
+      "label": "C7 starting a second spell DROPS the first (one at a time)",
+      "kind": "concentration",
+      "op": "start",
+      "args": {
+        "current": {
+          "spell_id": "bless",
+          "spell_name": "Bless"
+        },
+        "spell_id": "witch_bolt",
+        "spell_name": "Witch Bolt",
+        "slot_level": 1
+      },
+      "expect": {
+        "concentration": {
+          "spell_id": "witch_bolt",
+          "spell_name": "Witch Bolt",
+          "slot_level": 1
+        },
+        "dropped": {
+          "spell_id": "bless",
+          "spell_name": "Bless"
+        }
+      }
+    },
+    {
+      "label": "C8 drop while idle is a no-op",
+      "kind": "concentration",
+      "op": "drop",
+      "args": {
+        "current": null
+      },
+      "expect": {
+        "concentration": null,
+        "dropped": null
+      }
+    },
+    {
+      "label": "C9 drop ends the active spell",
+      "kind": "concentration",
+      "op": "drop",
+      "args": {
+        "current": {
+          "spell_id": "web",
+          "spell_name": "Web",
+          "slot_level": 2
+        }
+      },
+      "expect": {
+        "concentration": null,
+        "dropped": {
+          "spell_id": "web",
+          "spell_name": "Web",
+          "slot_level": 2
+        }
+      }
+    },
+    {
+      "label": "C10 maintain while not concentrating: nothing needed, nothing drops",
+      "kind": "concentration",
+      "op": "maintain",
+      "args": {
+        "current": null,
+        "damage": 18,
+        "con_save_total": 2
+      },
+      "expect": {
+        "needed": false,
+        "dc": 10,
+        "total": 2,
+        "success": true,
+        "concentration": null,
+        "dropped": null
+      }
+    },
+    {
+      "label": "C11 maintain keeps at exactly the dc (total >= dc)",
+      "kind": "concentration",
+      "op": "maintain",
+      "args": {
+        "current": {
+          "spell_id": "hold_person",
+          "spell_name": "Hold Person",
+          "slot_level": 2
+        },
+        "damage": 22,
+        "con_save_total": 11
+      },
+      "expect": {
+        "needed": true,
+        "dc": 11,
+        "total": 11,
+        "success": true,
+        "concentration": {
+          "spell_id": "hold_person",
+          "spell_name": "Hold Person",
+          "slot_level": 2
+        },
+        "dropped": null
+      }
+    },
+    {
+      "label": "C12 maintain fails one under the dc: the spell drops",
+      "kind": "concentration",
+      "op": "maintain",
+      "args": {
+        "current": {
+          "spell_id": "hold_person",
+          "spell_name": "Hold Person",
+          "slot_level": 2
+        },
+        "damage": 22,
+        "con_save_total": 10
+      },
+      "expect": {
+        "needed": true,
+        "dc": 11,
+        "total": 10,
+        "success": false,
+        "concentration": null,
+        "dropped": {
+          "spell_id": "hold_person",
+          "spell_name": "Hold Person",
+          "slot_level": 2
+        }
+      }
+    }
+  ]
+}

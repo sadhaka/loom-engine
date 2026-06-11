@@ -2436,3 +2436,93 @@ export type {
   BestiaryConfig,
   BestiaryIntegrations,
 } from './runtime/bestiary.js';
+
+// ============================================================================
+// Content pack - SRD 5.1 5e action pack (mechanics-only data + pure resolvers
+// + AST v2 document builders). The catalogs ship game mechanics from the SRD
+// 5.1 (CC-BY-4.0, NOTICE.md); flavor prose never crosses. Generated pack JSON
+// lives at packs/srd5e/srd5e_actions_v1.json (tools/gen-srd5e-pack.ts);
+// golden vectors at test_vectors/srd5e_pack_v1.json.
+// ============================================================================
+// Spell-slot economy: tables, spend/restore, rests, the widen-merge, upcast.
+export {
+  MAX_SLOT_LEVEL,
+  PACT_KEY,
+  casterKind,
+  isCaster,
+  spellAbilityForClass,
+  spellSlotsFor,
+  highestSlotLevel,
+  slotAvailable,
+  spendSlot,
+  spendLowestAvailable,
+  restoreSlot,
+  slotsRemaining,
+  longRest,
+  shortRest,
+  widenSlots,
+  spellRequiresConcentration,
+  spellBaseLevel,
+  upcastEffect,
+  totalDiceForCast,
+} from './runtime/srd5e-spell-slots.js';
+export type {
+  SlotEntry,
+  PactEntry,
+  SlotPool,
+  SpendResult,
+  UpcastInfo,
+} from './runtime/srd5e-spell-slots.js';
+// Concentration state machine (caller rolls the CON save, passes the total).
+export {
+  CONCENTRATION_MIN_DC,
+  maintainSaveDc,
+  isConcentrating,
+  startConcentration,
+  dropConcentration,
+  maintainSave,
+} from './runtime/srd5e-concentration.js';
+export type {
+  ConcentrationState,
+  ConcChange,
+  MaintainResult,
+} from './runtime/srd5e-concentration.js';
+// Condition tables: advantage/disadvantage MODE, auto-fail, reaction denial.
+export {
+  ADV_AGAINST_TARGET,
+  DISADV_ON_ATTACKER,
+  AUTO_FAIL_STR_DEX,
+  INCAPACITATED_NO_REACTION,
+  coerceConditions,
+  attackAdvantageMode,
+  conditionRollNote,
+  autoFailSaveCondition,
+  reactionDeniedByConditions,
+} from './runtime/srd5e-conditions.js';
+export type { AdvDetail } from './runtime/srd5e-conditions.js';
+// Action catalogs + AST v2 document builders + the dice-free cast economy.
+export {
+  CANTRIPS,
+  CLASS_CANTRIPS,
+  LEVELED_SPELLS,
+  CLASS_LEVELED_SPELLS,
+  classCanCast,
+  cantripDiceCount,
+  eldritchBlastBeams,
+  scaledCantripDice,
+  buildWeaponAttackCheck,
+  buildAttackCantripCheck,
+  buildSaveCantripCheck,
+  buildAttackSpellCheck,
+  buildSaveSpellCheck,
+  buildMultiTargetSaveTrigger,
+  buildMagicMissileTrigger,
+  buildHealTrigger,
+  buildConditionSpellCheck,
+  planLeveledCast,
+} from './runtime/srd5e-pack.js';
+export type {
+  CantripDef,
+  LeveledDef,
+  CastPlan,
+} from './runtime/srd5e-pack.js';

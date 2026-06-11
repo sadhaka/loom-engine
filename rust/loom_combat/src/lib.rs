@@ -12,8 +12,18 @@
 //! order). Integer math only; floats are denied at the crate root.
 //!
 //! Phase 2 of the Rust extraction (see ../../LOOM-RUST-EXTRACTION-SPEC.md).
+//!
+//! The SRD 5e action-pack pure modules (slot economy, concentration, condition
+//! tables) live in the `srd5e_*` submodules - SRD 5.1 (CC-BY-4.0) mechanics
+//! data, see NOTICE.md. Pinned by test_vectors/srd5e_pack_v1.json (the golden
+//! harness lives in loom_ruleset/tests/golden_srd5e_pack.rs, next to the AST
+//! executor the pack's action documents run through).
 
 #![forbid(unsafe_code)]
+
+pub mod srd5e_concentration;
+pub mod srd5e_conditions;
+pub mod srd5e_slots;
 
 /// The per-round reaction ceiling: exactly one reaction per combatant per round.
 pub mod reaction {
