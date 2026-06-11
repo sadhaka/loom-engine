@@ -9,6 +9,46 @@ contract yet.
 
 ## Unreleased
 
+- **BREAKING (bundle format v2): the WorldBundle carries a structural ChainSeal -
+  end-truncation of the chain tail is now rejected fail-closed on resume**
+  (`runtime/world-session`, `test_vectors/v3_4_world_session.json`,
+  `test_vectors/v3_5_session_soak.json`, `test_vectors/v6_1_plaza_persistent.json`,
+  `demo/plaza-persistent`): the persistent-proof recon proved that `resume()`
+  silently accepted a bundle whose `chainTail` lost its TRAILING records - a
+  bare hash chain cannot see records dropped off its end, the bundle carried no
+  `ChainSeal`, and the dropped history was silently replaced by re-simulated
+  catch-up. `EventChain.seal()` existed but the lifecycle never used it; the S4
+  soak case and the plaza demo verified seals EXTERNALLY only. Now structural:
+  (1) `WorldBundle` gains a required `seal` field; `suspend()` embeds
+  `chain.seal()` at pack time. (2) `resume()` verifies the seal FAIL-CLOSED
+  before trusting the tail: a missing seal (pre-v2 bundle), a forged seal
+  signature, a sealed head that disagrees with the tail's last record (the
+  end-truncation case), or a sealed count that disagrees with
+  `snapshot.eventIndex + chainTail.length` is rejected with a precise reason.
+  NO compatibility escape hatch - pre-seal bundles are rejected outright
+  (re-suspend with the current engine); the engine is unreleased between
+  milestones, and fail-closed beats compatible-but-spoofable. (3) `suspend()`
+  validates `snapshotEventIndex` against the chain's last seq fail-closed - an
+  index past the end used to yield a bundle claiming a snapshot at a
+  nonexistent event; it now throws, as do negative / non-integer indexes and a
+  chain whose seq numbering cannot align with the index. (4) Every vector that
+  embeds a bundle was regenerated via its generator (meta/provenance preserved;
+  payload deltas are exactly the added `seal` fields); the plaza demo, the
+  plaza headless test, and the soak suite now exercise the embedded seal
+  instead of external seal bookkeeping, with new negative pins: end-truncated
+  tail rejected, seal-less bundle rejected, forged seal rejected, swapped
+  valid-but-stale seal rejected, out-of-range `snapshotEventIndex` rejected.
+  KNOWN RESIDUAL (documented in the module header): the snapshot hash binds the
+  state but not its claimed chain POSITION, so a forger rewriting
+  `snapshot.eventIndex` + `tailGenesis` together while dropping LEADING tail
+  records still presents a structurally consistent bundle; closing that needs
+  the snapshot commitment to fold in (worldId, eventIndex) - a future format
+  revision. The Python and Rust ports enforce the same seal checks in their
+  `resume` (`python/loom_engine/world_session.py`,
+  `rust/loom_session/src/lib.rs`) with the same rejection reasons, pinned by
+  the same negative cases in their suites. Also:
+  `@types/node` added as a devDependency so ad-hoc `tsc` runs stop reporting
+  node resolution noise.
 - **Persistent world proven, not promised - session soak + partial-sync client +
   the plaza-persistent end-to-end demo** (`runtime/region-sync`,
   `demo/plaza-persistent`, `test_vectors/v3_5_session_soak.json`,
@@ -25,7 +65,8 @@ contract yet.
   (400 of 500 epochs lost) with a deterministic second resume across the void
   boundary. Driven on all three surfaces: `tests/world-session-soak.test.ts`,
   `python/tests/test_world_session_soak.py`, and
-  `rust/loom_session/tests/golden_session_soak.rs` (14 tests each). (2) The
+  `rust/loom_session/tests/golden_session_soak.rs` (16 tests each, including
+  the bundle-v2 seal negative cases). (2) The
   partial-sync CLIENT consumer (`partitionRegions` / `diffRegionLeaves` /
   `applyPartialSync`): partition a world into per-region world-shaped
   partitions (each entity carries exactly one `region:<id>` tag, fail-closed;

@@ -22,9 +22,24 @@
 //     ruleset was re-balanced after the event was written - the chain records what
 //     HAPPENED, not what the current rules would do.
 //
-//   * FAIL-CLOSED, STRICT ORDER. (1) snapshot hash; (2) load; (3) tail chain HMAC;
-//     (4) reduce; (5) bound catch-up (reject time-travel); (6) tick. Any integrity
-//     failure throws before the world is trusted.
+//   * FAIL-CLOSED, STRICT ORDER. (1) snapshot hash; (2) load; (3) chain seal +
+//     tail chain HMAC; (4) reduce; (5) bound catch-up (reject time-travel);
+//     (6) tick. Any integrity failure throws before the world is trusted.
+//
+//   * THE STRUCTURAL SEAL (bundle format v2 - BREAKING). A bare hash chain
+//     cannot see records dropped off its END, so a pre-seal bundle whose
+//     chainTail lost its trailing records verified clean and the lost events
+//     were silently replaced by re-simulated catch-up. The bundle now CARRIES
+//     the chain's ChainSeal: suspend() signs the (count, head) commitment via
+//     EventChain.seal(), and resume() rejects any bundle whose seal is missing,
+//     forged, or disagrees with the tail (head or count). NO compatibility
+//     escape hatch - bundles produced before the seal field existed are
+//     rejected; re-suspend with the current engine. KNOWN RESIDUAL: the
+//     snapshot hash binds the STATE but not its claimed chain POSITION, so a
+//     forger who rewrites snapshot.eventIndex + tailGenesis together and drops
+//     LEADING tail records still presents a structurally consistent bundle;
+//     binding state-to-position needs the snapshot commitment to fold in
+//     (worldId, eventIndex) - a future format revision.
 //
 // IP BOUNDARY. PUBLIC (this module): the WorldBundle schema, the suspend/resume
 // orchestration, the reducer, the verification loop. TWT-PRIVATE: the persistence
@@ -84,26 +99,52 @@ export function replayEpochEvent(state, event) {
 }
 // Pack a world into a verifiable bundle. The tail is every chain record after the
 // snapshot index; tailGenesis is the head signature at that index (so the tail
-// links cleanly under verifyRecords on resume).
+// links cleanly under verifyRecords on resume); the seal is the chain's signed
+// (count, head) commitment so resume() can detect an end-truncated tail.
+// FAIL-CLOSED: snapshotEventIndex is validated against the chain's last seq -
+// an index past the end would yield a bundle claiming a snapshot at a
+// nonexistent event (and a tail/seal accounting that can never verify).
 export function suspend(input) {
+    var idx = input.snapshotEventIndex;
+    if (typeof idx !== 'number' || !Number.isSafeInteger(idx) || idx < 0) {
+        throw new Error('world-session: snapshotEventIndex must be a JS-safe integer >= 0');
+    }
     var records = input.chain.list();
+    var lastRec = records.length > 0 ? records[records.length - 1] : null;
+    var lastSeq = lastRec ? lastRec.seq : 0;
+    if (idx > lastSeq) {
+        throw new Error('world-session: snapshotEventIndex ' + idx
+            + ' is past the end of the chain (last seq ' + lastSeq
+            + ') - the snapshot would claim a nonexistent event');
+    }
     var tail = [];
     for (var i = 0; i < records.length; i++) {
         var rec = records[i];
-        if (rec && rec.seq > input.snapshotEventIndex)
+        if (rec && rec.seq > idx)
             tail.push(rec);
+    }
+    // Seal/index alignment: the resume-side invariant is seal.count ==
+    // snapshot.eventIndex + chainTail.length, which holds only when exactly idx
+    // records sit at-or-before the snapshot index (dense 1-based seqs - what
+    // append() produces). A chain with gapped/odd seq numbering cannot be packed
+    // into a bundle that verifies, so refuse to produce one.
+    if (records.length - tail.length !== idx) {
+        throw new Error('world-session: snapshotEventIndex ' + idx
+            + ' does not align with the chain seq numbering ('
+            + (records.length - tail.length) + ' records at or before it)');
     }
     var firstTail = tail[0];
     var tailGenesis = firstTail ? firstTail.prevSig : input.chain.head();
     return {
         worldId: input.worldId,
         snapshot: {
-            eventIndex: input.snapshotEventIndex,
+            eventIndex: idx,
             stateHash: worldStateHash(input.key, input.snapshotState),
             state: input.snapshotState,
         },
         chainTail: tail,
         tailGenesis: tailGenesis,
+        seal: input.chain.seal(),
     };
 }
 // Reconstruct + verify + fast-forward a world from a bundle. Fail-closed at every
@@ -117,8 +158,38 @@ export function resume(input) {
     }
     // (2) load the verified snapshot into the working state.
     var work = cloneState(b.snapshot.state);
-    // (3) tail chain integrity - verify HMAC signatures + linkage against the anchor.
+    // (3) chain seal + tail chain integrity - FAIL-CLOSED, no escape hatch.
+    //
+    // (3a) the structural seal. A bare hash chain cannot see records dropped off
+    // its END, so before trusting the tail at all, the bundle must carry a valid
+    // ChainSeal and the tail must MATCH it: the sealed head is the last tail
+    // record's sig (or tailGenesis when the snapshot is current), and the sealed
+    // count equals snapshot.eventIndex + chainTail.length. Pre-seal bundles are
+    // rejected outright - re-suspend with the current engine.
     var tail = b.chainTail || [];
+    var seal = b.seal;
+    if (!seal || typeof seal !== 'object') {
+        throw new Error('world-session: bundle carries no chain seal'
+            + ' (pre-seal bundle format rejected; re-suspend with the current engine)');
+    }
+    if (!EventChain.verifySeal(input.key, seal)) {
+        throw new Error('world-session: chain seal signature invalid (forged seal or wrong key)');
+    }
+    if (!Number.isSafeInteger(b.snapshot.eventIndex) || b.snapshot.eventIndex < 0) {
+        throw new Error('world-session: snapshot.eventIndex must be a JS-safe integer >= 0');
+    }
+    var lastTail = tail.length > 0 ? tail[tail.length - 1] : null;
+    var tailHead = lastTail ? lastTail.sig : b.tailGenesis;
+    if (seal.head !== tailHead) {
+        throw new Error('world-session: chain tail head does not match the seal'
+            + ' (trailing records dropped or replaced - end-truncation detected)');
+    }
+    if (seal.count !== b.snapshot.eventIndex + tail.length) {
+        throw new Error('world-session: chain tail length does not match the seal'
+            + ' (sealed count ' + seal.count + ' != eventIndex ' + b.snapshot.eventIndex
+            + ' + tail ' + tail.length + ')');
+    }
+    // (3b) per-record HMAC signatures + linkage against the anchor.
     if (tail.length > 0) {
         var res = EventChain.verifyRecords(input.key, tail, b.tailGenesis);
         if (!res.ok) {

@@ -34,11 +34,14 @@ so the demo and the test suite pin the same hashes and neither can rot.
    appended to an `EventChain` and the record signatures + chain head match
    the pins.
 3. **Suspend** - `suspend()` packs the snapshot (index 0) + the 2-event HMAC
-   tail; `chain.seal()` is stored alongside. The demo also shows the hole the
+   tail and EMBEDS `chain.seal()` in the bundle (bundle format v2 - the seal
+   is structural, not external bookkeeping). The demo also shows the hole the
    seal closes: a TRUNCATED tail passes a bare hash-chain verify and is
    rejected only when the seal's (count, head) commitment is checked.
-4. **Resume** - `resume()` verifies the snapshot hash, verifies the tail HMAC
-   + linkage + seal, replays the tail via the recorded-mutation reducer
+4. **Resume** - `resume()` verifies the snapshot hash, verifies the bundle's
+   structural seal fail-closed (a missing, forged, or tail-disagreeing seal
+   is rejected), verifies the tail HMAC + linkage, replays the tail via the
+   recorded-mutation reducer
    (post-tail hash == pinned == the live state), then resolves 12 offline
    epochs deterministically (0 voided) to the pinned final state hash.
 5. **Partial sync** - `partitionRegions` splits the resumed (server) and

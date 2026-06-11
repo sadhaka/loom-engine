@@ -16,7 +16,7 @@ AI-narrated play.</p>
 </code><button type="button">Copy</button></pre>
 
 <p>That exact hash is reproduced by npm, the Python port, the Rust crates, the WASM build, and
-the C ABI - pinned by a shared golden-vector suite (4,188 tests) and enforced in CI by the
+the C ABI - pinned by a shared golden-vector suite (4,259 tests) and enforced in CI by the
 cross-language determinism gate
 (<a href="media/determinism-gate.yml"><code>.github/workflows/determinism-gate.yml</code></a>).</p>
 <h2 id="install-≈1-minute" class="tsd-anchor-link">Install (≈1 minute)<a href="#install-≈1-minute" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
@@ -52,8 +52,9 @@ under a solo-founded commercial product (<a href="https://theworldtable.ai">TheW
 <h2 id="what-it-is-and-isnt-so-you-dont-have-to-guess" class="tsd-anchor-link">What it is — and isn't (so you don't have to guess)<a href="#what-it-is-and-isnt-so-you-dont-have-to-guess" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
 <ul>
 <li>✅ A <strong>deterministic simulation core</strong>: a seeded PRNG, a rules AST (d20-style
-delta / derived checks as <em>data</em>, no untrusted-code execution; broader system
-families are on the roadmap), a tamper-evident HMAC event
+delta / derived checks plus the AST v2 system families - PbtA-style 2d6 moves
+and d100 roll-under checks - all as <em>data</em>, no untrusted-code execution), a
+tamper-evident HMAC event
 chain, snapshot + replay, and a real-time command-frame + client-rollback netcode primitive.</li>
 <li>✅ <strong>Server-authoritative primitives</strong> for anti-cheat: the engine owns the dice and the
 state, so an AI — or a client — cannot author a mechanical outcome. (Anti-cheat is a
@@ -74,11 +75,12 @@ Rust core, bound to four surfaces, resolves the same seed to byte-identical resu
 everywhere - the basis for replay, anti-cheat, and honest AI narration in a shared
 persistent world.</p>
 <ul>
-<li><strong>Any-System ruleset AST</strong> - express d20-style rules as DATA (a strict JSON
+<li><strong>Any-System ruleset AST</strong> - express tabletop rules as DATA (a strict JSON
 interpreter; no untrusted-code execution). Roll-vs-DC -&gt; degree -&gt; mutations,
 integer-only expressions, floor_div toward -inf, a fail-closed validation pass.
-Today it covers d20-style delta / derived checks; broader system families are
-on the roadmap.</li>
+Covers d20-style delta / derived checks, and the AST v2 node families make
+PbtA-style 2d6 moves and d100 roll-under checks expressible as data too -
+byte-identical on every surface, pinned by shared golden vectors.</li>
 <li><strong>Snapshot + replay</strong> - a pure content <code>state_hash</code> reconstructs a world from a
 verified snapshot + the events after it (provably equal to replay-from-genesis).</li>
 <li><strong>Epoch world-tick</strong> - the world keeps moving between sessions: offline factions
@@ -87,8 +89,11 @@ shipped with unit-level golden vectors; the end-to-end
 suspend -&gt; offline epochs -&gt; verified resume flow is proven by the
 <a href="media/plaza-persistent">Plaza Persistent reference demo</a> and soaked past
 100 epochs by the v3.5 session-soak vectors in <code>npm test</code>.</li>
-<li><strong>WorldSession suspend/resume</strong> - pack a world into a verifiable bundle; on resume,
-verify the snapshot hash, replay the HMAC chain tail, reject time-travel, fast-forward.</li>
+<li><strong>WorldSession suspend/resume</strong> - pack a world into a verifiable bundle that
+embeds the chain's structural seal (bundle format v2); on resume, verify the
+snapshot hash, verify the seal fail-closed (an end-truncated, seal-less, or
+forged-seal bundle is rejected), replay the HMAC chain tail, reject
+time-travel, fast-forward.</li>
 <li><strong>Real-time multiplayer core</strong> - server-authoritative command frames, client
 rollback reconciliation (predict, then reconcile to the authoritative frame - you
 can never forge an outcome), and region hashing (a partial-sync client verifies
@@ -515,7 +520,7 @@ source).</p>
 copy-paste from any external engine source. <a href="http://PRIOR-ART.md">PRIOR-ART.md</a> is the
 audit trail any future productization or patent dispute would lean on.</p>
 <h2 id="test-coverage" class="tsd-anchor-link">Test coverage<a href="#test-coverage" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
-<p>4082 / 4082 tests pass via <code>tsx --test</code>, spanning 180+ test files in
+<p>4259 / 4259 tests pass via <code>tsx --test</code>, spanning 220+ test files in
 <code>tests/</code>. Core suites include:</p>
 <ul>
 <li><code>smoke.test.ts</code> - public API barrel, version stamp</li>

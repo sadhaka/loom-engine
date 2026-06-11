@@ -1,5 +1,5 @@
 import { EventChain } from './event-chain.js';
-import type { ChainedRecord } from './event-chain.js';
+import type { ChainedRecord, ChainSeal } from './event-chain.js';
 import type { WorldState } from './world-state-snapshot.js';
 import type { EpochResolvedEvent, Ruleset, ProposalMap } from './world-epoch.js';
 export interface WorldBundle {
@@ -11,6 +11,7 @@ export interface WorldBundle {
     };
     chainTail: ChainedRecord<EpochResolvedEvent>[];
     tailGenesis: string;
+    seal: ChainSeal;
 }
 export declare function replayEpochEvent(state: WorldState, event: EpochResolvedEvent): WorldState;
 export interface SuspendInput {
