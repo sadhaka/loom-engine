@@ -19,14 +19,16 @@ same input → same 1d4 roll → same state hash, on every surface:
   →  state_hash = cea43ee25ad95f845260985846936bd81f2b6d1aa735102cfd001295654b0a54
 ```
 
-That exact hash is reproduced by npm, the PyPI wheel, the Rust crates, the WASM build, and
-the C ABI — pinned by a shared golden-vector suite (4,188 tests).
+That exact hash is reproduced by npm, the Python port, the Rust crates, the WASM build, and
+the C ABI - pinned by a shared golden-vector suite (4,188 tests) and enforced in CI by the
+cross-language determinism gate
+([`.github/workflows/determinism-gate.yml`](.github/workflows/determinism-gate.yml)).
 
 ## Install (≈1 minute)
 
 ```bash
 npm install loom-engine            # TypeScript / browser / Node
-pip install loom-engine-native     # Python — native wheel (Rust core); or loom-engine-rpg (pure-Python)
+pip install loom-engine-rpg        # Python - pure-Python port (the native PyO3 wheel is not on PyPI yet; build it from rust/loom_py with maturin)
 cargo add loom_frame               # Rust — the deterministic crates
 ```
 
@@ -42,7 +44,7 @@ flowchart TD
   CORE["One deterministic Rust core<br/>loom_math · loom_events · loom_snapshot<br/>loom_ruleset (AST) · loom_epoch · loom_session · loom_frame"]
   TS["loom-engine (npm)<br/>TypeScript reference"]
   CORE -->|wasm-bindgen| WASM["WASM"] --> B["Browser client"]
-  CORE -->|PyO3 / maturin| PY["loom-engine-native (PyPI)"] --> SV["Python game server"]
+  CORE -->|PyO3 / maturin| PY["loom_py binding (PyPI wheel planned)"] --> SV["Python game server"]
   CORE -->|C ABI| CA["C ABI .dll/.so/.a"] --> NT["Unity · Godot · Go"]
   TS -. "byte-identical, pinned by golden vectors" .- CORE
   B --> AI["AI narrates — never authors the dice or the state"]
@@ -63,8 +65,9 @@ under a solo-founded commercial product ([TheWorldTable.ai](https://theworldtabl
 
 ## What it is — and isn't (so you don't have to guess)
 
-- ✅ A **deterministic simulation core**: a seeded PRNG, an Any-System rules AST (any
-  tabletop system as *data*, no untrusted-code execution), a tamper-evident HMAC event
+- ✅ A **deterministic simulation core**: a seeded PRNG, a rules AST (d20-style
+  delta / derived checks as *data*, no untrusted-code execution; broader system
+  families are on the roadmap), a tamper-evident HMAC event
   chain, snapshot + replay, and a real-time command-frame + client-rollback netcode primitive.
 - ✅ **Server-authoritative primitives** for anti-cheat: the engine owns the dice and the
   state, so an AI — or a client — cannot author a mechanical outcome. (Anti-cheat is a
@@ -87,23 +90,29 @@ Rust core, bound to four surfaces, resolves the same seed to byte-identical resu
 everywhere - the basis for replay, anti-cheat, and honest AI narration in a shared
 persistent world.
 
-- **Any-System ruleset AST** - bring any tabletop system as DATA (a strict JSON
+- **Any-System ruleset AST** - express d20-style rules as DATA (a strict JSON
   interpreter; no untrusted-code execution). Roll-vs-DC -> degree -> mutations,
   integer-only expressions, floor_div toward -inf, a fail-closed validation pass.
+  Today it covers d20-style delta / derived checks; broader system families are
+  on the roadmap.
 - **Snapshot + replay** - a pure content `state_hash` reconstructs a world from a
   verified snapshot + the events after it (provably equal to replay-from-genesis).
 - **Epoch world-tick** - the world keeps moving between sessions: offline factions
-  act deterministically, fail-closed, bounded (the Veil-Ceiling guard).
+  act deterministically, fail-closed, bounded (the Veil-Ceiling guard). Primitive
+  shipped with unit-level golden vectors; a single end-to-end
+  suspend -> offline epochs -> resume reference flow is still planned.
 - **WorldSession suspend/resume** - pack a world into a verifiable bundle; on resume,
   verify the snapshot hash, replay the HMAC chain tail, reject time-travel, fast-forward.
 - **Real-time multiplayer core** - server-authoritative command frames, client
   rollback reconciliation (predict, then reconcile to the authoritative frame - you
   can never forge an outcome), and region hashing (a partial-sync client verifies
-  only its own region + the Merkle root).
+  only its own region + the Merkle root). The region-hash partial sync is a shipped
+  primitive with golden vectors; a reference client demo that consumes it is planned.
 
 **Every surface, one core.** A Rust workspace (`loom_math` / `loom_events` /
 `loom_snapshot` / `loom_ruleset` / `loom_epoch` / `loom_session` / `loom_frame`) binds
-to **WASM** (browser), a native **PyO3** wheel (Python server), and a panic-guarded
+to **WASM** (browser), a native **PyO3** binding (Python server; built from source with
+maturin - the wheel is not yet published to PyPI), and a panic-guarded
 **C ABI** (Unity / Godot / Go) - each verified against the same golden vectors as the
 TypeScript reference.
 
@@ -152,11 +161,13 @@ CRITICAL/HIGH/MED findings. 4087 / 4087 tests passed at 2.2.5.
 ## v2.0.0 - Trinity Mainframe complete
 
 The 2.0.0 drop closes the Trinity Mainframe ingestion - 14 new
-pure-logic kernels that take the engine from a Canvas2D / ECS base
-into the foundation of an AI-driven MMORPG runtime. Each kernel is
-the safe single-thread / single-owner core that drives a deferred
-WebGPU / WebTransport / WebCrypto / WASM-SIMD / SQLite-WAL
-integration layer. All Codex hardening gates enforced inline; all
+pure-logic kernels that extend the Canvas2D / ECS base with
+deterministic core primitives for persistent-world and multiplayer
+systems. These are standalone modules, not an integrated MMORPG
+runtime - there is no zone streaming, instancing, or sharding
+layer. Each kernel is the safe single-thread / single-owner core
+intended to drive a deferred WebGPU / WebTransport / WebCrypto /
+WASM-SIMD / SQLite-WAL integration layer. All Codex hardening gates enforced inline; all
 non-negotiable engine gates (no RNG, no wall clock, no Atomics,
 fixed-capacity, every input bounds-checked) honoured across the
 board. 3984 tests pass; see [CHANGELOG.md](./CHANGELOG.md) for the
