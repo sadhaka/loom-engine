@@ -7,6 +7,27 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## Unreleased
+
+- **Ruleset AST v2 - six additive node families** (`runtime/ruleset-ast`, spec:
+  [docs/specs/AST-V2-SPEC.md](docs/specs/AST-V2-SPEC.md)): the rules AST now
+  speaks system families - PbtA-style moves and d100 BRP-style skill checks are
+  expressible as pure JSON data, no engine code per system. New nodes:
+  `nat_roll_gte` / `nat_roll_lte` (natural-roll range conditions), `and`
+  (boolean conjunction), `compare` / `has_tag` (RNG-free state conditions),
+  `if` (conditional mutations), `foreach_target` (bounded multi-target mutation
+  scope), and `repeat` (bounded per-target iteration). Budgets stay fail-closed:
+  a static multiplicity multiplier `M` charges every branch document-globally at
+  validation, before any RNG draw, under new hard caps (`MAX_TARGETS` 32,
+  `MAX_ITERATIONS` 16, `MAX_APPLIED_MUTATIONS` 1024, `MAX_WORLD_ENTITIES`
+  65536); v1 documents validate and evaluate unchanged (`M` = 1), and unknown or
+  over-budget input rejects at validation with zero draws and the state
+  untouched. 38 shared golden vectors (`test_vectors/ast_v2_families.json`,
+  emitted by `tools/gen-ast-v2-vectors.ts` after asserting the real TS evaluator
+  against every hand-computed spec expectation) prove all-surface parity:
+  identical accept/reject boundaries, PRNG consumption, resolved degrees, and
+  applied-mutation lists on TypeScript, Python, and Rust.
+
 ## 3.0.0 - 2026-06-05 (Living Persistent World + cross-language surfaces + real-time multiplayer core)
 
 The engine becomes a deterministic, server-authoritative world engine: the same logic
