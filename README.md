@@ -20,7 +20,7 @@ same input → same 1d4 roll → same state hash, on every surface:
 ```
 
 That exact hash is reproduced by npm, the Python port, the Rust crates, the WASM build, and
-the C ABI - pinned by a shared golden-vector suite (4,188 tests) and enforced in CI by the
+the C ABI - pinned by a shared golden-vector suite (4,259 tests) and enforced in CI by the
 cross-language determinism gate
 ([`.github/workflows/determinism-gate.yml`](.github/workflows/determinism-gate.yml)).
 
@@ -66,8 +66,9 @@ under a solo-founded commercial product ([TheWorldTable.ai](https://theworldtabl
 ## What it is — and isn't (so you don't have to guess)
 
 - ✅ A **deterministic simulation core**: a seeded PRNG, a rules AST (d20-style
-  delta / derived checks as *data*, no untrusted-code execution; broader system
-  families are on the roadmap), a tamper-evident HMAC event
+  delta / derived checks plus the AST v2 system families - PbtA-style 2d6 moves
+  and d100 roll-under checks - all as *data*, no untrusted-code execution), a
+  tamper-evident HMAC event
   chain, snapshot + replay, and a real-time command-frame + client-rollback netcode primitive.
 - ✅ **Server-authoritative primitives** for anti-cheat: the engine owns the dice and the
   state, so an AI — or a client — cannot author a mechanical outcome. (Anti-cheat is a
@@ -90,11 +91,12 @@ Rust core, bound to four surfaces, resolves the same seed to byte-identical resu
 everywhere - the basis for replay, anti-cheat, and honest AI narration in a shared
 persistent world.
 
-- **Any-System ruleset AST** - express d20-style rules as DATA (a strict JSON
+- **Any-System ruleset AST** - express tabletop rules as DATA (a strict JSON
   interpreter; no untrusted-code execution). Roll-vs-DC -> degree -> mutations,
   integer-only expressions, floor_div toward -inf, a fail-closed validation pass.
-  Today it covers d20-style delta / derived checks; broader system families are
-  on the roadmap.
+  Covers d20-style delta / derived checks, and the AST v2 node families make
+  PbtA-style 2d6 moves and d100 roll-under checks expressible as data too -
+  byte-identical on every surface, pinned by shared golden vectors.
 - **Snapshot + replay** - a pure content `state_hash` reconstructs a world from a
   verified snapshot + the events after it (provably equal to replay-from-genesis).
 - **Epoch world-tick** - the world keeps moving between sessions: offline factions
@@ -103,8 +105,11 @@ persistent world.
   suspend -> offline epochs -> verified resume flow is proven by the
   [Plaza Persistent reference demo](./demo/plaza-persistent/) and soaked past
   100 epochs by the v3.5 session-soak vectors in `npm test`.
-- **WorldSession suspend/resume** - pack a world into a verifiable bundle; on resume,
-  verify the snapshot hash, replay the HMAC chain tail, reject time-travel, fast-forward.
+- **WorldSession suspend/resume** - pack a world into a verifiable bundle that
+  embeds the chain's structural seal (bundle format v2); on resume, verify the
+  snapshot hash, verify the seal fail-closed (an end-truncated, seal-less, or
+  forged-seal bundle is rejected), replay the HMAC chain tail, reject
+  time-travel, fast-forward.
 - **Real-time multiplayer core** - server-authoritative command frames, client
   rollback reconciliation (predict, then reconcile to the authoritative frame - you
   can never forge an outcome), and region hashing (a partial-sync client verifies
@@ -686,7 +691,7 @@ audit trail any future productization or patent dispute would lean on.
 
 ## Test coverage
 
-4082 / 4082 tests pass via `tsx --test`, spanning 180+ test files in
+4259 / 4259 tests pass via `tsx --test`, spanning 220+ test files in
 `tests/`. Core suites include:
 
 - `smoke.test.ts` - public API barrel, version stamp

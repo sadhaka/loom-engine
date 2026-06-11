@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#0a0805">
 <meta name="color-scheme" content="dark">
-<meta name="description" content="Loom Engine v3.0.0 - a deterministic, server-authoritative world engine. ONE core bound to TypeScript (npm), WASM, a PyO3 Python binding (PyPI wheel planned) and a C ABI - byte-identical on shared golden vectors, enforced in CI by the cross-language Determinism Gate. d20-style ruleset AST (rules as data), tamper-evident HMAC-SHA-256 EventChain, persistent-world snapshot/replay, real-time multiplayer core. 4,188 tests.">
+<meta name="description" content="Loom Engine v3.0.0 - a deterministic, server-authoritative world engine. ONE core bound to TypeScript (npm), WASM, a PyO3 Python binding (PyPI wheel planned) and a C ABI - byte-identical on shared golden vectors, enforced in CI by the cross-language Determinism Gate. Any-System ruleset AST (rules as data: d20 checks, PbtA-style moves, d100 roll-under), tamper-evident HMAC-SHA-256 EventChain, persistent-world snapshot/replay, real-time multiplayer core. 4,259 tests.">
 <meta property="og:title" content="Loom Engine // v3.0.0 - one deterministic core, every language">
-<meta property="og:description" content="A deterministic game engine - one seed, one core, byte-identical golden vectors on every surface (TypeScript, WASM, Python, Rust), enforced in CI by the cross-language Determinism Gate. d20-style ruleset AST (rules as data) + tamper-evident HMAC EventChain. The same core powers LoomMaster, a live AI GM that cannot cheat. 4,188 tests green.">
+<meta property="og:description" content="A deterministic game engine - one seed, one core, byte-identical golden vectors on every surface (TypeScript, WASM, Python, Rust), enforced in CI by the cross-language Determinism Gate. Any-System ruleset AST (rules as data: d20, PbtA-style, d100) + tamper-evident HMAC EventChain. The same core powers LoomMaster, a live AI GM that cannot cheat. 4,259 tests green.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://loom-engine.pages.dev/">
 <title>Loom Engine // v3.0.0</title>
@@ -340,7 +340,7 @@ footer a { color: var(--fg-dim); }
   <header class="banner">
     <h1>LOOM ENGINE<span class="slash">//</span>v3.0.0</h1>
     <div class="banner-meta">
-      <div><strong>4,188</strong> tests + CI determinism gate</div>
+      <div><strong>4,259</strong> tests + CI determinism gate</div>
       <div><strong>146</strong> versions since 0.10</div>
       <div><strong>TS · WASM · Python · Rust · C ABI</strong></div>
       <div><strong>BUSL-1.1</strong> source-available</div>
@@ -354,11 +354,11 @@ footer a { color: var(--fg-dim); }
     and a C ABI
     (Unity / Godot / Go) - producing <strong>byte-identical results from the same seed
     on every surface</strong>, pinned by shared golden vectors and enforced in CI by the
-    cross-language Determinism Gate. Express d20-style tabletop rules
-    as DATA via the <strong>Any-System ruleset AST</strong> (delta / derived checks today:
+    cross-language Determinism Gate. Express tabletop rules
+    as DATA via the <strong>Any-System ruleset AST</strong> (d20 delta / derived checks,
+    plus PbtA-style 2d6 moves and d100 roll-under checks via the v2 node families:
     roll vs DC -&gt; degree -&gt; mutations, fail-closed static validation before any RNG
-    draw, never untrusted code - broader system families are on the
-    roadmap). Persist + reconstruct a world from a verified
+    draw, never untrusted code). Persist + reconstruct a world from a verified
     <strong>snapshot + replay</strong> (HMAC over canonical integer-only state), advance it
     between sessions with a deterministic <strong>epoch world-tick</strong>, and run shared
     play on a <strong>real-time multiplayer core</strong> - a command-frame tick with
@@ -432,8 +432,8 @@ requestAnimationFrame(tick);</div>
     <div class="stats">
       <div class="stat">
         <div class="stat-label">Tests</div>
-        <div class="stat-value">4,188</div>
-        <div class="stat-sub">green at v3.0.0 - golden vectors gated in CI across TS / Python / Rust at the same commit</div>
+        <div class="stat-value">4,259</div>
+        <div class="stat-sub">green at the v3.0 head - golden vectors gated in CI across TS / Python / Rust at the same commit</div>
       </div>
       <div class="stat">
         <div class="stat-label">Versions</div>
@@ -548,10 +548,10 @@ requestAnimationFrame(tick);</div>
       outside the seeded PRNG, no wall clock, fail-closed at every boundary.
     </p>
     <div class="actions">
-      <div class="action"><div class="label">Any-System ruleset AST</div><div class="hint">Express d20-style rules as DATA (delta / derived checks today): roll vs DC -&gt; degree -&gt; mutations, integer math + floor_div toward -inf, fail-closed static validation before any RNG draw. No untrusted code execution. Broader system families are on the roadmap.</div></div>
+      <div class="action"><div class="label">Any-System ruleset AST</div><div class="hint">Express rules as DATA: d20 delta / derived checks, plus PbtA-style 2d6 moves and d100 roll-under checks via the v2 node families. Roll vs DC -&gt; degree -&gt; mutations, integer math + floor_div toward -inf, fail-closed static validation before any RNG draw. No untrusted code execution.</div></div>
       <div class="action"><div class="label">Snapshot + replay</div><div class="hint">Pure content state_hash (HMAC over canonical, integer-only JSON). A world persists compactly and reconstructs from a verified snapshot + the events after it - provably equal to replay-from-genesis.</div></div>
       <div class="action"><div class="label">Epoch world-tick</div><div class="hint">The between-session tick: offline factions act deterministically against a PRNG seeded purely from (worldId, epoch), fail-closed (a rejected proposal consumes zero RNG), bounded catch-up. Unit-vectored per primitive; the end-to-end suspend -&gt; offline epochs -&gt; verified resume flow is proven by the <a href="demo/plaza-persistent/">Plaza Persistent reference demo</a> and soaked past 100 epochs in npm test.</div></div>
-      <div class="action"><div class="label">WorldSession lifecycle</div><div class="hint">Suspend packs a world into a verifiable bundle; resume verifies the snapshot hash, replays the HMAC chain tail, rejects time-travel, and fast-forwards bounded offline epochs.</div></div>
+      <div class="action"><div class="label">WorldSession lifecycle</div><div class="hint">Suspend packs a world into a verifiable bundle that embeds the chain's structural seal (bundle format v2); resume verifies the snapshot hash, verifies the seal fail-closed (end-truncated, seal-less, or forged-seal bundles rejected), replays the HMAC chain tail, rejects time-travel, and fast-forwards bounded offline epochs.</div></div>
       <div class="action"><div class="label">Real-time multiplayer core</div><div class="hint">Server-authoritative command-frame tick (commands sorted by a numeric-aware player id, resolved through the AST, rate-capped), client-side rollback reconciliation, 2-level Merkle region hashing - both the server-side leaves/root primitive and the fail-closed partial-sync client, proven end-to-end by the <a href="demo/plaza-persistent/">Plaza Persistent reference demo</a>. The client can predict but never forge an outcome.</div></div>
       <div class="action"><div class="label">Four binding surfaces</div><div class="hint">A Rust workspace (loom_math / loom_events / loom_snapshot / loom_ruleset / loom_epoch / loom_session / loom_frame) bound to WASM, a native PyO3 Python binding (built from source with maturin - the wheel is not yet on PyPI), and a panic-guarded C ABI (Unity / Godot / Go) - each verified against the same golden vectors.</div></div>
     </div>

@@ -852,7 +852,7 @@ fn validate_mutation(node: &Value, w: &mut WalkCtx, mdepth: i64, m: i64, each_ok
                 // SET truncates at runtime).
                 let l = value_int(lv, "foreach_target select.limit")
                     .map_err(|_| format!("AST: foreach_target select.limit must be an integer in 1..{}", MAX_TARGETS))?;
-                if l < 1 || l > MAX_TARGETS {
+                if !(1..=MAX_TARGETS).contains(&l) {
                     return Err(format!("AST: foreach_target select.limit must be an integer in 1..{}", MAX_TARGETS));
                 }
                 lim = l;
@@ -875,7 +875,7 @@ fn validate_mutation(node: &Value, w: &mut WalkCtx, mdepth: i64, m: i64, each_ok
             // vector F7): 1..MAX_ITERATIONS only; 0 is rejected (a no-op is an
             // empty list).
             let count = match value_int(&node["count"], "repeat count") {
-                Ok(c) if c >= 1 && c <= MAX_ITERATIONS => c,
+                Ok(c) if (1..=MAX_ITERATIONS).contains(&c) => c,
                 _ => return Err(format!("AST: repeat count must be an integer in 1..{}", MAX_ITERATIONS)),
             };
             let m_repeat = m * count;
