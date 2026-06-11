@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Loom Engine - Plaza Persistent</title>
+  <style>
+    html, body { margin: 0; padding: 0; background: #14110d; color: #e8d8b6; font: 13px/1.4 sans-serif; }
+    .wrap { max-width: 720px; margin: 0 auto; padding: 16px; }
+    canvas { display: block; image-rendering: pixelated; image-rendering: crisp-edges; background: #000; border: 1px solid #2a241a; }
+    .stats { margin-top: 8px; font-family: ui-monospace, Consolas, monospace; color: #b6a17a; white-space: pre; }
+    h1 { margin: 0 0 12px; font-size: 14px; color: #d6c694; letter-spacing: 0.05em; text-transform: uppercase; }
+    p { margin: 4px 0; color: #8a7c5e; }
+    a { color: #d6c694; }
+    .sync { margin-top: 8px; font-family: ui-monospace, Consolas, monospace; font-size: 12px; color: #8a7c5e; white-space: pre-wrap; min-height: 2.6em; }
+    .sync.ok { color: #9fce8f; }
+    .sync.bad { color: #d97b6c; }
+    #tamper { margin-top: 8px; display: none; background: #1d1812; color: #d6c694; border: 1px solid #2a241a; padding: 6px 12px; font: 12px ui-monospace, Consolas, monospace; cursor: pointer; }
+    #tamper:hover { border-color: #d97b6c; color: #d97b6c; }
+    #checks { list-style: none; margin: 12px 0 0; padding: 0; font-family: ui-monospace, Consolas, monospace; font-size: 12px; }
+    #checks li { padding: 2px 0 2px 22px; position: relative; color: #5e553f; }
+    #checks li::before { content: '\00B7'; position: absolute; left: 6px; }
+    #checks li.pass { color: #9fce8f; }
+    #checks li.pass::before { content: '\2713'; color: #9fce8f; }
+    #checks li.fail { color: #d97b6c; }
+    #checks li.fail::before { content: '\2717'; color: #d97b6c; }
+  </style>
+  <script type="importmap">
+  {
+    "imports": {
+      "@sadhaka/loom-engine": "../../dist/index.js"
+    }
+  }
+  </script>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Loom Engine - Plaza Persistent</h1>
+    <p>The plaza that remembers: persistence + partial sync, proven in one seeded run. Twelve villagers across four regions live two epochs on an HMAC event chain, the world suspends into a sealed bundle, resumes through full chain verification plus twelve deterministic offline epochs, then a client pulls ONLY the regions that changed and proves the recombined Merkle root. Every hash is pinned by <code>vector.json</code> - the same vector <code>npm test</code> drives headlessly. <a href="../">back to gallery</a> &middot; <a href="https://github.com/sadhaka/loom-engine/blob/main/demo/plaza-persistent/main.ts">view source</a></p>
+    <canvas id="stage" width="640" height="400"></canvas>
+    <div class="stats" id="stats">booting...</div>
+    <div class="sync" id="sync"></div>
+    <button id="tamper" type="button">tamper with a pulled region</button>
+    <ul id="checks"></ul>
+  </div>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

@@ -99,15 +99,19 @@ persistent world.
   verified snapshot + the events after it (provably equal to replay-from-genesis).
 - **Epoch world-tick** - the world keeps moving between sessions: offline factions
   act deterministically, fail-closed, bounded (the Veil-Ceiling guard). Primitive
-  shipped with unit-level golden vectors; a single end-to-end
-  suspend -> offline epochs -> resume reference flow is still planned.
+  shipped with unit-level golden vectors; the end-to-end
+  suspend -> offline epochs -> verified resume flow is proven by the
+  [Plaza Persistent reference demo](./demo/plaza-persistent/) and soaked past
+  100 epochs by the v3.5 session-soak vectors in `npm test`.
 - **WorldSession suspend/resume** - pack a world into a verifiable bundle; on resume,
   verify the snapshot hash, replay the HMAC chain tail, reject time-travel, fast-forward.
 - **Real-time multiplayer core** - server-authoritative command frames, client
   rollback reconciliation (predict, then reconcile to the authoritative frame - you
   can never forge an outcome), and region hashing (a partial-sync client verifies
-  only its own region + the Merkle root). The region-hash partial sync is a shipped
-  primitive with golden vectors; a reference client demo that consumes it is planned.
+  only its own region + the Merkle root). The region-hash partial sync ships BOTH
+  halves: the server-side leaves/root primitive AND the fail-closed client consumer
+  (`partitionRegions` / `diffRegionLeaves` / `applyPartialSync`), proven end-to-end
+  by the [Plaza Persistent reference demo](./demo/plaza-persistent/).
 
 **Every surface, one core.** A Rust workspace (`loom_math` / `loom_events` /
 `loom_snapshot` / `loom_ruleset` / `loom_epoch` / `loom_session` / `loom_frame`) binds

@@ -52,6 +52,11 @@
         <div class="tag">phase 15.1 / presence + interp</div>
         <p>Walkable iso plaza with three peers driven by a <code>MockMultiplayerBridge</code>. Showcases <code>PeerPool</code> linear interpolation between presence updates and the pluggable transport.</p>
       </a>
+      <a class="card" href="./plaza-persistent/">
+        <h2>Plaza Persistent</h2>
+        <div class="tag">persistence + partial sync / proof</div>
+        <p>The plaza that remembers. One seeded run: live epochs on an HMAC chain, suspend into a sealed bundle, resume with full chain verification plus 12 offline epochs, then a client pulls only the changed regions and proves the Merkle root. Every hash pinned by the golden vector npm test drives.</p>
+      </a>
     </div>
 
     <div class="section-h">Reference demos</div>

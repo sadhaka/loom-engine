@@ -339,6 +339,34 @@ pub struct ChainSeal {
     pub sig: String,
 }
 
+/// Why one record (or the seal) failed verification. Mirrors the TS
+/// ChainMismatch reason strings ('sig_mismatch' / 'broken_chain_link' /
+/// 'seal_mismatch') exactly.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MismatchReason {
+    SigMismatch,
+    BrokenChainLink,
+    SealMismatch,
+}
+
+/// One verification failure. `seq`/`type_` identify the offending record; a
+/// seal failure carries seq = seal.count and type_ = "(seal)" (TS parity).
+#[derive(Debug, Clone)]
+pub struct ChainMismatch {
+    pub seq: u64,
+    pub type_: String,
+    pub reason: MismatchReason,
+}
+
+/// The full verification report. Mirrors TS ChainVerifyResult: `ok` iff zero
+/// mismatches, `total` = number of records examined.
+#[derive(Debug, Clone)]
+pub struct ChainVerifyResult {
+    pub ok: bool,
+    pub total: usize,
+    pub mismatches: Vec<ChainMismatch>,
+}
+
 /// Tamper-evident HMAC-chained event log. `create -> append* -> verify / seal`.
 pub struct EventChain {
     records: Vec<ChainedRecord>,
@@ -405,24 +433,89 @@ impl EventChain {
         Self::verify_records(&self.key, &self.records, &self.genesis)
     }
 
+    /// Full verification report for THIS chain's records, optionally against a
+    /// prior seal (TS `chain.verify(expectedSeal?)`).
+    pub fn verify_detailed(&self, expected_seal: Option<&ChainSeal>) -> ChainVerifyResult {
+        Self::verify_records_detailed(&self.key, &self.records, &self.genesis, expected_seal)
+    }
+
     /// Verify an external record set (e.g. loaded from disk) without an instance.
+    /// Boolean form of verify_records_detailed (same single verification core).
     pub fn verify_records(key: &[u8], records: &[ChainedRecord], genesis: &str) -> bool {
+        Self::verify_records_detailed(key, records, genesis, None).ok
+    }
+
+    /// Verify an external record set and report EVERY mismatch, optionally
+    /// against a prior seal() commitment (which detects tail truncation - a bare
+    /// hash chain cannot see records dropped off the END without an external
+    /// length commitment). Byte-identical semantics to the TS
+    /// `EventChain.verifyRecords(key, records, genesis, expectedSeal)`:
+    ///
+    ///   - a record whose stored content no longer canonicalizes can never carry
+    ///     a valid signature -> sig_mismatch, then CONTINUE with prevActual =
+    ///     rec.sig (the link check is skipped for that record, matching the TS
+    ///     catch block);
+    ///   - a recomputed signature disagreeing with the stored one -> sig_mismatch;
+    ///   - a stored prevSig disagreeing with the real predecessor's signature
+    ///     (deletion / reordering) -> broken_chain_link;
+    ///   - with a seal: an invalid seal sig, a count != records.len(), or a head
+    ///     != the last record's sig (genesis when empty) -> ONE seal_mismatch
+    ///     entry with seq = seal.count and type "(seal)".
+    pub fn verify_records_detailed(
+        key: &[u8],
+        records: &[ChainedRecord],
+        genesis: &str,
+        expected_seal: Option<&ChainSeal>,
+    ) -> ChainVerifyResult {
+        let mut mismatches: Vec<ChainMismatch> = Vec::new();
         let mut prev_actual = genesis.to_string();
         for rec in records {
             let expected = match sign_record(key, rec.seq, &rec.type_, &rec.payload, &rec.prev_sig)
             {
                 Ok(s) => s,
-                Err(_) => return false, // stored record no longer canonicalizable
+                Err(_) => {
+                    // stored record no longer canonicalizable - fail closed.
+                    mismatches.push(ChainMismatch {
+                        seq: rec.seq,
+                        type_: rec.type_.clone(),
+                        reason: MismatchReason::SigMismatch,
+                    });
+                    prev_actual = rec.sig.clone();
+                    continue;
+                }
             };
             if !constant_time_eq(expected.as_bytes(), rec.sig.as_bytes()) {
-                return false;
+                mismatches.push(ChainMismatch {
+                    seq: rec.seq,
+                    type_: rec.type_.clone(),
+                    reason: MismatchReason::SigMismatch,
+                });
             }
             if rec.prev_sig != prev_actual {
-                return false; // deletion / reordering broke the link
+                mismatches.push(ChainMismatch {
+                    seq: rec.seq,
+                    type_: rec.type_.clone(),
+                    reason: MismatchReason::BrokenChainLink,
+                });
             }
             prev_actual = rec.sig.clone();
         }
-        true
+        if let Some(seal) = expected_seal {
+            let head_now = records.last().map(|r| r.sig.as_str()).unwrap_or(genesis);
+            let seal_valid = Self::verify_seal(key, seal);
+            if !seal_valid || seal.count != records.len() as u64 || seal.head != head_now {
+                mismatches.push(ChainMismatch {
+                    seq: seal.count,
+                    type_: "(seal)".to_string(),
+                    reason: MismatchReason::SealMismatch,
+                });
+            }
+        }
+        ChainVerifyResult {
+            ok: mismatches.is_empty(),
+            total: records.len(),
+            mismatches,
+        }
     }
 
     /// Sign the current (count, head) so a holder can later prove no records were
@@ -562,5 +655,59 @@ mod tests {
         let seal = chain.seal();
         assert!(EventChain::verify_seal(b"k", &seal));
         assert_eq!(seal.count, 1);
+    }
+
+    #[test]
+    fn detailed_verify_reports_reasons_like_ts() {
+        let mut chain = EventChain::create(b"k", "g");
+        chain.append("e", json!({ "n": 1 }));
+        chain.append("e", json!({ "n": 2 }));
+        chain.append("e", json!({ "n": 3 }));
+        let seal = chain.seal();
+
+        // Intact + seal -> ok, total 3, zero mismatches.
+        let ok = chain.verify_detailed(Some(&seal));
+        assert!(ok.ok);
+        assert_eq!(ok.total, 3);
+        assert!(ok.mismatches.is_empty());
+
+        // Payload tamper -> sig_mismatch at that seq.
+        let mut tampered: Vec<ChainedRecord> = chain.records().to_vec();
+        tampered[1].payload = json!({ "n": 99 });
+        let r = EventChain::verify_records_detailed(b"k", &tampered, "g", None);
+        assert!(!r.ok);
+        assert!(r
+            .mismatches
+            .iter()
+            .any(|m| m.seq == 2 && m.reason == MismatchReason::SigMismatch));
+
+        // Middle deletion -> broken_chain_link on the record after the gap.
+        let mut deleted: Vec<ChainedRecord> = chain.records().to_vec();
+        deleted.remove(1);
+        let r = EventChain::verify_records_detailed(b"k", &deleted, "g", None);
+        assert!(!r.ok);
+        assert!(r
+            .mismatches
+            .iter()
+            .any(|m| m.seq == 3 && m.reason == MismatchReason::BrokenChainLink));
+
+        // Tail truncation: CLEAN without a seal (the documented hole), caught
+        // WITH the seal (seal_mismatch, seq = seal.count, type "(seal)").
+        let truncated: Vec<ChainedRecord> = chain.records()[..2].to_vec();
+        let clean = EventChain::verify_records_detailed(b"k", &truncated, "g", None);
+        assert!(clean.ok, "truncation invisible without a seal");
+        assert_eq!(clean.total, 2);
+        let caught = EventChain::verify_records_detailed(b"k", &truncated, "g", Some(&seal));
+        assert!(!caught.ok);
+        assert!(caught
+            .mismatches
+            .iter()
+            .any(|m| m.seq == 3 && m.type_ == "(seal)" && m.reason == MismatchReason::SealMismatch));
+
+        // Empty records + a seal over the empty chain: head falls back to genesis.
+        let empty_chain = EventChain::create(b"k", "g");
+        let empty_seal = empty_chain.seal();
+        let r = EventChain::verify_records_detailed(b"k", &[], "g", Some(&empty_seal));
+        assert!(r.ok, "empty chain verifies against its own seal (head == genesis)");
     }
 }

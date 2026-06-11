@@ -71,6 +71,13 @@ from .srd5e_conditions import (  # noqa: F401
     INCAPACITATED_NO_REACTION, coerce_conditions, attack_advantage_mode,
     condition_roll_note, auto_fail_save_condition, reaction_denied_by_conditions,
 )
+from .event_chain import (  # noqa: F401
+    EventChain, verify_records, verify_seal, canonical_json,
+    RECORD_DOMAIN, SEAL_DOMAIN, RESOURCE_EVENT_CHAIN,
+)
+from .world_session import (  # noqa: F401
+    suspend, resume, replay_epoch_event, RESOURCE_WORLD_SESSION,
+)
 from .srd5e_pack import (  # noqa: F401
     CANTRIPS, CLASS_CANTRIPS, LEVELED_SPELLS, CLASS_LEVELED_SPELLS,
     class_can_cast, cantrip_dice_count, eldritch_blast_beams, scaled_cantrip_dice,
