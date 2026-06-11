@@ -9,6 +9,29 @@ contract yet.
 
 ## Unreleased
 
+- **SRD 5e action pack - a playable 5e core, actions as data**
+  (`runtime/srd5e-spell-slots`, `runtime/srd5e-concentration`,
+  `runtime/srd5e-conditions`, `runtime/srd5e-pack`): production-proven
+  resolvers extracted from a live game, ported to all three surfaces
+  (TypeScript, Python, Rust). Pure modules: the spell-slot economy
+  (full/half/pact-caster tables, spend/restore, short/long rest, the level-up
+  widen-merge, "At Higher Levels" upcast scaling), the concentration state
+  machine (one spell at a time, maintain DC = max(10, floor(damage/2)); the
+  caller rolls the CON save and passes the total), and condition tables
+  (condition -> advantage/disadvantage MODE on attacks, STR/DEX auto-fail,
+  incapacitated reaction denial). The pack module ships mechanics-only
+  cantrip + leveled-spell catalogs, AST v2 document builders (every emitted
+  document passes the v2 validators), and `planLeveledCast` - the dice-free
+  economy half of a cast. `tools/gen-srd5e-pack.ts` generates 245 concrete
+  action documents to `packs/srd5e/srd5e_actions_v1.json` (shipped in the npm
+  package). Mechanics are public; game-specific tuning is caller config with
+  neutral defaults. Content is SRD 5.1 (CC-BY-4.0) mechanics and numbers only,
+  no descriptive prose - see NOTICE.md. 72 shared golden vectors
+  (`test_vectors/srd5e_pack_v1.json`, emitted by `tools/gen-srd5e-vectors.ts`
+  after asserting the real TS modules + AST evaluator against hand-computed
+  expectations) pin builder drift and prove TS/Python/Rust parity across
+  slot-economy transitions, concentration flows, and scripted-dice AST
+  evaluation of the built action documents.
 - **Ruleset AST v2 - six additive node families** (`runtime/ruleset-ast`, spec:
   [docs/specs/AST-V2-SPEC.md](docs/specs/AST-V2-SPEC.md)): the rules AST now
   speaks system families - PbtA-style moves and d100 BRP-style skill checks are

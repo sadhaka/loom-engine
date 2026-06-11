@@ -618,4 +618,19 @@ export { ClientPluginRegistry, MapPluginStorage as ClientMapPluginStorage, Conso
 // at spawn. Emits compact death FX events through a double-buffered
 // ring for the render layer.
 export { BestiaryKernel, CREATURE_CATALOG, RESOURCE_BESTIARY, BESTIARY_FP_SHIFT, BESTIARY_FP_ONE, TIER_FODDER, TIER_ELITE, TIER_MINIBOSS, TIER_BOSS, TIER_RAID, INFERENCE_LANE_NONE as BESTIARY_INFERENCE_LANE_NONE, INFERENCE_LANE_LOCAL_SLM as BESTIARY_INFERENCE_LANE_LOCAL_SLM, INFERENCE_LANE_CLOUD as BESTIARY_INFERENCE_LANE_CLOUD, DEATH_FX_NONE, DEATH_FX_BONE_SHATTER, DEATH_FX_SOUL_WISP_RISE, DEATH_FX_SIGIL_BURST, DEATH_FX_CYAN_DIVIDE_SPLIT_2, DEATH_FX_CHAMPION_COLLAPSE, CREATURE_ACTION_IDLE, CREATURE_ACTION_PATROL, CREATURE_ACTION_PURSUE, CREATURE_ACTION_WIND_UP, CREATURE_ACTION_SWING, CREATURE_ACTION_DRAW, CREATURE_ACTION_RELEASE, CREATURE_ACTION_CHANNEL, CREATURE_ACTION_TAUNT, CREATURE_ACTION_FLEE, CREATURE_ACTION_TAKE_DAMAGE, CREATURE_ACTION_DEAD, CREATURE_HANDLE_INVALID, TARGET_HANDLE_NONE, VARIANT_IDX_INVALID, MOOD_AGITATION, MOOD_FEAR, MOOD_CAUTION, MOOD_BLOODLUST, MOOD_SORROW, MOOD_DOMINANCE, MOOD_INVALID, SONIC_SEMANTIC_PLAYER_FOOTSTEP, SONIC_SEMANTIC_PLAYER_ATTACK, SONIC_SEMANTIC_ALLY_DEATH, DEFAULT_LISTENER_SEMANTIC_MASK, DEATH_FX_EVENT_STRIDE, BB_KEY_HP, BB_KEY_MAX_HP, BB_KEY_POS_X, BB_KEY_POS_Y, BB_KEY_FACING, BB_KEY_MOOD, BB_KEY_TARGET_HANDLE, BB_KEY_TARGET_X, BB_KEY_TARGET_Y, BB_KEY_PERCEIVED_SOURCE, BB_KEY_PERCEIVED_DISTANCE, BB_KEY_TICK_COUNT, BB_KEY_VARIANT_IDX, BB_KEY_INTENT_ACTION, BB_KEY_INTENT_VEL_X, BB_KEY_INTENT_VEL_Y, BB_KEY_INTENT_FACING, BB_KEY_INFERENCE_DECISION, BB_KEY_BIAS_FROM_MEMORY, makeCreatureHandle, creatureSlot, creatureGeneration, getVariantIndex, getSpec, isCatalogValid, defaultBehaviorTreeFactory, } from './runtime/bestiary.js';
+// ============================================================================
+// Content pack - SRD 5.1 5e action pack (mechanics-only data + pure resolvers
+// + AST v2 document builders). The catalogs ship game mechanics from the SRD
+// 5.1 (CC-BY-4.0, NOTICE.md); flavor prose never crosses. Generated pack JSON
+// lives at packs/srd5e/srd5e_actions_v1.json (tools/gen-srd5e-pack.ts);
+// golden vectors at test_vectors/srd5e_pack_v1.json.
+// ============================================================================
+// Spell-slot economy: tables, spend/restore, rests, the widen-merge, upcast.
+export { MAX_SLOT_LEVEL, PACT_KEY, casterKind, isCaster, spellAbilityForClass, spellSlotsFor, highestSlotLevel, slotAvailable, spendSlot, spendLowestAvailable, restoreSlot, slotsRemaining, longRest, shortRest, widenSlots, spellRequiresConcentration, spellBaseLevel, upcastEffect, totalDiceForCast, } from './runtime/srd5e-spell-slots.js';
+// Concentration state machine (caller rolls the CON save, passes the total).
+export { CONCENTRATION_MIN_DC, maintainSaveDc, isConcentrating, startConcentration, dropConcentration, maintainSave, } from './runtime/srd5e-concentration.js';
+// Condition tables: advantage/disadvantage MODE, auto-fail, reaction denial.
+export { ADV_AGAINST_TARGET, DISADV_ON_ATTACKER, AUTO_FAIL_STR_DEX, INCAPACITATED_NO_REACTION, coerceConditions, attackAdvantageMode, conditionRollNote, autoFailSaveCondition, reactionDeniedByConditions, } from './runtime/srd5e-conditions.js';
+// Action catalogs + AST v2 document builders + the dice-free cast economy.
+export { CANTRIPS, CLASS_CANTRIPS, LEVELED_SPELLS, CLASS_LEVELED_SPELLS, classCanCast, cantripDiceCount, eldritchBlastBeams, scaledCantripDice, buildWeaponAttackCheck, buildAttackCantripCheck, buildSaveCantripCheck, buildAttackSpellCheck, buildSaveSpellCheck, buildMultiTargetSaveTrigger, buildMagicMissileTrigger, buildHealTrigger, buildConditionSpellCheck, planLeveledCast, } from './runtime/srd5e-pack.js';
 //# sourceMappingURL=index.js.map
