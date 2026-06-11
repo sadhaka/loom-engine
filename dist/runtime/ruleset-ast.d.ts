@@ -25,6 +25,39 @@ export type MutationNode = {
     type: 'add_tag' | 'remove_tag';
     target: string;
     tag: string;
+} | {
+    type: 'if';
+    condition: DegreeCond;
+    then: MutationNode[];
+    else?: MutationNode[];
+} | {
+    type: 'foreach_target';
+    select: {
+        tag: string;
+        limit?: number;
+    };
+    mutations: MutationNode[];
+} | {
+    type: 'repeat';
+    count: number;
+    mutations: MutationNode[];
+};
+export type CompareOp = 'gt' | 'gte' | 'lt' | 'lte' | 'eq' | 'ne';
+export type CompareOperand = {
+    source: 'roll';
+} | {
+    source: 'dc';
+} | {
+    source: 'delta';
+} | {
+    source: 'natural';
+} | {
+    source: 'prop';
+    target: string;
+    property: string;
+} | {
+    source: 'literal';
+    value: number;
 };
 export type DegreeCond = {
     type: 'delta_gte';
@@ -36,8 +69,26 @@ export type DegreeCond = {
     type: 'nat_roll_eq';
     value: number;
 } | {
+    type: 'nat_roll_gte';
+    value: number;
+} | {
+    type: 'nat_roll_lte';
+    value: number;
+} | {
     type: 'or';
     conditions: DegreeCond[];
+} | {
+    type: 'and';
+    conditions: DegreeCond[];
+} | {
+    type: 'compare';
+    op: CompareOp;
+    left: CompareOperand;
+    right: CompareOperand;
+} | {
+    type: 'has_tag';
+    target: string;
+    tag: string;
 };
 export interface DegreeBranch {
     condition: DegreeCond;
@@ -55,6 +106,7 @@ export interface EvalContext {
     targetId: string | undefined;
     rng: Pcg32;
     naturalRoll: number | null;
+    eachId?: string | undefined;
 }
 export interface ActionResult {
     state: WorldState;
