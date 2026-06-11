@@ -2,7 +2,7 @@
 
 Re-executes the five long-horizon golden cases from
 test_vectors/v3_5_session_soak.json against the pure-Python core, mirroring
-tests/world-session-soak.test.ts one-for-one (14 tests):
+tests/world-session-soak.test.ts one-for-one (16 tests):
 
   S1 - 120-epoch catch-up, run BOTH single-shot and in four 30-epoch chunks,
        pinned byte-identical (catch-up COMPOSABILITY) with 30/60/90 checkpoint
@@ -15,11 +15,13 @@ tests/world-session-soak.test.ts one-for-one (14 tests):
        the strongest cross-language HMAC-framing pin), equal to one 21-epoch
        resume.
   S4 - the accumulated 21-record chain sealed + verified across the whole gap,
-       AND the negative space: tail truncation WITHOUT a seal verifies CLEAN
-       (the documented WorldBundle truncation hole - resume() cannot detect a
-       dropped tail because the bundle carries no ChainSeal), WITH the seal it
-       is caught (seal_mismatch), and a flipped recorded mutation is a
-       sig_mismatch.
+       AND the negative space: bare verify_records (no seal) still cannot see
+       tail truncation - the EventChain-level fact that motivated bundle
+       format v2, where the WorldBundle CARRIES its ChainSeal and resume()
+       verifies it structurally (the old documented hole is CLOSED: an
+       end-truncated bundle is now rejected, pinned below against bundleA) -
+       WITH the seal truncation is caught (seal_mismatch), and a flipped
+       recorded mutation is a sig_mismatch.
   S5 - void-at-scale (100 of 500 resolved, 400 voided) and a deterministic
        SECOND resume across the void boundary.
 """
@@ -201,14 +203,48 @@ def test_s4_sealed_chain_verifies_across_the_gap():
 def test_s4_truncation_without_seal_verifies_clean():
     c = _by_kind(_vec(), "chain_seal")
     truncated = copy.deepcopy(c["records"])[:-1]
-    # verify_records alone CANNOT see records dropped off the END - and
-    # WorldBundle carries no ChainSeal, so resume() silently accepts a
-    # tail-truncated bundle (recorded history replaced by re-simulated
-    # catch-up). This pin is the regression net: it documents the hole until
-    # WorldBundle grows a seal field.
+    # verify_records alone CANNOT see records dropped off the END - the
+    # EventChain-level fact that motivated bundle format v2. The WorldBundle
+    # now CARRIES a ChainSeal and resume() verifies it fail-closed, so the old
+    # documented hole (resume() silently accepting a tail-truncated bundle and
+    # replacing recorded history with re-simulated catch-up) is CLOSED - see
+    # the structural-seal rejection test below.
     res = verify_records(c["key"], truncated, c["genesis"])
     assert res["ok"] is True, "truncated tail verifies clean without a seal"
     assert res["total"] == len(c["records"]) - 1, "one record silently gone"
+
+
+def test_s4_end_truncated_bundle_rejected_by_structural_seal():
+    # The hole is closed structurally: bundleA (3-record tail) loses its
+    # trailing record; resume() must reject it via the bundle's embedded seal
+    # instead of silently re-simulating the dropped epoch.
+    c = _by_kind(_vec(), "boundary")
+    truncated = copy.deepcopy(c["bundleA"])
+    truncated["chainTail"] = truncated["chainTail"][:-1]
+    raised = None
+    try:
+        resume(c["key"], truncated, c["expect"]["b"]["currentEpoch"], c["ruleset"],
+               c["maxCatchup"], proposals_by_epoch=c["proposalsByEpoch"],
+               actor_tags=c["actorTags"])
+    except ValueError as e:
+        raised = str(e)
+    assert raised is not None and "does not match the seal" in raised, \
+        "expected structural-seal rejection, got %r" % raised
+
+
+def test_s4_sealless_pre_v2_bundle_rejected():
+    c = _by_kind(_vec(), "boundary")
+    sealless = copy.deepcopy(c["bundleA"])
+    del sealless["seal"]
+    raised = None
+    try:
+        resume(c["key"], sealless, c["expect"]["b"]["currentEpoch"], c["ruleset"],
+               c["maxCatchup"], proposals_by_epoch=c["proposalsByEpoch"],
+               actor_tags=c["actorTags"])
+    except ValueError as e:
+        raised = str(e)
+    assert raised is not None and "carries no chain seal" in raised, \
+        "expected pre-v2 format rejection, got %r" % raised
 
 
 def test_s4_truncation_with_seal_is_caught():
@@ -291,8 +327,10 @@ if __name__ == "__main__":
     test_s3_one_shot_resume_equals_cycles()
     test_s4_sealed_chain_verifies_across_the_gap()
     test_s4_truncation_without_seal_verifies_clean()
+    test_s4_end_truncated_bundle_rejected_by_structural_seal()
+    test_s4_sealless_pre_v2_bundle_rejected()
     test_s4_truncation_with_seal_is_caught()
     test_s4_flipped_mutation_is_sig_mismatch()
     test_s5_void_at_scale()
     test_s5_second_resume_across_the_void()
-    print("world_session SOAK Python parity: all 14 tests pass")
+    print("world_session SOAK Python parity: all 16 tests pass")
