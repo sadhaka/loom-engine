@@ -2,9 +2,9 @@
 //
 // Re-drives the ENTIRE demo/plaza-persistent scenario headlessly from the
 // canonical vector via src imports - build, live epochs on the HMAC chain,
-// suspend + seal, resume (verify + replay + 12 offline epochs), partition,
-// leaves, diffRegionLeaves, applyPartialSync - and asserts every pinned stage
-// hash. The demo page cannot import src/ (rootDir) and this test cannot
+// suspend (the bundle carries its STRUCTURAL seal, bundle format v2), resume
+// (verify + replay + 12 offline epochs), partition, leaves, diffRegionLeaves,
+// applyPartialSync - and asserts every pinned stage hash. The demo page cannot import src/ (rootDir) and this test cannot
 // resolve the demo's importmap specifier in Node, so the VECTOR is the shared
 // contract: same inputs, same pinned hashes, driven twice (exactly how
 // world-session.test.ts and golden_session.rs already share v3_4).
@@ -55,9 +55,9 @@ function runScenario() {
   var rec1 = chain.append('EpochResolved', t1.event);
   var rec2 = chain.append('EpochResolved', t2.event);
 
-  // (3) SUSPEND + seal.
+  // (3) SUSPEND - bundle format v2: the bundle CARRIES its seal structurally.
   var bundle = suspend({ key: i.key, worldId: i.worldId, snapshotState: s0, snapshotEventIndex: i.snapshotEventIndex, chain: chain });
-  var seal = chain.seal();
+  var seal = bundle.seal;
 
   // (4) RESUME.
   var postTail = replayEpochEvent(replayEpochEvent(s0, t1.event), t2.event);
@@ -118,13 +118,15 @@ test('live play: both EpochResolved events + chain records reproduce the pinned 
   assert.strictEqual(worldStateHash(i.key, run.t2.state), vec.expect.live.post_live_state_hash, 'post-live state hash');
 });
 
-test('suspend: tail + tailGenesis + seal match the pins; tail verifies under the seal', function () {
+test('suspend: tail + tailGenesis + the STRUCTURAL seal match the pins; tail verifies under the seal', function () {
   var i = vec.inputs;
   assert.strictEqual(run.bundle.chainTail.length, vec.expect.suspend.tail_length, 'tail length');
   assert.strictEqual(run.bundle.tailGenesis, vec.expect.suspend.tail_genesis, 'tail genesis');
   assert.strictEqual(run.bundle.tailGenesis, i.genesis, 'snapshot @ 0 anchors the tail at the genesis');
-  assert.deepStrictEqual(run.seal, vec.expect.suspend.seal, 'pinned seal (count, head, sig)');
-  var res = EventChain.verifyRecords<EpochResolvedEvent>(i.key, run.bundle.chainTail, run.bundle.tailGenesis, run.seal);
+  // Bundle format v2: the seal is INSIDE the bundle (suspend embeds chain.seal()).
+  assert.deepStrictEqual(run.bundle.seal, vec.expect.suspend.seal, 'pinned structural seal (count, head, sig)');
+  assert.deepStrictEqual(run.seal, run.bundle.seal, 'the scenario uses the embedded seal, not an external one');
+  var res = EventChain.verifyRecords<EpochResolvedEvent>(i.key, run.bundle.chainTail, run.bundle.tailGenesis, run.bundle.seal);
   assert.strictEqual(res.ok, true, 'tail HMAC + linkage + seal commitment verify');
   assert.strictEqual(vec.expect.suspend.tail_verify_ok, true, 'pinned');
 });
@@ -196,10 +198,30 @@ test('fail-closed: a TRUNCATED tail passes the bare chain verify but is caught B
   var bare = EventChain.verifyRecords<EpochResolvedEvent>(i.key, truncated, run.bundle.tailGenesis);
   assert.strictEqual(bare.ok, true, 'the truncation hole: a bare hash chain cannot see a cut tail');
   assert.strictEqual(vec.expect.suspend.truncated_tail_passes_without_seal, true, 'pinned');
-  var sealed = EventChain.verifyRecords<EpochResolvedEvent>(i.key, truncated, run.bundle.tailGenesis, run.seal);
+  var sealed = EventChain.verifyRecords<EpochResolvedEvent>(i.key, truncated, run.bundle.tailGenesis, run.bundle.seal);
   assert.strictEqual(sealed.ok, false, 'the seal closes it');
   assert.strictEqual(sealed.mismatches.some(function (m) { return m.reason === 'seal_mismatch'; }), true, 'seal_mismatch reported');
   assert.strictEqual(vec.expect.suspend.truncated_tail_fails_with_seal, true, 'pinned');
+});
+
+test('fail-closed: an end-truncated BUNDLE is rejected by resume via the STRUCTURAL seal', function () {
+  // Bundle format v2: the seal travels INSIDE the bundle, so resume() itself
+  // rejects the cut tail - no external seal bookkeeping required.
+  var i = vec.inputs;
+  var tampered: WorldBundle = JSON.parse(JSON.stringify(run.bundle));
+  tampered.chainTail = tampered.chainTail.slice(0, 1);
+  assert.throws(function () {
+    resume({ key: i.key, bundle: tampered, currentEpoch: i.currentEpoch, ruleset: i.ruleset, proposalsByEpoch: i.offlineProposalsByEpoch, maxCatchup: i.maxCatchup, actorTags: i.actorTags });
+  }, /does not match the seal/);
+});
+
+test('fail-closed: a seal-less (pre-v2 format) bundle is rejected by resume', function () {
+  var i = vec.inputs;
+  var sealless = JSON.parse(JSON.stringify(run.bundle)) as { seal?: unknown };
+  delete sealless.seal;
+  assert.throws(function () {
+    resume({ key: i.key, bundle: sealless as never, currentEpoch: i.currentEpoch, ruleset: i.ruleset, proposalsByEpoch: i.offlineProposalsByEpoch, maxCatchup: i.maxCatchup, actorTags: i.actorTags });
+  }, /carries no chain seal/);
 });
 
 test('fail-closed: a tampered seal is rejected', function () {

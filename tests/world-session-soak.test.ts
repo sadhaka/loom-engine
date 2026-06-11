@@ -13,11 +13,13 @@
 //        suspend -> resume -> append-newEvents-to-the-ONE-chain -> re-suspend
 //        cycles, pinned per cycle, equal to one 21-epoch resume.
 //   S4 - the accumulated 21-record chain sealed + verified across the whole gap,
-//        AND the negative space: tail truncation WITHOUT a seal verifies CLEAN
-//        (the documented WorldBundle truncation hole - resume() cannot detect a
-//        dropped tail because the bundle carries no ChainSeal), WITH the seal it
-//        is caught (seal_mismatch), and a flipped recorded mutation is a
-//        sig_mismatch.
+//        AND the negative space: bare verifyRecords (no seal) still cannot see
+//        tail truncation - the EventChain-level fact that motivated bundle
+//        format v2, where the WorldBundle CARRIES its ChainSeal and resume()
+//        verifies it structurally (the old documented hole is CLOSED: an
+//        end-truncated bundle is now rejected, pinned below against bundleA) -
+//        WITH the seal truncation is caught (seal_mismatch), and a flipped
+//        recorded mutation is a sig_mismatch.
 //   S5 - void-at-scale (100 of 500 resolved, 400 voided) and a deterministic
 //        SECOND resume across the void boundary.
 
@@ -165,16 +167,39 @@ test('S4 soak: the 21-record chain seals and verifies across the whole gap', fun
   assert.strictEqual(c.expect.seal_head, c.records[c.records.length - 1].sig, 'seal head == chain head');
 });
 
-test('S4 soak: tail truncation WITHOUT a seal verifies CLEAN (the documented hole)', function () {
+test('S4 soak: bare verifyRecords (no seal) STILL cannot see tail truncation', function () {
   var c = byKind('chain_seal');
   var truncated = clone(c.records).slice(0, c.records.length - 1);
-  // verifyRecords alone CANNOT see records dropped off the END - and WorldBundle
-  // carries no ChainSeal, so resume() silently accepts a tail-truncated bundle
-  // (recorded history replaced by re-simulated catch-up). This pin is the
-  // regression net: it documents the hole until WorldBundle grows a seal field.
+  // verifyRecords alone CANNOT see records dropped off the END - the
+  // EventChain-level fact that motivated bundle format v2. The WorldBundle now
+  // CARRIES a ChainSeal and resume() verifies it fail-closed, so the old
+  // documented hole (resume() silently accepting a tail-truncated bundle and
+  // replacing recorded history with re-simulated catch-up) is CLOSED - see the
+  // structural-seal rejection test below.
   var res = EventChain.verifyRecords(c.key, truncated, c.genesis);
   assert.strictEqual(res.ok, true, 'truncated tail verifies clean without a seal');
   assert.strictEqual(res.total, c.records.length - 1, 'one record silently gone');
+});
+
+test('S4 soak: an end-truncated BUNDLE tail is rejected by the structural seal on resume', function () {
+  // The hole is closed structurally: bundleA (3-record tail) loses its trailing
+  // record; resume() must reject it via the bundle's embedded seal instead of
+  // silently re-simulating the dropped epoch.
+  var c = byKind('boundary');
+  var truncated = clone(c.bundleA);
+  truncated.chainTail = truncated.chainTail.slice(0, truncated.chainTail.length - 1);
+  assert.throws(function () {
+    resume({ key: c.key, bundle: truncated, currentEpoch: c.expect.b.currentEpoch, ruleset: c.ruleset, proposalsByEpoch: c.proposalsByEpoch, maxCatchup: c.maxCatchup, actorTags: c.actorTags });
+  }, /does not match the seal/);
+});
+
+test('S4 soak: a seal-less (pre-v2 format) bundle is rejected on resume', function () {
+  var c = byKind('boundary');
+  var sealless = clone(c.bundleA);
+  delete (sealless as { seal?: unknown }).seal;
+  assert.throws(function () {
+    resume({ key: c.key, bundle: sealless, currentEpoch: c.expect.b.currentEpoch, ruleset: c.ruleset, proposalsByEpoch: c.proposalsByEpoch, maxCatchup: c.maxCatchup, actorTags: c.actorTags });
+  }, /carries no chain seal/);
 });
 
 test('S4 soak: tail truncation WITH the seal is caught (seal_mismatch)', function () {
