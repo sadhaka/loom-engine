@@ -1,5 +1,7 @@
 {
   "meta": {
+    "generator": "hand-authored (no generator tool)",
+    "generated_note": "Hand-authored in commit a1681a451 alongside the TS + Python golden harnesses; there is no generator script - edit by hand and keep the TS, Python and Rust harnesses green.",
     "engine_version": "2.3.0",
     "note": "Cross-language golden vectors. INTEGER-only inputs so TS (float feet), Python (float feet), and the Rust core (integer feet) all agree byte-for-byte. All three language harnesses (tests/golden-vectors.test.ts, python/tests/test_golden_vectors.py, rust/loom_combat/tests/golden_vectors.rs) load THIS file and must produce identical outputs - the parity gate. The Rust runner covers the numeric core only (range bands, initiative, reaction ceiling); narration.find_invented_number is server-side prose validation with no native/WASM client, so it stays TS+Python."
   },

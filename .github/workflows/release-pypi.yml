@@ -6,6 +6,10 @@
 # trusted publisher registered on PyPI pointing at this repo + workflow + the job's
 # environment (one-time setup). For the first publish, register them as PyPI "pending
 # publishers".
+#
+# Cross-language parity is enforced by determinism-gate.yml (TS + Python + Rust
+# golden vectors at the same commit, on every push/PR) - this workflow builds and
+# publishes only; it does not run the parity suites.
 name: Publish to PyPI
 
 on:

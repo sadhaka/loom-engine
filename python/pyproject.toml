@@ -24,6 +24,12 @@ Homepage = "https://www.npmjs.com/package/loom-engine"
 requires = ["setuptools>=77.0.0"]  # PEP 639 SPDX `license = "..."` support
 build-backend = "setuptools.build_meta"
 
+[tool.pytest.ini_options]
+# `python -m pytest` from python/ discovers the whole suite, including
+# tests/test_native_surface.py (which self-skips when the PyO3 module
+# loom_engine_native is not built into the active venv).
+testpaths = ["tests"]
+
 [tool.setuptools]
 packages = ["loom_engine"]
 
