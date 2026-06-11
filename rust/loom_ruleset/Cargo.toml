@@ -16,3 +16,10 @@ description = "Deterministic data-driven ruleset AST interpreter for the Loom En
 serde_json = "1"
 loom_math = { path = "../loom_math", version = "0.1.1" }
 loom_snapshot = { path = "../loom_snapshot", version = "0.1.1" }
+
+[dev-dependencies]
+# Test-only: the SRD 5e action-pack golden harness (tests/golden_srd5e_pack.rs)
+# drives loom_combat's srd5e_* pure modules alongside this crate's AST executor
+# against the shared test_vectors/srd5e_pack_v1.json. Never linked into the
+# published crate (path-only dev-dep, stripped on publish).
+loom_combat = { path = "../loom_combat" }
