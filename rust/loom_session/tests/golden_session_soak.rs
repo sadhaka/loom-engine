@@ -12,15 +12,17 @@
 //!        re-suspend cycles, pinned per cycle (including the TS chain head sig -
 //!        a real cross-language CHAIN parity proof), equal to one 21-epoch resume.
 //!   S4 - the accumulated 21-record chain sealed + verified across the whole gap,
-//!        AND the negative space: tail truncation WITHOUT a seal verifies CLEAN
-//!        (the documented WorldBundle truncation hole - resume() cannot detect a
-//!        dropped tail because the bundle carries no ChainSeal), WITH the seal it
-//!        is caught (seal_mismatch), and a flipped recorded mutation is a
-//!        sig_mismatch at seq 10.
+//!        AND the negative space: bare verify_records (no seal) still cannot see
+//!        tail truncation - the EventChain-level fact that motivated bundle
+//!        format v2, where the WorldBundle CARRIES its ChainSeal and resume()
+//!        verifies it structurally (the old documented hole is CLOSED: an
+//!        end-truncated bundle is now rejected, pinned below against bundleA) -
+//!        WITH the seal truncation is caught (seal_mismatch), and a flipped
+//!        recorded mutation is a sig_mismatch at seq 10.
 //!   S5 - void-at-scale (100 of 500 resolved, 400 voided) and a deterministic
 //!        SECOND resume across the void boundary.
 //!
-//! Mirrors tests/world-session-soak.test.ts test-for-test (14 each).
+//! Mirrors tests/world-session-soak.test.ts test-for-test (16 each).
 
 use loom_epoch::{catch_up_epochs, CatchUpInput};
 use loom_events::{ChainSeal, ChainedRecord, EventChain, MismatchReason};
@@ -68,10 +70,10 @@ fn parse_records(v: &Value) -> Vec<ChainedRecord> {
         .collect()
 }
 
-// Mirror of the TS suspend(): tail = every chain record with seq >
-// snapshotEventIndex; tailGenesis = the first tail record's prevSig, else the
-// chain head. Rust has no suspend in the core (the bundle is data); this test
-// helper reproduces the TS bundle shape byte-for-byte.
+// The CORE suspend() (bundle format v2: the bundle embeds chain.seal()) with the
+// case's string key - the same call the TS soak tests make. The hand-rolled
+// bundle builder this helper used to be is gone: Rust now has suspend in the
+// core, and the sealed bundle shape is byte-for-byte the TS one.
 fn suspend_bundle(
     key: &str,
     world_id: &str,
@@ -79,32 +81,8 @@ fn suspend_bundle(
     snapshot_event_index: u64,
     chain: &EventChain,
 ) -> Value {
-    let mut tail: Vec<Value> = Vec::new();
-    for rec in chain.records() {
-        if rec.seq > snapshot_event_index {
-            tail.push(json!({
-                "seq": rec.seq,
-                "type": rec.type_,
-                "payload": rec.payload,
-                "prevSig": rec.prev_sig,
-                "sig": rec.sig,
-            }));
-        }
-    }
-    let tail_genesis = match tail.first() {
-        Some(first) => first["prevSig"].as_str().unwrap().to_string(),
-        None => chain.head().to_string(),
-    };
-    json!({
-        "worldId": world_id,
-        "snapshot": {
-            "eventIndex": snapshot_event_index,
-            "stateHash": hash(key, state),
-            "state": state,
-        },
-        "chainTail": tail,
-        "tailGenesis": tail_genesis,
-    })
+    loom_session::suspend(key.as_bytes(), world_id, state, snapshot_event_index as i64, chain)
+        .expect("suspend packs a sealed bundle")
 }
 
 // resume() with the case's shared ruleset/tags; per-call clock + cap + proposals.
@@ -345,19 +323,60 @@ fn s4_21_record_chain_seals_and_verifies_across_the_gap() {
 }
 
 #[test]
-fn s4_tail_truncation_without_seal_verifies_clean_the_documented_hole() {
+fn s4_bare_verify_records_no_seal_still_cannot_see_tail_truncation() {
     let c = load_case("chain_seal");
     let key = c["key"].as_str().unwrap();
     let genesis = c["genesis"].as_str().unwrap();
     let records = parse_records(&c["records"]);
     let truncated = &records[..records.len() - 1];
-    // verifyRecords alone CANNOT see records dropped off the END - and WorldBundle
-    // carries no ChainSeal, so resume() silently accepts a tail-truncated bundle
-    // (recorded history replaced by re-simulated catch-up). This pin is the
-    // regression net: it documents the hole until WorldBundle grows a seal field.
+    // verify_records alone CANNOT see records dropped off the END - the
+    // EventChain-level fact that motivated bundle format v2. The WorldBundle now
+    // CARRIES a ChainSeal and resume() verifies it fail-closed, so the old
+    // documented hole (resume() silently accepting a tail-truncated bundle and
+    // replacing recorded history with re-simulated catch-up) is CLOSED - see the
+    // structural-seal rejection test below.
     let res = EventChain::verify_records_detailed(key.as_bytes(), truncated, genesis, None);
     assert!(res.ok, "truncated tail verifies clean without a seal");
     assert_eq!(res.total, records.len() - 1, "one record silently gone");
+}
+
+#[test]
+fn s4_end_truncated_bundle_tail_is_rejected_by_the_structural_seal_on_resume() {
+    // The hole is closed structurally: bundleA (3-record tail) loses its trailing
+    // record; resume() must reject it via the bundle's embedded seal instead of
+    // silently re-simulating the dropped epoch.
+    let c = load_case("boundary");
+    let mut truncated = c["bundleA"].clone();
+    let tail = truncated["chainTail"].as_array().expect("tail").clone();
+    assert!(!tail.is_empty(), "bundleA has a tail to truncate");
+    truncated["chainTail"] = Value::Array(tail[..tail.len() - 1].to_vec());
+    match resume_case(
+        &c,
+        &truncated,
+        c["expect"]["b"]["currentEpoch"].as_i64().unwrap(),
+        c["maxCatchup"].as_i64().unwrap(),
+        &c["proposalsByEpoch"],
+    ) {
+        Ok(_) => panic!("end-truncated bundle tail must be rejected"),
+        Err(e) => assert!(e.contains("does not match the seal"), "reason is the seal, got: {}", e),
+    }
+}
+
+#[test]
+fn s4_seal_less_pre_v2_bundle_is_rejected_on_resume() {
+    let c = load_case("boundary");
+    let mut sealless = c["bundleA"].clone();
+    sealless.as_object_mut().expect("bundle object").remove("seal");
+    match resume_case(
+        &c,
+        &sealless,
+        c["expect"]["b"]["currentEpoch"].as_i64().unwrap(),
+        c["maxCatchup"].as_i64().unwrap(),
+        &c["proposalsByEpoch"],
+    ) {
+        Ok(_) => panic!("seal-less (pre-v2 format) bundle must be rejected"),
+        Err(e) => assert!(e.contains("carries no chain seal"), "reason is the missing seal, got: {}", e),
+    }
 }
 
 #[test]
@@ -444,6 +463,9 @@ fn s5_second_resume_across_the_void_boundary_is_deterministic() {
         c["bundle2"]["snapshot"]["stateHash"].as_str().unwrap(),
         "rebuilt bundle matches the stored post-void bundle"
     );
+    // Bundle format v2: the Rust suspend's embedded seal byte-matches the seal
+    // the TS generator packed into bundle2 - cross-language SEAL parity.
+    assert_eq!(rebuilt["seal"], c["bundle2"]["seal"], "rebuilt seal == TS-generated seal");
 
     let second = &c["expect"]["second"];
     let r2 = resume_case(
