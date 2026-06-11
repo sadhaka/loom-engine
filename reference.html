@@ -15,10 +15,12 @@ AI-narrated play.</p>
   →  state_hash = cea43ee25ad95f845260985846936bd81f2b6d1aa735102cfd001295654b0a54
 </code><button type="button">Copy</button></pre>
 
-<p>That exact hash is reproduced by npm, the PyPI wheel, the Rust crates, the WASM build, and
-the C ABI — pinned by a shared golden-vector suite (4,188 tests).</p>
+<p>That exact hash is reproduced by npm, the Python port, the Rust crates, the WASM build, and
+the C ABI - pinned by a shared golden-vector suite (4,188 tests) and enforced in CI by the
+cross-language determinism gate
+(<a href="media/determinism-gate.yml"><code>.github/workflows/determinism-gate.yml</code></a>).</p>
 <h2 id="install-≈1-minute" class="tsd-anchor-link">Install (≈1 minute)<a href="#install-≈1-minute" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
-<pre><code class="bash"><span class="hl-0">npm</span><span class="hl-1"> </span><span class="hl-2">install</span><span class="hl-1"> </span><span class="hl-2">loom-engine</span><span class="hl-1">            </span><span class="hl-3"># TypeScript / browser / Node</span><br/><span class="hl-0">pip</span><span class="hl-1"> </span><span class="hl-2">install</span><span class="hl-1"> </span><span class="hl-2">loom-engine-native</span><span class="hl-1">     </span><span class="hl-3"># Python — native wheel (Rust core); or loom-engine-rpg (pure-Python)</span><br/><span class="hl-0">cargo</span><span class="hl-1"> </span><span class="hl-2">add</span><span class="hl-1"> </span><span class="hl-2">loom_frame</span><span class="hl-1">               </span><span class="hl-3"># Rust — the deterministic crates</span>
+<pre><code class="bash"><span class="hl-0">npm</span><span class="hl-1"> </span><span class="hl-2">install</span><span class="hl-1"> </span><span class="hl-2">loom-engine</span><span class="hl-1">            </span><span class="hl-3"># TypeScript / browser / Node</span><br/><span class="hl-0">pip</span><span class="hl-1"> </span><span class="hl-2">install</span><span class="hl-1"> </span><span class="hl-2">loom-engine-rpg</span><span class="hl-1">        </span><span class="hl-3"># Python - pure-Python port (the native PyO3 wheel is not on PyPI yet; build it from rust/loom_py with maturin)</span><br/><span class="hl-0">cargo</span><span class="hl-1"> </span><span class="hl-2">add</span><span class="hl-1"> </span><span class="hl-2">loom_frame</span><span class="hl-1">               </span><span class="hl-3"># Rust — the deterministic crates</span>
 </code><button type="button">Copy</button></pre>
 
 <p>Live playground: <a href="https://theworldtable.ai/engine/">theworldtable.ai/engine</a> ·
@@ -30,7 +32,7 @@ Reproduce the proof: <a href="media/same-seed"><code>examples/same-seed</code></
   CORE["One deterministic Rust core<br/>loom_math · loom_events · loom_snapshot<br/>loom_ruleset (AST) · loom_epoch · loom_session · loom_frame"]
   TS["loom-engine (npm)<br/>TypeScript reference"]
   CORE -->|wasm-bindgen| WASM["WASM"] --> B["Browser client"]
-  CORE -->|PyO3 / maturin| PY["loom-engine-native (PyPI)"] --> SV["Python game server"]
+  CORE -->|PyO3 / maturin| PY["loom_py binding (PyPI wheel planned)"] --> SV["Python game server"]
   CORE -->|C ABI| CA["C ABI .dll/.so/.a"] --> NT["Unity · Godot · Go"]
   TS -. "byte-identical, pinned by golden vectors" .- CORE
   B --> AI["AI narrates — never authors the dice or the state"]
@@ -49,8 +51,9 @@ restrictions are planned, and feedback on the terms is welcome. It's the determi
 under a solo-founded commercial product (<a href="https://theworldtable.ai">TheWorldTable.ai</a>).</p>
 <h2 id="what-it-is-and-isnt-so-you-dont-have-to-guess" class="tsd-anchor-link">What it is — and isn't (so you don't have to guess)<a href="#what-it-is-and-isnt-so-you-dont-have-to-guess" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
 <ul>
-<li>✅ A <strong>deterministic simulation core</strong>: a seeded PRNG, an Any-System rules AST (any
-tabletop system as <em>data</em>, no untrusted-code execution), a tamper-evident HMAC event
+<li>✅ A <strong>deterministic simulation core</strong>: a seeded PRNG, a rules AST (d20-style
+delta / derived checks as <em>data</em>, no untrusted-code execution; broader system
+families are on the roadmap), a tamper-evident HMAC event
 chain, snapshot + replay, and a real-time command-frame + client-rollback netcode primitive.</li>
 <li>✅ <strong>Server-authoritative primitives</strong> for anti-cheat: the engine owns the dice and the
 state, so an AI — or a client — cannot author a mechanical outcome. (Anti-cheat is a
@@ -71,23 +74,29 @@ Rust core, bound to four surfaces, resolves the same seed to byte-identical resu
 everywhere - the basis for replay, anti-cheat, and honest AI narration in a shared
 persistent world.</p>
 <ul>
-<li><strong>Any-System ruleset AST</strong> - bring any tabletop system as DATA (a strict JSON
+<li><strong>Any-System ruleset AST</strong> - express d20-style rules as DATA (a strict JSON
 interpreter; no untrusted-code execution). Roll-vs-DC -&gt; degree -&gt; mutations,
-integer-only expressions, floor_div toward -inf, a fail-closed validation pass.</li>
+integer-only expressions, floor_div toward -inf, a fail-closed validation pass.
+Today it covers d20-style delta / derived checks; broader system families are
+on the roadmap.</li>
 <li><strong>Snapshot + replay</strong> - a pure content <code>state_hash</code> reconstructs a world from a
 verified snapshot + the events after it (provably equal to replay-from-genesis).</li>
 <li><strong>Epoch world-tick</strong> - the world keeps moving between sessions: offline factions
-act deterministically, fail-closed, bounded (the Veil-Ceiling guard).</li>
+act deterministically, fail-closed, bounded (the Veil-Ceiling guard). Primitive
+shipped with unit-level golden vectors; a single end-to-end
+suspend -&gt; offline epochs -&gt; resume reference flow is still planned.</li>
 <li><strong>WorldSession suspend/resume</strong> - pack a world into a verifiable bundle; on resume,
 verify the snapshot hash, replay the HMAC chain tail, reject time-travel, fast-forward.</li>
 <li><strong>Real-time multiplayer core</strong> - server-authoritative command frames, client
 rollback reconciliation (predict, then reconcile to the authoritative frame - you
 can never forge an outcome), and region hashing (a partial-sync client verifies
-only its own region + the Merkle root).</li>
+only its own region + the Merkle root). The region-hash partial sync is a shipped
+primitive with golden vectors; a reference client demo that consumes it is planned.</li>
 </ul>
 <p><strong>Every surface, one core.</strong> A Rust workspace (<code>loom_math</code> / <code>loom_events</code> /
 <code>loom_snapshot</code> / <code>loom_ruleset</code> / <code>loom_epoch</code> / <code>loom_session</code> / <code>loom_frame</code>) binds
-to <strong>WASM</strong> (browser), a native <strong>PyO3</strong> wheel (Python server), and a panic-guarded
+to <strong>WASM</strong> (browser), a native <strong>PyO3</strong> binding (Python server; built from source with
+maturin - the wheel is not yet published to PyPI), and a panic-guarded
 <strong>C ABI</strong> (Unity / Godot / Go) - each verified against the same golden vectors as the
 TypeScript reference.</p>
 <h2 id="v230-deterministic-ttrpg-core-every-language" class="tsd-anchor-link">v2.3.0 - deterministic TTRPG core, every language<a href="#v230-deterministic-ttrpg-core-every-language" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
@@ -128,11 +137,13 @@ snapshot at every trust boundary); the round-4 audit is GREEN with no
 CRITICAL/HIGH/MED findings. 4087 / 4087 tests passed at 2.2.5.</p>
 <h2 id="v200-trinity-mainframe-complete" class="tsd-anchor-link">v2.0.0 - Trinity Mainframe complete<a href="#v200-trinity-mainframe-complete" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
 <p>The 2.0.0 drop closes the Trinity Mainframe ingestion - 14 new
-pure-logic kernels that take the engine from a Canvas2D / ECS base
-into the foundation of an AI-driven MMORPG runtime. Each kernel is
-the safe single-thread / single-owner core that drives a deferred
-WebGPU / WebTransport / WebCrypto / WASM-SIMD / SQLite-WAL
-integration layer. All Codex hardening gates enforced inline; all
+pure-logic kernels that extend the Canvas2D / ECS base with
+deterministic core primitives for persistent-world and multiplayer
+systems. These are standalone modules, not an integrated MMORPG
+runtime - there is no zone streaming, instancing, or sharding
+layer. Each kernel is the safe single-thread / single-owner core
+intended to drive a deferred WebGPU / WebTransport / WebCrypto /
+WASM-SIMD / SQLite-WAL integration layer. All Codex hardening gates enforced inline; all
 non-negotiable engine gates (no RNG, no wall clock, no Atomics,
 fixed-capacity, every input bounds-checked) honoured across the
 board. 3984 tests pass; see <a href="media/CHANGELOG.md">CHANGELOG.md</a> for the
