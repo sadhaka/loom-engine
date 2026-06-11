@@ -55,3 +55,27 @@ from .world_epoch import (  # noqa: F401
     DEFAULT_ACTOR_TAG, RESOURCE_WORLD_EPOCH,
     REASON_UNKNOWN_ACTION, REASON_INVALID_ACTION, REASON_EVAL_ERROR,
 )
+from .srd5e_spell_slots import (  # noqa: F401
+    MAX_SLOT_LEVEL, PACT_KEY, caster_kind, is_caster, spell_ability_for_class,
+    spell_slots_for, highest_slot_level, slot_available, spend_slot,
+    spend_lowest_available, restore_slot, slots_remaining, long_rest,
+    short_rest, widen_slots, spell_requires_concentration, spell_base_level,
+    upcast_effect, total_dice_for_cast,
+)
+from .srd5e_concentration import (  # noqa: F401
+    CONCENTRATION_MIN_DC, maintain_save_dc, is_concentrating,
+    start_concentration, drop_concentration, maintain_save,
+)
+from .srd5e_conditions import (  # noqa: F401
+    ADV_AGAINST_TARGET, DISADV_ON_ATTACKER, AUTO_FAIL_STR_DEX,
+    INCAPACITATED_NO_REACTION, coerce_conditions, attack_advantage_mode,
+    condition_roll_note, auto_fail_save_condition, reaction_denied_by_conditions,
+)
+from .srd5e_pack import (  # noqa: F401
+    CANTRIPS, CLASS_CANTRIPS, LEVELED_SPELLS, CLASS_LEVELED_SPELLS,
+    class_can_cast, cantrip_dice_count, eldritch_blast_beams, scaled_cantrip_dice,
+    build_weapon_attack_check, build_attack_cantrip_check, build_save_cantrip_check,
+    build_attack_spell_check, build_save_spell_check, build_multi_target_save_trigger,
+    build_magic_missile_trigger, build_heal_trigger, build_condition_spell_check,
+    plan_leveled_cast,
+)
