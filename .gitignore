@@ -30,6 +30,11 @@ docs-build/
 # alongside the generated TypeDoc output. typedoc.json sets
 # cleanOutputDir:false so local `npm run docs` does not wipe it.
 !docs/PERF-BENCH-METHODOLOGY.md
+# AST v2: hand-written engine specs live in docs/specs/ alongside the
+# generated site. Same exception mechanism as the methodology doc - the
+# directory entry must be un-ignored first, then its contents.
+!docs/specs/
+!docs/specs/**
 
 # Dependencies
 node_modules/
