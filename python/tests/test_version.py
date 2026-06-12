@@ -16,8 +16,16 @@ import io
 import json
 import os
 import re
+import sys
 
-import loom_engine
+# Run-as-script parity with every sibling test: the determinism gate executes
+# each tests/*.py as a plain script from the repo root, so the package dir
+# must be self-inserted (pytest from python/ never needed it - which is how
+# this file alone turned the CI gate red from round 5 until 2026-06-12
+# evening while every golden vector kept passing on all three surfaces).
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+
+import loom_engine  # noqa: E402
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 
