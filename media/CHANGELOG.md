@@ -7,6 +7,33 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
+## 3.1.1 - 2026-06-12 (round-5 release-audit fixes - the seal joins the NFC parity, every version surface is test-locked)
+
+- **Round-5 Codex verification audit of the 3.1.0 fixes - HOLD closed by hand.**
+  HIGH: Rust `seal_message` now validates NFC on the head exactly like the TS
+  `sealMessage` / Python `_seal_message` guards - a chain created with a
+  non-NFC GENESIS (the only path a dirty string reaches `head_sig`; record
+  sigs are always hex) could previously SIGN an empty-chain seal that
+  verified on Rust while TS/Python rejected it, the same cross-surface fork
+  class as the round-4 bundle-binding HIGH, one message family over.
+  `seal()` returns `Err` (never panics), `verify_seal` fails closed to
+  `false` like the TS catch, regression-tested in both directions.
+  BLOCKER (the 3.1.0 publish wound): the version was declared on FIVE
+  surfaces and three were stale - the native wheel pyproject/Cargo pair
+  still said 3.0.0 (so the v3.1.0 tag rebuilt 3.0.0 wheels and PyPI rejected
+  the duplicate upload) and the runtime constants lied independently
+  (`loom_py.version()` hardcoded "0.1.0"; pure `__version__` said "3.0.0").
+  Every surface now reads 3.1.1; the native runtime constants track
+  `CARGO_PKG_VERSION` by construction (never a literal again); the native
+  parity script reads its expected version from pyproject instead of a pin;
+  and a new `python/tests/test_version.py` locks ALL the json/toml/python
+  surfaces to one string so a future bump that misses a file fails pytest
+  before it can reach a tag. LOW: the last release-facing "bundle format v2"
+  texts (root README capability list, the plaza-persistent vector note + its
+  generator) now state the v3 seal + binding truth (vector regenerated -
+  data byte-identical, note only). 3.1.0 itself is yanked on PyPI (pure) /
+  was never re-uploaded (native); 3.1.1 supersedes it everywhere.
+
 ## 3.1.0 - 2026-06-12 (AST v2 + 5e Action Pack + forge-proof persistence + delve-mini - the audited content milestone)
 
 - **3.1.0 release audit (Codex round 4) - all findings fixed by hand before this

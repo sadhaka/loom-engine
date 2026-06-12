@@ -1,4 +1,4 @@
-export declare const LOOM_ENGINE_VERSION = "3.1.0";
+export declare const LOOM_ENGINE_VERSION = "3.1.1";
 export type { Vec2, Vec3, Rect } from './util/math.js';
 export { vec2, vec3, rect, clamp, lerp, smoothstep, approxEq, rectContains, rectIntersects, visibleInView, } from './util/math.js';
 export type { ColorRGBA } from './util/color.js';
