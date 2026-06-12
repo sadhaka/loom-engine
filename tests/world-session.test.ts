@@ -93,12 +93,31 @@ test('fail-closed: a forged seal signature is rejected', function () {
 
 test('fail-closed: a re-signed seal that disagrees with the tail length is rejected', function () {
   // A VALID seal taken from a different chain state (here: an empty chain's
-  // seal) cannot be swapped in - the sealed head no longer matches the tail.
+  // seal) cannot be swapped in. The bundle binding (v3) signs the sealed
+  // (count, head) together with the snapshot identity, so swapping in a seal
+  // whose count/head differ from what was bound is caught by the binding gate -
+  // a stronger rejection than the structural head check it precedes. Either way
+  // the bundle is rejected fail-closed.
   var i = vec.inputs;
   var swapped = JSON.parse(JSON.stringify(i.bundle));
   var empty = EventChain.create({ key: i.key, genesis: swapped.tailGenesis });
   swapped.seal = empty.seal(); // count 0, head == tailGenesis - validly signed
-  assert.throws(function () { doResume(swapped, i.currentEpoch); }, /does not match the seal/);
+  assert.throws(function () { doResume(swapped, i.currentEpoch); }, /binding invalid|does not match the seal/);
+});
+
+test('fail-closed: the leading-truncation forge (rewrite eventIndex + tailGenesis) is rejected by the binding', function () {
+  // The Codex audit P1 forge: drop the FIRST tail record, set eventIndex one
+  // higher, and re-anchor tailGenesis to the new first record's prevSig. The
+  // seal (count, head) is untouched and every structural check still passes -
+  // but the binding signed the ORIGINAL eventIndex + tailGenesis, so it rejects.
+  var i = vec.inputs;
+  if (!Array.isArray(i.bundle.chainTail) || i.bundle.chainTail.length < 2) return;
+  var forged = JSON.parse(JSON.stringify(i.bundle));
+  var dropped = forged.chainTail[0];
+  forged.chainTail = forged.chainTail.slice(1);
+  forged.snapshot.eventIndex = forged.snapshot.eventIndex + 1;
+  forged.tailGenesis = dropped.sig; // the new first record's prevSig
+  assert.throws(function () { doResume(forged, i.currentEpoch); }, /binding invalid/);
 });
 
 test('fail-closed: suspend rejects a snapshotEventIndex past the end of the chain', function () {

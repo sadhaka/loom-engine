@@ -26,20 +26,26 @@
 //     tail chain HMAC; (4) reduce; (5) bound catch-up (reject time-travel);
 //     (6) tick. Any integrity failure throws before the world is trusted.
 //
-//   * THE STRUCTURAL SEAL (bundle format v2 - BREAKING). A bare hash chain
-//     cannot see records dropped off its END, so a pre-seal bundle whose
-//     chainTail lost its trailing records verified clean and the lost events
-//     were silently replaced by re-simulated catch-up. The bundle now CARRIES
-//     the chain's ChainSeal: suspend() signs the (count, head) commitment via
-//     EventChain.seal(), and resume() rejects any bundle whose seal is missing,
-//     forged, or disagrees with the tail (head or count). NO compatibility
-//     escape hatch - bundles produced before the seal field existed are
-//     rejected; re-suspend with the current engine. KNOWN RESIDUAL: the
-//     snapshot hash binds the STATE but not its claimed chain POSITION, so a
-//     forger who rewrites snapshot.eventIndex + tailGenesis together and drops
-//     LEADING tail records still presents a structurally consistent bundle;
-//     binding state-to-position needs the snapshot commitment to fold in
-//     (worldId, eventIndex) - a future format revision.
+//   * THE STRUCTURAL SEAL (bundle format v2). A bare hash chain cannot see
+//     records dropped off its END, so a pre-seal bundle whose chainTail lost its
+//     trailing records verified clean and the lost events were silently replaced
+//     by re-simulated catch-up. The bundle CARRIES the chain's ChainSeal:
+//     suspend() signs the (count, head) commitment via EventChain.seal(), and
+//     resume() rejects any bundle whose seal is missing, forged, or disagrees
+//     with the tail (head or count). No compatibility escape hatch.
+//
+//   * THE BUNDLE BINDING (bundle format v3 - BREAKING; Codex audit P1). The seal
+//     signs only (count, head), which left a forge: the snapshot hash binds the
+//     STATE but not its claimed chain POSITION, so a forger could rewrite
+//     snapshot.eventIndex + tailGenesis together to drop the LEADING prefix of
+//     the tail (every structural check still passed; the dropped record's
+//     mutations were silently lost), or splice a snapshot from another world.
+//     suspend() now also signs a BINDING over worldId + snapshot.stateHash +
+//     eventIndex + tailGenesis + (count, head) via EventChain.bindBundle();
+//     resume() re-derives it and rejects fail-closed on any mismatch, closing
+//     both forges. resume() also takes an optional expectedWorldId so a caller
+//     can refuse a cross-world bundle outright. The prior KNOWN RESIDUAL is
+//     resolved.
 //
 // IP BOUNDARY. PUBLIC (this module): the WorldBundle schema, the suspend/resume
 // orchestration, the reducer, the verification loop. TWT-PRIVATE: the persistence
@@ -78,6 +84,16 @@ export interface WorldBundle {
   // count is rejected. Without it, records dropped off the END of chainTail
   // verified clean and were silently replaced by re-simulated catch-up.
   seal: ChainSeal;
+  // Bundle format v3 (BREAKING; Codex audit P1 - persistence forge): the HMAC
+  // that binds this bundle's IDENTITY - worldId + snapshot.stateHash +
+  // snapshot.eventIndex + tailGenesis + the sealed (count, head). The seal alone
+  // signs only (count, head), so a forger could rewrite eventIndex + tailGenesis
+  // together to DROP the leading prefix of the tail (every check still passed,
+  // the dropped record's mutations silently lost), or splice a snapshot from
+  // another world. resume() re-derives this binding and rejects fail-closed on
+  // any mismatch, closing both forges. The prior "future format revision" note
+  // is resolved by this field.
+  binding: string;
 }
 
 // ---- the reducer: replay a recorded EpochResolved event --------------------
@@ -175,16 +191,19 @@ export function suspend(input: SuspendInput): WorldBundle {
   }
   var firstTail = tail[0];
   var tailGenesis = firstTail ? firstTail.prevSig : input.chain.head();
+  var stateHash = worldStateHash(input.key, input.snapshotState);
   return {
     worldId: input.worldId,
     snapshot: {
       eventIndex: idx,
-      stateHash: worldStateHash(input.key, input.snapshotState),
+      stateHash: stateHash,
       state: input.snapshotState,
     },
     chainTail: tail,
     tailGenesis: tailGenesis,
     seal: input.chain.seal(),
+    // v3: bind the identity fields the seal does not cover (Codex audit P1).
+    binding: input.chain.bindBundle(input.worldId, stateHash, idx, tailGenesis),
   };
 }
 
@@ -200,6 +219,10 @@ export interface ResumeInput {
   maxCatchup: number;
   actorTags?: string[] | undefined;
   maxActions?: number | undefined;
+  // Codex audit P1: when set, resume() rejects a bundle whose worldId does not
+  // match - a caller that knows which world it asked for can refuse a
+  // cross-world / cross-path bundle outright (defense in depth atop the binding).
+  expectedWorldId?: string | undefined;
 }
 
 export interface ResumeResult {
@@ -217,6 +240,30 @@ export interface ResumeResult {
 // proposalsByEpoch), the result is byte-identical on every surface.
 export function resume(input: ResumeInput): ResumeResult {
   var b = input.bundle;
+
+  // (0) shape + identity gates (Codex audit P1/P2), fail-closed and BEFORE any
+  // crypto so a malformed bundle is rejected cheaply and identically on every
+  // surface.
+  // (0a) expectedWorldId: a caller that named its world refuses any other.
+  if (input.expectedWorldId !== undefined && b.worldId !== input.expectedWorldId) {
+    throw new Error('world-session: bundle worldId does not match expectedWorldId'
+      + ' (cross-world or cross-path bundle rejected)');
+  }
+  // (0b) chainTail MUST be an array (Rust/Python treated a non-array as empty;
+  // TS rejected via NaN - make the rejection explicit and identical).
+  if (b.chainTail !== undefined && !Array.isArray(b.chainTail)) {
+    throw new Error('world-session: chainTail must be an array');
+  }
+  // (0c) WorldState shape: entities MUST be an object. The audit found Rust
+  // no-opped a malformed state (entities not an object) while TS/Python threw -
+  // fail-closed is the canonical contract, so validate it explicitly here.
+  if (!b.snapshot || !b.snapshot.state || typeof b.snapshot.state !== 'object'
+    || b.snapshot.state.entities === null
+    || typeof b.snapshot.state.entities !== 'object'
+    || Array.isArray(b.snapshot.state.entities)) {
+    throw new Error('world-session: snapshot.state.entities must be an object'
+      + ' (malformed WorldState rejected fail-closed)');
+  }
 
   // (1) snapshot integrity - constant-time hash compare.
   if (!verifyWorldSnapshot(input.key, b.snapshot.state, b.snapshot.stateHash)) {
@@ -245,6 +292,17 @@ export function resume(input: ResumeInput): ResumeResult {
   }
   if (!Number.isSafeInteger(b.snapshot.eventIndex) || b.snapshot.eventIndex < 0) {
     throw new Error('world-session: snapshot.eventIndex must be a JS-safe integer >= 0');
+  }
+  // (3a-bind) THE FORGE GATE (Codex audit P1): the seal signs only (count,
+  // head), which a forger satisfies by dropping the leading tail prefix and
+  // rewriting eventIndex + tailGenesis (no key needed). The binding signs all of
+  // worldId + stateHash + eventIndex + tailGenesis + count + head, so any such
+  // rewrite - or a cross-world snapshot/tail splice - fails here. Verified
+  // BEFORE the head/count structural checks the forger is able to pass.
+  if (!EventChain.verifyBundleBinding(input.key, b.worldId, b.snapshot.stateHash,
+      b.snapshot.eventIndex, b.tailGenesis, seal.count, seal.head, b.binding)) {
+    throw new Error('world-session: bundle binding invalid'
+      + ' (worldId / eventIndex / tailGenesis rewritten, or cross-world splice - forge detected)');
   }
   var lastTail = tail.length > 0 ? tail[tail.length - 1] : null;
   var tailHead = lastTail ? lastTail.sig : b.tailGenesis;

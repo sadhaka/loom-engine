@@ -144,6 +144,27 @@ function isInt(n: unknown): n is number {
   return typeof n === 'number' && isFinite(n) && Math.floor(n) === n;
 }
 
+// Codex audit P2: a host-supplied pool is untrusted. A corrupted entry such as
+// { max: 1, used: -100 } would make slotAvailable report 101 and spendSlot
+// spend forever (a slot-minting exploit). Clamp every entry to a well-formed
+// shape (max a non-negative integer, used an integer in [0, max]) at the single
+// boundary every public op passes through. A VALID entry is returned unchanged,
+// so well-formed pools are byte-identical.
+function normEntry(maxRaw: unknown, usedRaw: unknown): { max: number; used: number } {
+  var max = isInt(maxRaw) && (maxRaw as number) > 0 ? (maxRaw as number) : 0;
+  var used = isInt(usedRaw) ? (usedRaw as number) : 0;
+  if (used < 0) used = 0;
+  if (used > max) used = max;
+  return { max: max, used: used };
+}
+
+// Exported boundary helper (Codex audit P2): hosts may normalize an untrusted
+// pool once before storing it. Every public op already sanitizes internally, so
+// this is a convenience, not a precondition.
+export function sanitizeSlotPool(slots: SlotPool): SlotPool {
+  return clonePool(slots);
+}
+
 function setPact(pool: SlotPool, p: PactEntry): void {
   (pool as { pact?: PactEntry }).pact = p;
 }
@@ -154,10 +175,12 @@ function clonePool(slots: SlotPool): SlotPool {
     if (!Object.prototype.hasOwnProperty.call(slots, k)) continue;
     if (k === PACT_KEY) {
       var p = slots.pact;
-      if (p) setPact(out, { slot_level: p.slot_level, max: p.max, used: p.used });
+      // Codex audit P2: clamp the untrusted entry; every mutating op clones
+      // through here, so this one line sanitizes spend/restore/widen at once.
+      if (p) { var np = normEntry(p.max, p.used); setPact(out, { slot_level: p.slot_level, max: np.max, used: np.used }); }
     } else {
       var e = slots[k];
-      if (e) out[k] = { max: e.max, used: e.used };
+      if (e) { var ne = normEntry(e.max, e.used); out[k] = { max: ne.max, used: ne.used }; }
     }
   }
   return out;
@@ -190,10 +213,10 @@ export function highestSlotLevel(slots: SlotPool): number {
   var best = 0;
   for (var L = 1; L <= MAX_SLOT_LEVEL; L++) {
     var e = slots[String(L)];
-    if (e && e.max > 0) best = L;
+    if (e && normEntry(e.max, e.used).max > 0) best = L; // P2: clamp untrusted max
   }
   var p = slots.pact;
-  if (p && p.max > 0 && p.slot_level > best) best = p.slot_level;
+  if (p && normEntry(p.max, p.used).max > 0 && p.slot_level > best) best = p.slot_level;
   return best;
 }
 
@@ -201,9 +224,11 @@ export function highestSlotLevel(slots: SlotPool): number {
 export function slotAvailable(slots: SlotPool, slotLevel: number): number {
   var n = 0;
   var e = slots[String(slotLevel)];
-  if (e && e.max > e.used) n += e.max - e.used;
+  // Codex audit P2: read through the clamp so a corrupted used (e.g. -100)
+  // cannot inflate availability.
+  if (e) { var ne = normEntry(e.max, e.used); if (ne.max > ne.used) n += ne.max - ne.used; }
   var p = slots.pact;
-  if (p && p.slot_level === slotLevel && p.max > p.used) n += p.max - p.used;
+  if (p && p.slot_level === slotLevel) { var np = normEntry(p.max, p.used); if (np.max > np.used) n += np.max - np.used; }
   return n;
 }
 
@@ -270,12 +295,16 @@ export function slotsRemaining(slots: SlotPool): { [level: number]: number } {
   var out: { [level: number]: number } = {};
   for (var L = 1; L <= MAX_SLOT_LEVEL; L++) {
     var e = slots[String(L)];
-    if (e && e.max > 0) out[L] = e.max - e.used > 0 ? e.max - e.used : 0;
+    // Codex audit P2: clamp the untrusted entry before subtracting.
+    if (e) { var ne = normEntry(e.max, e.used); if (ne.max > 0) out[L] = ne.max - ne.used; }
   }
   var p = slots.pact;
-  if (p && p.max > 0) {
-    var rem = p.max - p.used > 0 ? p.max - p.used : 0;
-    out[p.slot_level] = (out[p.slot_level] === undefined ? 0 : out[p.slot_level] as number) + rem;
+  if (p) {
+    var np = normEntry(p.max, p.used);
+    if (np.max > 0) {
+      var rem = np.max - np.used;
+      out[p.slot_level] = (out[p.slot_level] === undefined ? 0 : out[p.slot_level] as number) + rem;
+    }
   }
   return out;
 }

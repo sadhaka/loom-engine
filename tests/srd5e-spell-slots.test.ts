@@ -9,9 +9,28 @@ import {
   spellSlotsFor, highestSlotLevel, slotAvailable, spendSlot,
   spendLowestAvailable, restoreSlot, slotsRemaining, longRest, shortRest,
   widenSlots, spellRequiresConcentration, spellBaseLevel, upcastEffect,
-  totalDiceForCast,
+  totalDiceForCast, sanitizeSlotPool,
 } from '../src/runtime/srd5e-spell-slots.js';
 import type { SlotPool } from '../src/runtime/srd5e-spell-slots.js';
+
+test('srd5e-spell-slots: Codex audit P2 - malformed pools are clamped', function () {
+  // A corrupted entry { max: 1, used: -100 } must NOT report 101 available.
+  var bad = { '1': { max: 1, used: -100 } } as unknown as SlotPool;
+  assert.strictEqual(slotAvailable(bad, 1), 1, 'negative used clamps to 0, availability is max');
+  assert.deepStrictEqual(slotsRemaining(bad), { 1: 1 }, 'slotsRemaining clamps too');
+  // Spend cannot exceed the real max no matter how negative used was.
+  var s1 = spendSlot(bad, 1);
+  assert.strictEqual(s1.ok, true);
+  assert.strictEqual(slotAvailable(s1.slots, 1), 0, 'one real slot, now spent');
+  assert.strictEqual(spendSlot(s1.slots, 1).ok, false, 'no phantom slots remain');
+  // used > max clamps down; non-integer max coerces to 0.
+  assert.strictEqual(slotAvailable({ '2': { max: 2, used: 9 } } as unknown as SlotPool, 2), 0);
+  assert.strictEqual(highestSlotLevel({ '3': { max: 2.5, used: 0 } } as unknown as SlotPool), 0, 'non-integer max is not a real tier');
+  // sanitizeSlotPool returns a clamped clone; a valid pool is unchanged.
+  var clean = spellSlotsFor('wizard', 5);
+  assert.deepStrictEqual(sanitizeSlotPool(clean), clean, 'valid pool is byte-identical');
+  assert.deepStrictEqual(sanitizeSlotPool(bad), { '1': { max: 1, used: 0 } }, 'malformed entry clamped');
+});
 
 test('srd5e-slots: caster taxonomy + spellcasting ability', function () {
   assert.strictEqual(MAX_SLOT_LEVEL, 9);

@@ -31,9 +31,19 @@ def ck(label, cond):
 
 # ---- the SRD tables ----------------------------------------------------------
 
-ck("ADV_AGAINST_TARGET", ADV_AGAINST_TARGET == ["restrained", "stunned", "paralyzed", "unconscious"])
-ck("DISADV_ON_ATTACKER", DISADV_ON_ATTACKER == ["poisoned", "frightened", "restrained", "prone"])
-ck("AUTO_FAIL_STR_DEX", AUTO_FAIL_STR_DEX == ["paralyzed", "stunned", "unconscious"])
+ck("ADV_AGAINST_TARGET", ADV_AGAINST_TARGET == ["restrained", "stunned", "paralyzed", "unconscious", "blinded", "petrified"])
+ck("DISADV_ON_ATTACKER", DISADV_ON_ATTACKER == ["poisoned", "frightened", "restrained", "prone", "blinded"])
+ck("AUTO_FAIL_STR_DEX", AUTO_FAIL_STR_DEX == ["paralyzed", "stunned", "unconscious", "petrified"])
+# Codex audit P1 - blinded / petrified / invisible RAW
+ck("blinded target adv", attack_advantage_mode([], ["blinded"], True)["mode"] == "adv")
+ck("blinded attacker dis", attack_advantage_mode(["blinded"], [], True)["mode"] == "dis")
+ck("petrified target adv", attack_advantage_mode([], ["petrified"], True)["mode"] == "adv")
+ck("petrified auto-fails dex", auto_fail_save_condition("dex", ["petrified"]) == "petrified")
+ck("petrified auto-fails str", auto_fail_save_condition("str", ["petrified"]) == "petrified")
+ck("petrified not wis", auto_fail_save_condition("wis", ["petrified"]) is None)
+ck("invisible attacker adv", attack_advantage_mode(["invisible"], [], True)["mode"] == "adv")
+ck("invisible target dis", attack_advantage_mode([], ["invisible"], True)["mode"] == "dis")
+ck("mutual invisible cancels", attack_advantage_mode(["invisible"], ["invisible"], True)["mode"] is None)
 ck("INCAPACITATED_NO_REACTION",
    INCAPACITATED_NO_REACTION == ["paralyzed", "stunned", "unconscious", "incapacitated", "petrified"])
 

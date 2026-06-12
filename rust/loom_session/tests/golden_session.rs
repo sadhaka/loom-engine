@@ -134,7 +134,34 @@ fn swapped_valid_but_stale_seal_is_rejected() {
     let res = resume_from_json(&inputs.to_string());
     assert!(res.is_err(), "stale seal must be rejected");
     let e = res.unwrap_err();
-    assert!(e.contains("does not match the seal"), "reason is the seal mismatch, got: {}", e);
+    // Bundle format v3: the binding signs the sealed (count, head) with the
+    // snapshot identity, so swapping in a stale seal whose count/head differ
+    // from what was bound is caught by the binding gate - a stronger rejection
+    // than the structural head check. Either way the bundle is rejected.
+    assert!(
+        e.contains("binding invalid") || e.contains("does not match the seal"),
+        "reason is the binding or seal mismatch, got: {}",
+        e
+    );
+}
+
+// Codex audit P1: the leading-truncation forge is rejected by the binding.
+#[test]
+fn leading_truncation_forge_is_rejected() {
+    let mut inputs = load_inputs();
+    let tail = inputs["bundle"]["chainTail"].as_array().cloned().unwrap_or_default();
+    if tail.len() < 2 {
+        return; // the fixture has a short tail; nothing to truncate
+    }
+    let dropped_sig = tail[0]["sig"].as_str().unwrap_or("").to_string();
+    let new_tail: Vec<_> = tail[1..].to_vec();
+    let idx = inputs["bundle"]["snapshot"]["eventIndex"].as_u64().unwrap_or(0);
+    inputs["bundle"]["chainTail"] = json!(new_tail);
+    inputs["bundle"]["snapshot"]["eventIndex"] = json!(idx + 1);
+    inputs["bundle"]["tailGenesis"] = json!(dropped_sig);
+    let res = resume_from_json(&inputs.to_string());
+    assert!(res.is_err(), "the leading-truncation forge must be rejected");
+    assert!(res.unwrap_err().contains("binding invalid"));
 }
 
 #[test]

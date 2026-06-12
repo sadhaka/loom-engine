@@ -11,10 +11,29 @@ import {
 } from '../src/runtime/srd5e-conditions.js';
 
 test('srd5e-conditions: the SRD tables', function () {
-  assert.deepStrictEqual(ADV_AGAINST_TARGET, ['restrained', 'stunned', 'paralyzed', 'unconscious']);
-  assert.deepStrictEqual(DISADV_ON_ATTACKER, ['poisoned', 'frightened', 'restrained', 'prone']);
-  assert.deepStrictEqual(AUTO_FAIL_STR_DEX, ['paralyzed', 'stunned', 'unconscious']);
+  assert.deepStrictEqual(ADV_AGAINST_TARGET, ['restrained', 'stunned', 'paralyzed', 'unconscious', 'blinded', 'petrified']);
+  assert.deepStrictEqual(DISADV_ON_ATTACKER, ['poisoned', 'frightened', 'restrained', 'prone', 'blinded']);
+  assert.deepStrictEqual(AUTO_FAIL_STR_DEX, ['paralyzed', 'stunned', 'unconscious', 'petrified']);
   assert.deepStrictEqual(INCAPACITATED_NO_REACTION, ['paralyzed', 'stunned', 'unconscious', 'incapacitated', 'petrified']);
+});
+
+test('srd5e-conditions: Codex audit P1 - blinded / petrified / invisible RAW', function () {
+  // Blinded: attacks against a blinded target have advantage; a blinded
+  // attacker has disadvantage.
+  assert.strictEqual(attackAdvantageMode([], ['blinded'], true).mode, 'adv', 'blinded target grants advantage');
+  assert.strictEqual(attackAdvantageMode(['blinded'], [], true).mode, 'dis', 'blinded attacker has disadvantage');
+  // Petrified: attacks against it have advantage AND it auto-fails STR/DEX saves.
+  assert.strictEqual(attackAdvantageMode([], ['petrified'], true).mode, 'adv', 'petrified target grants advantage');
+  assert.strictEqual(autoFailSaveCondition('dex', ['petrified']), 'petrified', 'petrified auto-fails DEX saves');
+  assert.strictEqual(autoFailSaveCondition('str', ['petrified']), 'petrified', 'petrified auto-fails STR saves');
+  assert.strictEqual(autoFailSaveCondition('wis', ['petrified']), null, 'petrified does NOT auto-fail WIS saves');
+  // Invisible: an invisible attacker gains advantage; attacks against an
+  // invisible target have disadvantage; mutual invisibility cancels.
+  assert.strictEqual(attackAdvantageMode(['invisible'], [], true).mode, 'adv', 'invisible attacker has advantage');
+  assert.strictEqual(attackAdvantageMode([], ['invisible'], true).mode, 'dis', 'attacks against an invisible target have disadvantage');
+  var mutual = attackAdvantageMode(['invisible'], ['invisible'], true);
+  assert.strictEqual(mutual.mode, null, 'mutual invisibility cancels');
+  assert.strictEqual(mutual.detail.cancelled, true);
 });
 
 test('srd5e-conditions: coerceConditions is fail-soft and normalizing', function () {

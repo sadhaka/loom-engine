@@ -15,7 +15,7 @@ from loom_engine.srd5e_spell_slots import (  # noqa: E402
     spell_slots_for, highest_slot_level, slot_available, spend_slot,
     spend_lowest_available, restore_slot, slots_remaining, long_rest,
     short_rest, widen_slots, spell_requires_concentration, spell_base_level,
-    upcast_effect, total_dice_for_cast,
+    upcast_effect, total_dice_for_cast, sanitize_slot_pool,
 )
 
 PASS = 0
@@ -214,6 +214,17 @@ ck("unknown spell returns base", total_dice_for_cast("8d6", "nonsense", 5) == "8
 ck("mismatched sides return base", total_dice_for_cast("2d10", "fireball", 5) == "2d10")
 ck("non-dice base passes through", total_dice_for_cast("junk", "fireball", 5) == "junk")
 ck("flat mod preserved once", total_dice_for_cast("1d8+3", "cure_wounds", 3) == "3d8+3")
+
+# Codex audit P2 - malformed pools are clamped (no slot-minting).
+_bad = {"1": {"max": 1, "used": -100}}
+ck("negative used clamps availability", slot_available(_bad, 1) == 1)
+ck("slots_remaining clamps", slots_remaining(_bad) == {1: 1})
+_s1 = spend_slot(_bad, 1)
+ck("one real slot spends", _s1["ok"] is True and slot_available(_s1["slots"], 1) == 0)
+ck("no phantom slot remains", spend_slot(_s1["slots"], 1)["ok"] is False)
+ck("used over max clamps down", slot_available({"2": {"max": 2, "used": 9}}, 2) == 0)
+ck("sanitize valid pool unchanged", sanitize_slot_pool(spell_slots_for("wizard", 5)) == spell_slots_for("wizard", 5))
+ck("sanitize clamps malformed", sanitize_slot_pool(_bad) == {"1": {"max": 1, "used": 0}})
 
 print("\npassed=%d failed=%d" % (PASS, FAIL))
 

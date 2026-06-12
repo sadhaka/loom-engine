@@ -145,18 +145,40 @@ def _is_int(n) -> bool:
     return _is_num(n) and math.floor(n) == n
 
 
+def _norm_entry(max_raw, used_raw):
+    """Codex audit P2: clamp an untrusted slot entry - max a non-negative
+    integer, used an integer in [0, max]. A valid entry is returned unchanged,
+    so well-formed pools are byte-identical. Mirrors the TS normEntry."""
+    mx = max_raw if (_is_int(max_raw) and max_raw > 0) else 0
+    used = used_raw if _is_int(used_raw) else 0
+    if used < 0:
+        used = 0
+    if used > mx:
+        used = mx
+    return mx, used
+
+
 def _clone_pool(slots: SlotPool) -> SlotPool:
     out: SlotPool = {}
     for k in slots:
         if k == PACT_KEY:
             p = slots.get(PACT_KEY)
             if p:
-                out[PACT_KEY] = {"slot_level": p["slot_level"], "max": p["max"], "used": p["used"]}
+                # P2: clamp through the single mutating-op choke point.
+                nmx, nused = _norm_entry(p["max"], p["used"])
+                out[PACT_KEY] = {"slot_level": p["slot_level"], "max": nmx, "used": nused}
         else:
             e = slots[k]
             if e:
-                out[k] = {"max": e["max"], "used": e["used"]}
+                nmx, nused = _norm_entry(e["max"], e["used"])
+                out[k] = {"max": nmx, "used": nused}
     return out
+
+
+def sanitize_slot_pool(slots: SlotPool) -> SlotPool:
+    """Codex audit P2 boundary helper: normalize an untrusted pool once. Every
+    public op already sanitizes internally; this is a convenience."""
+    return _clone_pool(slots)
 
 
 def spell_slots_for(class_id, level) -> SlotPool:
@@ -185,10 +207,10 @@ def highest_slot_level(slots: SlotPool) -> int:
     best = 0
     for lv in range(1, MAX_SLOT_LEVEL + 1):
         e = slots.get(str(lv))
-        if e and e["max"] > 0:
+        if e and _norm_entry(e["max"], e["used"])[0] > 0:  # P2: clamp untrusted max
             best = lv
     p = slots.get(PACT_KEY)
-    if p and p["max"] > 0 and p["slot_level"] > best:
+    if p and _norm_entry(p["max"], p["used"])[0] > 0 and p["slot_level"] > best:
         best = p["slot_level"]
     return best
 
@@ -197,11 +219,16 @@ def slot_available(slots: SlotPool, slot_level) -> int:
     """Unused slots at exactly slot_level (numeric tier + a matching pact tier summed)."""
     n = 0
     e = slots.get(str(slot_level))
-    if e and e["max"] > e["used"]:
-        n += e["max"] - e["used"]
+    # Codex audit P2: read through the clamp so a corrupted used cannot inflate.
+    if e:
+        nmx, nused = _norm_entry(e["max"], e["used"])
+        if nmx > nused:
+            n += nmx - nused
     p = slots.get(PACT_KEY)
-    if p and p["slot_level"] == slot_level and p["max"] > p["used"]:
-        n += p["max"] - p["used"]
+    if p and p["slot_level"] == slot_level:
+        nmx, nused = _norm_entry(p["max"], p["used"])
+        if nmx > nused:
+            n += nmx - nused
     return n
 
 
@@ -264,12 +291,15 @@ def slots_remaining(slots: SlotPool) -> Dict[int, int]:
     out: Dict[int, int] = {}
     for lv in range(1, MAX_SLOT_LEVEL + 1):
         e = slots.get(str(lv))
-        if e and e["max"] > 0:
-            out[lv] = e["max"] - e["used"] if e["max"] - e["used"] > 0 else 0
+        if e:  # Codex audit P2: clamp before subtracting
+            nmx, nused = _norm_entry(e["max"], e["used"])
+            if nmx > 0:
+                out[lv] = nmx - nused
     p = slots.get(PACT_KEY)
-    if p and p["max"] > 0:
-        rem = p["max"] - p["used"] if p["max"] - p["used"] > 0 else 0
-        out[p["slot_level"]] = out.get(p["slot_level"], 0) + rem
+    if p:
+        nmx, nused = _norm_entry(p["max"], p["used"])
+        if nmx > 0:
+            out[p["slot_level"]] = out.get(p["slot_level"], 0) + (nmx - nused)
     return out
 
 

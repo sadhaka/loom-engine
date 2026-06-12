@@ -20,13 +20,22 @@ from __future__ import annotations
 from typing import Dict, List, Optional
 
 # Attacks AGAINST a target with any of these have advantage.
-ADV_AGAINST_TARGET: List[str] = ["restrained", "stunned", "paralyzed", "unconscious"]
+# Codex audit P1: blinded + petrified appended (5e RAW), order preserved.
+ADV_AGAINST_TARGET: List[str] = ["restrained", "stunned", "paralyzed", "unconscious", "blinded", "petrified"]
 
 # An ATTACKER with any of these has disadvantage on attack rolls.
-DISADV_ON_ATTACKER: List[str] = ["poisoned", "frightened", "restrained", "prone"]
+# Codex audit P1: a blinded attacker has disadvantage.
+DISADV_ON_ATTACKER: List[str] = ["poisoned", "frightened", "restrained", "prone", "blinded"]
+
+# An ATTACKER with any of these has ADVANTAGE (5e RAW invisible attacker).
+ADV_FROM_ATTACKER: List[str] = ["invisible"]
+
+# Attacks AGAINST a target with any of these have DISADVANTAGE (invisible target).
+DISADV_AGAINST_TARGET: List[str] = ["invisible"]
 
 # These auto-fail STRENGTH and DEXTERITY saving throws (and only those).
-AUTO_FAIL_STR_DEX: List[str] = ["paralyzed", "stunned", "unconscious"]
+# Codex audit P1: petrified auto-fails STR and DEX saves (5e RAW).
+AUTO_FAIL_STR_DEX: List[str] = ["paralyzed", "stunned", "unconscious", "petrified"]
 
 # These deny reactions (the SRD incapacitated family - an incapacitated
 # creature takes no actions or reactions).
@@ -96,6 +105,14 @@ def attack_advantage_mode(attacker_conds, target_conds, is_melee) -> dict:
     for dc in DISADV_ON_ATTACKER:
         if _has_cond(atk, dc):
             dis_from.append(dc)
+    # Codex audit P1: invisible attacker -> advantage; invisible target ->
+    # disadvantage. Mutual invisibility lands one source on each side -> cancel.
+    for aa in ADV_FROM_ATTACKER:
+        if _has_cond(atk, aa):
+            adv_from.append(aa)
+    for dt in DISADV_AGAINST_TARGET:
+        if _has_cond(tgt, dt):
+            dis_from.append(dt)
     cancelled = len(adv_from) > 0 and len(dis_from) > 0
     mode: Optional[str] = None
     if len(adv_from) > 0 and len(dis_from) == 0:

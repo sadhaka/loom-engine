@@ -211,7 +211,7 @@ test('srd5e-pack: packs/srd5e/srd5e_actions_v1.json - every document validates',
   var pack = JSON.parse(readFileSync(join(here, '..', 'packs', 'srd5e', 'srd5e_actions_v1.json'), 'utf8'));
   assert.ok(pack.meta && typeof pack.meta.generator === 'string', 'pack has meta provenance');
   assert.ok(Array.isArray(pack.actions), 'pack has an actions array');
-  assert.strictEqual(pack.actions.length, 245, 'expected exactly 245 enumerated actions');
+  assert.strictEqual(pack.actions.length, 246, 'expected exactly 246 enumerated actions (245 + the Blindness/Deafness deafness variant, Codex audit P2)');
   var ids: Record<string, boolean> = {};
   for (var i = 0; i < pack.actions.length; i++) {
     var a = pack.actions[i] as { id: string; action_type: string; document: unknown };
