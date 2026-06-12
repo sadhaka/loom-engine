@@ -14,6 +14,16 @@
 // (sign + verify here); it is NOT promised to be byte-compatible with other
 // languages' JSON serialisation or HMAC framing.
 //
+// STRING-OVERLOAD CONTRACT (round-8 audit P2): the string overloads encode
+// via TextEncoder, which is RAW JS-USV input - a lone surrogate (e.g.
+// '\uD800') is silently replaced with U+FFFD per the WHATWG encoding spec,
+// while the Python and Rust surfaces reject / cannot represent the same
+// invalid scalar. For CROSS-SURFACE byte parity, pass Uint8Array (the byte
+// APIs are exact everywhere); the engine's own signing paths (EventChain /
+// session / snapshot) are unaffected - they clean-string-guard BEFORE
+// reaching these helpers, so a dirty string never gets here from the
+// kernel. The string overloads stay as-is for JS-local convenience.
+//
 //   var sig = hmacSha256Hex('runtime-secret', 'message');  // 64-char lowercase hex
 //
 // Isomorphic: depends only on TextEncoder (browser + Node 11+) and typed
