@@ -81,10 +81,32 @@ under a solo-founded commercial product ([TheWorldTable.ai](https://theworldtabl
   engine *underneath* one.
 
 Shipped in production by **LoomMaster** ([theworldtable.ai/loommaster.html](https://theworldtable.ai/loommaster.html)),
-an AI Dungeon Master for 5e + PF2e where every roll, degree-of-success, and HP change is
+an AI Game Master for 5e + PF2e where every roll, degree-of-success, and HP change is
 resolved server-side on a seeded PRNG and HMAC-chained for replay — the LLM only narrates.
 
-## v3.0 - the Living Persistent World (current)
+## v3.1 - the audited content milestone (current)
+
+v3.1 brings 5e/PF2e content depth onto the deterministic core and hardens the
+persistence boundary, across five hand-closed release-audit rounds.
+
+- **Ruleset AST v2** - the homebrew interpreter gains richer closed-grammar node
+  families (PbtA-style 2d6 moves, d100 roll-under), still no untrusted-code
+  execution, still fail-closed before any RNG draw, NFC-guarded at every name
+  boundary.
+- **5e Action Pack** - leveled spell slots, concentration, and the full RAW
+  condition table, each an event-sourced, replay-verifiable primitive.
+- **Forge-proof persistence** - the `.loom` bundle carries a v3 length-prefixed
+  signature plus an ownership-binding digest, so a save cannot be re-pointed at
+  another world or truncated undetected - rejected on every surface.
+- **delve-mini** - a full multi-room dungeon run reconstructed from the tape as a
+  headless determinism proof, the TileMap stage folded into the fingerprint.
+- **Hardened** - release-audit rounds 4-8 closed by hand: NFC parity on the seal,
+  every seed digest, and the AST name guard across TypeScript / Python / Rust;
+  the bundle-binding cross-surface fork shut everywhere; every version surface
+  test-locked to one string. 4,270 tests pass; published to npm / PyPI /
+  crates.io (core crates 0.1.2).
+
+## v3.0 - the Living Persistent World
 
 v3.0 makes the engine a deterministic, **server-authoritative world engine**. One
 Rust core, bound to four surfaces, resolves the same seed to byte-identical results
