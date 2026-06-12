@@ -109,7 +109,26 @@ jobs:
         run: npm test
 
       - name: Build
-        run: npm run build
+        # Round-8 P2 (release hygiene): clean BEFORE building so a stale
+        # ignored dist/ from any prior context can never reach the pack -
+        # the publish always ships exactly what this run compiled.
+        run: |
+          npm run clean
+          npm run build
+
+      - name: Post-build dist smoke (version embedded in the artifact)
+        # Round-8 P2: assert the BUILT artifact carries this checkout's
+        # LOOM_ENGINE_VERSION (local stale-dist incidents read 3.0.0 while
+        # package.json said 3.1.1 - CI rebuilds, but this makes the
+        # artifact-vs-manifest match an explicit, failing check).
+        run: |
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          DIST_VERSION=$(node -p "require('./dist/index.js').LOOM_ENGINE_VERSION")
+          if [ "$PKG_VERSION" != "$DIST_VERSION" ]; then
+            echo "dist LOOM_ENGINE_VERSION ($DIST_VERSION) does not match package.json ($PKG_VERSION)"
+            exit 1
+          fi
+          echo "dist artifact version match: $DIST_VERSION"
 
       - name: Verify version matches tag
         if: startsWith(github.ref, 'refs/tags/v')
