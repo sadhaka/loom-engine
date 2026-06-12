@@ -129,7 +129,7 @@ fn swapped_valid_but_stale_seal_is_rejected() {
     let key = inputs["key"].as_str().expect("key").to_string();
     let genesis = inputs["bundle"]["tailGenesis"].as_str().expect("tailGenesis").to_string();
     let empty = EventChain::create(key.as_bytes(), &genesis);
-    let stale = empty.seal(); // count 0, head == tailGenesis - validly signed
+    let stale = empty.seal().expect("clean tailGenesis seals"); // count 0, head == tailGenesis - validly signed
     inputs["bundle"]["seal"] = json!({ "count": stale.count, "head": stale.head, "sig": stale.sig });
     let res = resume_from_json(&inputs.to_string());
     assert!(res.is_err(), "stale seal must be rejected");

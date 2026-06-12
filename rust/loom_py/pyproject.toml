@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "loom-engine-native"
-version = "3.0.0"  # tracks the engine version (npm loom-engine + loom-engine-rpg)
+version = "3.1.1"  # tracks the engine version (npm loom-engine + loom-engine-rpg)
 description = "Native (Rust) Python bindings for the Loom Engine deterministic core - the same Rust core the WASM and C-ABI surfaces use, so a Python-server result is byte-identical to a browser-client one."
 requires-python = ">=3.8"
 # SPDX (PEP 639) - BUSL-1.1, matching the engine. This wheel bundles the compiled

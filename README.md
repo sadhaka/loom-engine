@@ -106,10 +106,11 @@ persistent world.
   [Plaza Persistent reference demo](./demo/plaza-persistent/) and soaked past
   100 epochs by the v3.5 session-soak vectors in `npm test`.
 - **WorldSession suspend/resume** - pack a world into a verifiable bundle that
-  embeds the chain's structural seal (bundle format v2); on resume, verify the
-  snapshot hash, verify the seal fail-closed (an end-truncated, seal-less, or
-  forged-seal bundle is rejected), replay the HMAC chain tail, reject
-  time-travel, fast-forward.
+  embeds the chain's structural seal plus a signed identity binding (bundle
+  format v3); on resume, verify the binding first (a leading-truncated,
+  cross-world-spliced, or rewritten-position bundle is rejected), verify the
+  seal fail-closed (an end-truncated, seal-less, or forged-seal bundle is
+  rejected), replay the HMAC chain tail, reject time-travel, fast-forward.
 - **Real-time multiplayer core** - server-authoritative command frames, client
   rollback reconciliation (predict, then reconcile to the authoritative frame - you
   can never forge an outcome), and region hashing (a partial-sync client verifies

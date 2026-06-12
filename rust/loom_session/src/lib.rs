@@ -177,7 +177,12 @@ pub fn suspend(
     };
     let state_hash =
         world_state_hash(key, snapshot_state).map_err(|e| format!("world-session: hash: {:?}", e))?;
-    let seal = chain.seal();
+    // Round-5 audit HIGH: seal() now rejects a non-NFC head (only reachable
+    // via a non-NFC genesis on an empty chain) - Err, never a panic, so a
+    // bundle unsignable on TS/Python is unsignable here too.
+    let seal = chain
+        .seal()
+        .map_err(|e| format!("world-session: seal: {:?} (non-NFC head rejected)", e))?;
     // Bundle format v3 (Codex audit P1): bind the identity fields the seal does
     // not cover - worldId + stateHash + eventIndex + tailGenesis + (count, head).
     // 3.1.0 audit HIGH: bind_bundle now rejects a non-NFC identity string (the
