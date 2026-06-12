@@ -1045,7 +1045,8 @@
           "count": 3,
           "head": "f818aecf86d8a308b324c4dc307079211629ebfdfbfcd6ef2359353f08e90785",
           "sig": "05876a7e6090284efa47e431b2a93da0c71b52cf2a5cf217188c6a3d2459e767"
-        }
+        },
+        "binding": "321d24238a4bbb7f7308841dc7944510ee2743b16845d85da24a1e1d59a1e5cb"
       },
       "bundleC": {
         "worldId": "soak_boundary",
@@ -1117,7 +1118,8 @@
           "count": 3,
           "head": "f818aecf86d8a308b324c4dc307079211629ebfdfbfcd6ef2359353f08e90785",
           "sig": "05876a7e6090284efa47e431b2a93da0c71b52cf2a5cf217188c6a3d2459e767"
-        }
+        },
+        "binding": "9edce9fff65ec6dd95672758ba8144ddb8706a4c8647138880026e829056d57b"
       },
       "maxCatchup": 5,
       "proposalsByEpoch": {
@@ -1282,7 +1284,8 @@
           "count": 0,
           "head": "loom.world/soak_cycles",
           "sig": "6602e655632d0b6f6017c4bdb87d2aa117cf15e8d97f636047a77f8e9d923521"
-        }
+        },
+        "binding": "d593d00a3f393bc4ef078a1057fd354e61cbc2e71eff2e76bd62b6abf7771779"
       },
       "cycle_length": 7,
       "cycle_count": 3,
@@ -2616,7 +2619,8 @@
           "count": 0,
           "head": "loom.world/soak_void",
           "sig": "14b6394fbd6080159ff45312b1a1bf10e148f9703682ca316c43996627cfc54b"
-        }
+        },
+        "binding": "fb1a70c1b5c56a3b9f9a0a9bc7204ad24e44bf25139a954fdc697017f36700fa"
       },
       "first": {
         "currentEpoch": 500,
@@ -3205,7 +3209,8 @@
           "count": 0,
           "head": "loom.world/soak_void",
           "sig": "14b6394fbd6080159ff45312b1a1bf10e148f9703682ca316c43996627cfc54b"
-        }
+        },
+        "binding": "17fc7cda3c9da6a51e798bebe137f209334b5de22e74399719b00e169ee24ea0"
       },
       "second": {
         "currentEpoch": 502,

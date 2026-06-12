@@ -44,6 +44,9 @@ import unicodedata as _unicodedata
 # a format version. MUST match the TS RECORD_DOMAIN / SEAL_DOMAIN verbatim.
 RECORD_DOMAIN = "loom.chain.rec/1"
 SEAL_DOMAIN = "loom.chain.seal/1"
+# Codex audit P1 (persistence forge): world-bundle binding namespace. Signs
+# worldId + snapshot stateHash + eventIndex + tailGenesis + sealed (count, head).
+BUNDLE_DOMAIN = "loom.bundle.bind/1"
 
 # Number.MAX_SAFE_INTEGER (2^53 - 1).
 MAX_SAFE_INT = 9007199254740991
@@ -199,6 +202,33 @@ def _seal_message(count, head):
     return field(SEAL_DOMAIN) + field(_num_str(count, "EventChain")) + field(head)
 
 
+def _bundle_bind_message(world_id, state_hash, event_index, tail_genesis, count, head):
+    """Codex audit P1: the world-bundle binding message - byte-identical to the
+    TS bundleBindMessage. Length-prefixed (injective) fields."""
+    assert_clean_string(world_id)
+    assert_clean_string(state_hash)
+    assert_clean_string(tail_genesis)
+    assert_clean_string(head)
+    return (field(BUNDLE_DOMAIN) + field(world_id) + field(state_hash)
+            + field(_num_str(event_index, "EventChain")) + field(tail_genesis)
+            + field(_num_str(count, "EventChain")) + field(head))
+
+
+def verify_bundle_binding(key, world_id, state_hash, event_index, tail_genesis, count, head, binding):
+    """Verify a world-bundle binding (constant-time). A mismatch on ANY identity
+    field fails closed. Mirrors the TS EventChain.verifyBundleBinding."""
+    if (not isinstance(binding, str) or not isinstance(world_id, str)
+            or not isinstance(state_hash, str) or not isinstance(tail_genesis, str)
+            or not isinstance(head, str)):
+        return False
+    try:
+        expected = hmac_sha256_hex(
+            key, _bundle_bind_message(world_id, state_hash, event_index, tail_genesis, count, head))
+    except Exception:
+        return False
+    return _hmac.compare_digest(expected, binding)
+
+
 def verify_records(key, records, genesis="", expected_seal=None):
     """Verify an external record list (e.g. loaded from disk / the network /
     a WorldBundle chainTail) without an instance. Returns
@@ -312,6 +342,16 @@ class EventChain(object):
         head = self._head_sig
         return {"count": count, "head": head,
                 "sig": hmac_sha256_hex(self._key, _seal_message(count, head))}
+
+    def bind_bundle(self, world_id, state_hash, event_index, tail_genesis):
+        """Codex audit P1 (persistence forge): sign a world bundle's identity -
+        worldId + snapshot stateHash + eventIndex + tailGenesis + (count, head).
+        Byte-identical to the TS EventChain.bindBundle."""
+        count = len(self._records)
+        head = self._head_sig
+        return hmac_sha256_hex(
+            self._key,
+            _bundle_bind_message(world_id, state_hash, event_index, tail_genesis, count, head))
 
     def by_seq(self, seq):
         if isinstance(seq, bool) or not isinstance(seq, (int, float)) or seq <= 0:

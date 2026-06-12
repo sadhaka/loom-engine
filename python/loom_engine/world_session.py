@@ -52,7 +52,7 @@ The bundle is a plain dict in the cross-language wire shape:
 
 import json as _json
 
-from .event_chain import verify_records, verify_seal
+from .event_chain import verify_records, verify_seal, verify_bundle_binding
 from .world_epoch import catch_up_epochs
 from .world_snapshot import world_state_hash, verify_world_snapshot, normalize_tags
 
@@ -157,23 +157,28 @@ def suspend(key, world_id, snapshot_state, snapshot_event_index, chain):
             " seq numbering (%d records at or before it)"
             % (idx, len(records) - len(tail)))
     tail_genesis = tail[0]["prevSig"] if len(tail) > 0 else chain.head()
+    state_hash = world_state_hash(key, snapshot_state)
     return {
         "worldId": world_id,
         "snapshot": {
             "eventIndex": idx,
-            "stateHash": world_state_hash(key, snapshot_state),
+            "stateHash": state_hash,
             "state": snapshot_state,
         },
         "chainTail": tail,
         "tailGenesis": tail_genesis,
         "seal": chain.seal(),
+        # Bundle format v3 (Codex audit P1): bind the identity fields the seal
+        # does not cover - worldId + stateHash + eventIndex + tailGenesis + seal.
+        "binding": chain.bind_bundle(world_id, state_hash, idx, tail_genesis),
     }
 
 
 # ---- resume ----------------------------------------------------------------
 
 def resume(key, bundle, current_epoch, ruleset, max_catchup,
-           proposals_by_epoch=None, actor_tags=None, max_actions=None):
+           proposals_by_epoch=None, actor_tags=None, max_actions=None,
+           expected_world_id=None):
     """Reconstruct + verify + fast-forward a world from a bundle. Fail-closed at
     every integrity gate. Deterministic: given the same (bundle, current_epoch,
     proposals_by_epoch), the result is byte-identical on every surface.
@@ -182,6 +187,21 @@ def resume(key, bundle, current_epoch, ruleset, max_catchup,
     "epochs_voided"} - new_events are the EpochResolved events generated during
     catch-up, ready for the caller to append to the chain + persist."""
     b = bundle
+
+    # (0) shape + identity gates (Codex audit P1/P2), fail-closed and BEFORE any
+    # crypto so a malformed bundle is rejected identically on every surface.
+    if expected_world_id is not None and b.get("worldId") != expected_world_id:
+        raise ValueError(
+            "world-session: bundle worldId does not match expectedWorldId"
+            " (cross-world or cross-path bundle rejected)")
+    _ctail = b.get("chainTail")
+    if _ctail is not None and not isinstance(_ctail, list):
+        raise ValueError("world-session: chainTail must be an array")
+    _entities = b.get("snapshot", {}).get("state", {}).get("entities")
+    if not isinstance(_entities, dict):
+        raise ValueError(
+            "world-session: snapshot.state.entities must be an object"
+            " (malformed WorldState rejected fail-closed)")
 
     # (1) snapshot integrity - constant-time hash compare.
     if not verify_world_snapshot(key, b["snapshot"]["state"], b["snapshot"]["stateHash"]):
@@ -214,6 +234,17 @@ def resume(key, bundle, current_epoch, ruleset, max_catchup,
     if not _is_safe_integer(event_index) or event_index < 0:
         raise ValueError(
             "world-session: snapshot.eventIndex must be a JS-safe integer >= 0")
+    # (3a-bind) THE FORGE GATE (Codex audit P1): the binding signs worldId +
+    # stateHash + eventIndex + tailGenesis + (count, head), so a leading-prefix
+    # drop (rewrite eventIndex + tailGenesis) or a cross-world snapshot/tail
+    # splice fails HERE, before the structural head/count checks the forger can
+    # pass. Mirrors the TS resume() gate.
+    if not verify_bundle_binding(
+            key, b.get("worldId", ""), b["snapshot"]["stateHash"], event_index,
+            b.get("tailGenesis", ""), seal["count"], seal["head"], b.get("binding", "")):
+        raise ValueError(
+            "world-session: bundle binding invalid"
+            " (worldId / eventIndex / tailGenesis rewritten, or cross-world splice - forge detected)")
     tail_head = tail[-1]["sig"] if len(tail) > 0 else b["tailGenesis"]
     if seal["head"] != tail_head:
         raise ValueError(

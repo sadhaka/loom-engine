@@ -175,6 +175,9 @@ pub fn suspend(
     let state_hash =
         world_state_hash(key, snapshot_state).map_err(|e| format!("world-session: hash: {:?}", e))?;
     let seal = chain.seal();
+    // Bundle format v3 (Codex audit P1): bind the identity fields the seal does
+    // not cover - worldId + stateHash + eventIndex + tailGenesis + (count, head).
+    let binding = chain.bind_bundle(world_id, &state_hash, idx, &tail_genesis);
     Ok(json!({
         "worldId": world_id,
         "snapshot": {
@@ -185,6 +188,7 @@ pub fn suspend(
         "chainTail": tail,
         "tailGenesis": tail_genesis,
         "seal": { "count": seal.count, "head": seal.head, "sig": seal.sig },
+        "binding": binding,
     }))
 }
 
@@ -224,6 +228,22 @@ pub fn resume(
     let snapshot = bundle.get("snapshot").ok_or("world-session: bundle missing snapshot")?;
     let snap_state = snapshot.get("state").ok_or("world-session: snapshot missing state")?;
     let expected = snapshot.get("stateHash").and_then(|x| x.as_str()).ok_or("world-session: snapshot missing stateHash")?;
+
+    // (0) shape gates (Codex audit P1/P2), fail-closed and identical to TS.
+    // chainTail, when present, MUST be an array - a non-array was silently
+    // treated as empty here, diverging from TS which rejects.
+    match bundle.get("chainTail") {
+        None | Some(Value::Null) => {}
+        Some(v) if v.is_array() => {}
+        _ => return Err("world-session: chainTail must be an array".to_string()),
+    }
+    // WorldState shape: entities MUST be an object. The audit found Rust no-opped
+    // a malformed state (entities not an object) while TS/Python threw - fail
+    // closed is the canonical contract.
+    match snap_state.get("entities") {
+        Some(v) if v.is_object() => {}
+        _ => return Err("world-session: snapshot.state.entities must be an object (malformed WorldState rejected fail-closed)".to_string()),
+    }
 
     // (1) snapshot integrity.
     let actual = world_state_hash(key, snap_state).map_err(|e| format!("world-session: hash: {:?}", e))?;
@@ -274,6 +294,15 @@ pub fn resume(
         Some(i) if i >= 0 && loom_epoch::is_safe_epoch(i) => i as u64,
         _ => return Err("world-session: snapshot.eventIndex must be a JS-safe integer >= 0".to_string()),
     };
+    // (3a-bind) THE FORGE GATE (Codex audit P1): the binding signs worldId +
+    // stateHash + eventIndex + tailGenesis + (count, head), so a leading-prefix
+    // drop (rewrite eventIndex + tailGenesis) or a cross-world snapshot/tail
+    // splice fails HERE, before the structural head/count checks the forger can
+    // pass. Mirrors the TS resume() gate exactly.
+    let binding = bundle.get("binding").and_then(|x| x.as_str()).unwrap_or("");
+    if !EventChain::verify_bundle_binding(key, &world_id, expected, event_index, tail_genesis, seal.count, &seal.head, binding) {
+        return Err("world-session: bundle binding invalid (worldId / eventIndex / tailGenesis rewritten, or cross-world splice - forge detected)".to_string());
+    }
     // The tail's head: the last tail record's sig, or tailGenesis when the tail
     // is empty. None (missing field) never equals a sealed head - fail closed.
     let tail_head: Option<&str> = match tail.last() {

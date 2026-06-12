@@ -143,15 +143,36 @@ def test_fail_closed_forged_seal_rejected():
 
 
 def test_fail_closed_swapped_valid_seal_rejected():
-    # A VALID seal taken from a different chain state (here: an empty chain's
-    # seal) cannot be swapped in - the sealed head no longer matches the tail.
+    # A VALID seal from a different chain state cannot be swapped in. Bundle
+    # format v3: the binding signs the sealed (count, head) with the snapshot
+    # identity, so a swapped seal whose count/head differ from what was bound is
+    # caught by the binding gate - a stronger rejection than the structural head
+    # check. Either way the bundle is rejected fail-closed.
     v = _vec()
     i = v["inputs"]
     swapped = copy.deepcopy(i["bundle"])
     empty = EventChain.create(key=i["key"], genesis=swapped["tailGenesis"])
     swapped["seal"] = empty.seal()  # count 0, head == tailGenesis - validly signed
     _expect_raises(lambda: _do_resume(v, swapped, i["currentEpoch"]),
-                   "does not match the seal", "swapped valid seal")
+                   "binding invalid", "swapped valid seal")
+
+
+def test_fail_closed_leading_truncation_forge_rejected():
+    # Codex audit P1: drop the FIRST tail record, bump eventIndex, re-anchor
+    # tailGenesis. The seal is untouched and every structural check passes - but
+    # the binding signed the ORIGINAL eventIndex + tailGenesis, so it rejects.
+    v = _vec()
+    i = v["inputs"]
+    tail = i["bundle"].get("chainTail") or []
+    if len(tail) < 2:
+        return
+    forged = copy.deepcopy(i["bundle"])
+    dropped = forged["chainTail"][0]
+    forged["chainTail"] = forged["chainTail"][1:]
+    forged["snapshot"]["eventIndex"] = forged["snapshot"]["eventIndex"] + 1
+    forged["tailGenesis"] = dropped["sig"]
+    _expect_raises(lambda: _do_resume(v, forged, i["currentEpoch"]),
+                   "binding invalid", "leading-truncation forge")
 
 
 def test_fail_closed_suspend_rejects_index_past_chain_end():
@@ -189,6 +210,7 @@ if __name__ == "__main__":
     test_fail_closed_missing_seal_rejected()
     test_fail_closed_forged_seal_rejected()
     test_fail_closed_swapped_valid_seal_rejected()
+    test_fail_closed_leading_truncation_forge_rejected()
     test_fail_closed_suspend_rejects_index_past_chain_end()
     test_fail_closed_suspend_rejects_bad_index()
-    print("world_session Python parity: all 12 tests pass")
+    print("world_session Python parity: all 13 tests pass")

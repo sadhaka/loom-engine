@@ -43,6 +43,10 @@ type HmacSha256 = Hmac<Sha256>;
 // version. MUST match the TS constants verbatim.
 const RECORD_DOMAIN: &str = "loom.chain.rec/1";
 const SEAL_DOMAIN: &str = "loom.chain.seal/1";
+// Codex audit P1 (persistence forge): the world-bundle binding namespace. Signs
+// worldId + snapshot stateHash + eventIndex + tailGenesis + sealed (count, head)
+// so none of those fields can be rewritten without the key.
+const BUNDLE_DOMAIN: &str = "loom.bundle.bind/1";
 
 // Hard cap on canonicalization recursion - matches the TS MAX_CANONICAL_DEPTH so
 // a hostile deeply-nested payload is rejected at the same boundary on both sides.
@@ -283,6 +287,27 @@ fn canonical_message(
 fn seal_message(count: u64, head: &str) -> String {
     let mut m = String::new();
     m.push_str(&field(SEAL_DOMAIN));
+    m.push_str(&field(&count.to_string()));
+    m.push_str(&field(head));
+    m
+}
+
+// Codex audit P1: the world-bundle binding message - byte-identical to the TS
+// bundleBindMessage. Length-prefixed (injective) fields, no delimiter ambiguity.
+fn bundle_bind_message(
+    world_id: &str,
+    state_hash: &str,
+    event_index: u64,
+    tail_genesis: &str,
+    count: u64,
+    head: &str,
+) -> String {
+    let mut m = String::new();
+    m.push_str(&field(BUNDLE_DOMAIN));
+    m.push_str(&field(world_id));
+    m.push_str(&field(state_hash));
+    m.push_str(&field(&event_index.to_string()));
+    m.push_str(&field(tail_genesis));
     m.push_str(&field(&count.to_string()));
     m.push_str(&field(head));
     m
@@ -531,6 +556,32 @@ impl EventChain {
     pub fn verify_seal(key: &[u8], seal: &ChainSeal) -> bool {
         let expected = hmac_sha256_hex(key, &seal_message(seal.count, &seal.head));
         constant_time_eq(expected.as_bytes(), seal.sig.as_bytes())
+    }
+
+    /// Codex audit P1 (persistence forge): sign a world bundle's identity. Binds
+    /// worldId + snapshot stateHash + eventIndex + tailGenesis to the sealed
+    /// (count, head). Byte-identical to the TS EventChain.bindBundle.
+    pub fn bind_bundle(&self, world_id: &str, state_hash: &str, event_index: u64, tail_genesis: &str) -> String {
+        let count = self.records.len() as u64;
+        let head = self.head_sig.clone();
+        hmac_sha256_hex(&self.key, &bundle_bind_message(world_id, state_hash, event_index, tail_genesis, count, &head))
+    }
+
+    /// Verify a world-bundle binding (constant-time). A mismatch on ANY identity
+    /// field fails closed.
+    #[allow(clippy::too_many_arguments)]
+    pub fn verify_bundle_binding(
+        key: &[u8],
+        world_id: &str,
+        state_hash: &str,
+        event_index: u64,
+        tail_genesis: &str,
+        count: u64,
+        head: &str,
+        binding: &str,
+    ) -> bool {
+        let expected = hmac_sha256_hex(key, &bundle_bind_message(world_id, state_hash, event_index, tail_genesis, count, head));
+        constant_time_eq(expected.as_bytes(), binding.as_bytes())
     }
 }
 
