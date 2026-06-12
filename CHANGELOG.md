@@ -9,6 +9,48 @@ contract yet.
 
 ## Unreleased
 
+- **SECURITY / BREAKING (bundle format v3): a signed bundle binding closes the
+  leading-truncation and cross-world forges** (`runtime/event-chain`,
+  `runtime/world-session`, the Rust `loom_events` / `loom_session` ports, the
+  Python `event_chain` / `world_session` ports, `test_vectors/v3_4` / `v3_5` /
+  `v6_1`, `demo/plaza-persistent`). A Codex adversarial audit proved the v2
+  seal - which signs only `(count, head)` - left a forge needing NO key: the
+  snapshot hash binds the STATE but not its chain POSITION, so a forger could
+  rewrite `snapshot.eventIndex` + `tailGenesis` together to drop the LEADING
+  prefix of `chainTail` (every structural check still passed; the dropped
+  record's mutations were silently lost), or splice a snapshot from another
+  world. `suspend()` now also signs a BINDING over `worldId` + snapshot
+  `stateHash` + `eventIndex` + `tailGenesis` + the sealed `(count, head)` via
+  `EventChain.bindBundle` (domain `loom.bundle.bind/1`, length-prefixed,
+  byte-identical on every surface); `resume()` re-derives it and rejects
+  fail-closed BEFORE the structural checks the forger can satisfy. `resume()`
+  also gains an optional `expectedWorldId`; WorldState shape is validated
+  fail-closed (Rust previously no-opped a malformed state while TS/Python threw);
+  and `chainTail` must be an array. The KNOWN RESIDUAL documented in the v2
+  entry is RESOLVED. Negative tests on TS, Rust and Python construct the exact
+  audit forge and confirm rejection.
+- **5e content pack: RAW blinded / petrified / invisible, a malformed-pool guard,
+  and a Blindness/Deafness deafness variant** (`runtime/srd5e-conditions`,
+  `runtime/srd5e-spell-slots`, `runtime/srd5e-pack`, the Python + Rust ports,
+  `packs/srd5e/srd5e_actions_v1.json` 245 -> 246 actions). Codex audit: the
+  advantage / auto-fail tables were missing three conditions (attacks against a
+  blinded/petrified target have advantage; a blinded attacker has disadvantage;
+  invisible attacker advantage / target disadvantage; petrified auto-fails STR
+  and DEX) - combat math was silently wrong; now correct and unit-tested on all
+  three surfaces. An untrusted slot pool is clamped at every public boundary
+  (`{ max: 1, used: -100 }` no longer reports 101 available slots - a
+  slot-minting exploit), with an exported `sanitizeSlotPool` helper. The shipped
+  pack JSON no longer references private host tuning.
+- **AST v2: cross-language parity forks closed + a name budget** (`runtime/
+  ruleset-ast`, the Python + Rust ports, `test_vectors/ast_v2_families.json`).
+  Codex audit: a PRESENT non-integer (incl. null) property read returned 0 on
+  Rust where TS/Python threw; `set_prop`/`add_prop` read the previous value
+  three different ways; and the `pub` shared-rng entry points (`loom_epoch` /
+  `loom_frame` callers) skipped validation, letting an external Rust consumer
+  bypass it. All three are fail-closed and identical now, plus a 256-UTF-16-unit
+  cap on property/tag names. Seven new golden vectors (G1-G7) pin every fix
+  byte-identical across TS, Python and Rust.
+
 - **BREAKING (bundle format v2): the WorldBundle carries a structural ChainSeal -
   end-truncation of the chain tail is now rejected fail-closed on resume**
   (`runtime/world-session`, `test_vectors/v3_4_world_session.json`,
