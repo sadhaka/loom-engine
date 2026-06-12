@@ -63,6 +63,12 @@ import { hmacSha256Hex, timingSafeEqualHex } from './hmac-sha256.js';
 // trailing /1 is a format version for future migrations.
 const RECORD_DOMAIN = 'loom.chain.rec/1';
 const SEAL_DOMAIN = 'loom.chain.seal/1';
+// Codex audit P1 (persistence forge): a separate namespace for the world-bundle
+// binding HMAC, which signs the bundle's identity (worldId + snapshot stateHash
+// + eventIndex + tailGenesis + sealed count + sealed head) so none of those
+// fields can be rewritten without the key. A bundle-bind HMAC can never be
+// reinterpreted as a record or seal HMAC.
+const BUNDLE_DOMAIN = 'loom.bundle.bind/1';
 // 2.2.5 audit LOW: hard cap on canonicalization / clone recursion depth. Event
 // payloads are shallow; this is far above any legitimate nesting and exists only
 // so a hostile deeply-nested payload (e.g. an untrusted verifyRecords /
@@ -268,6 +274,19 @@ function sealMessage(count, head) {
     assertCleanString(head);
     return field(SEAL_DOMAIN) + field(String(count)) + field(head);
 }
+// Codex audit P1: the world-bundle binding message. Length-prefixed fields
+// (injective) so worldId, stateHash, eventIndex, tailGenesis, count and head
+// are bound into one HMAC with no delimiter ambiguity. Identical byte string
+// on TS, Python and Rust.
+function bundleBindMessage(worldId, stateHash, eventIndex, tailGenesis, count, head) {
+    assertCleanString(worldId);
+    assertCleanString(stateHash);
+    assertCleanString(tailGenesis);
+    assertCleanString(head);
+    return field(BUNDLE_DOMAIN) + field(worldId) + field(stateHash)
+        + field(String(eventIndex)) + field(tailGenesis)
+        + field(String(count)) + field(head);
+}
 // 2.2.3 audit MED 4: payload is DEEP-CLONED so the returned record shares no
 // mutable state with the stored one - a holder mutating a listed/snapshotted
 // payload can never reach back into chain state (and break verify()).
@@ -399,6 +418,35 @@ export class EventChain {
             return false;
         }
         return timingSafeEqualHex(expected, seal.sig);
+    }
+    // Codex audit P1 (persistence forge): sign a world bundle's identity. Binds
+    // worldId + snapshot stateHash + eventIndex + tailGenesis to the sealed
+    // (count, head). suspend() stores this; resume() re-derives and compares, so
+    // a forger cannot rewrite eventIndex/tailGenesis to drop leading tail records
+    // (or splice a snapshot from another world) without invalidating it. count
+    // and head are this chain's current values - the SAME ones seal() signs.
+    bindBundle(worldId, stateHash, eventIndex, tailGenesis) {
+        var count = this.records.length;
+        var head = this.headSig;
+        return hmacSha256Hex(this.key, bundleBindMessage(worldId, stateHash, eventIndex, tailGenesis, count, head));
+    }
+    // Verify a world-bundle binding (constant-time). All identity fields are
+    // passed by the caller (resume()); a mismatch on ANY of them fails closed.
+    static verifyBundleBinding(key, worldId, stateHash, eventIndex, tailGenesis, count, head, binding) {
+        if (typeof binding !== 'string' || typeof worldId !== 'string'
+            || typeof stateHash !== 'string' || typeof tailGenesis !== 'string'
+            || typeof head !== 'string'
+            || !Number.isSafeInteger(eventIndex) || !Number.isSafeInteger(count)) {
+            return false;
+        }
+        var expected;
+        try {
+            expected = hmacSha256Hex(key, bundleBindMessage(worldId, stateHash, eventIndex, tailGenesis, count, head));
+        }
+        catch (e) {
+            return false;
+        }
+        return timingSafeEqualHex(expected, binding);
     }
     bySeq(seq) {
         if (!isFinite(seq) || seq <= 0)

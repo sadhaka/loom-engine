@@ -1,5 +1,7 @@
 export declare var ADV_AGAINST_TARGET: string[];
 export declare var DISADV_ON_ATTACKER: string[];
+export declare var ADV_FROM_ATTACKER: string[];
+export declare var DISADV_AGAINST_TARGET: string[];
 export declare var AUTO_FAIL_STR_DEX: string[];
 export declare var INCAPACITATED_NO_REACTION: string[];
 export interface AdvDetail {

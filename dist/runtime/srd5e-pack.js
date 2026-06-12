@@ -449,19 +449,24 @@ export function buildHealTrigger(spellId, castSlotLevel) {
 // (applies_duration_rounds) for the host's ConditionTrack - never in the AST.
 // Upcast extra targets are host enumeration (extra single-target checks or a
 // wider painted selection), per the catalog note.
-export function buildConditionSpellCheck(spellId, castSlotLevel) {
+export function buildConditionSpellCheck(spellId, castSlotLevel, appliesTagOverride) {
     var id = normId(spellId);
     var def = LEVELED_SPELLS[id];
     if (!def || def.kind !== 'save_utility' || !def.save_ability || !def.applies_tag) {
         throw new Error('SRD5E: unknown condition spell: ' + spellId);
     }
     void castSlotLevel; // the document is slot-invariant; upcast = more targets (host-side)
+    // Codex audit P2: a spell offering a CHOICE of conditions (Blindness /
+    // Deafness) ships one document per choice; appliesTagOverride selects which
+    // tag this document lands, defaulting to the catalog tag.
+    var tag = typeof appliesTagOverride === 'string' && appliesTagOverride.length > 0
+        ? appliesTagOverride : def.applies_tag;
     return {
         type: 'check',
         roll: exAdd(exDice('1d20'), exProp('target', saveProp(def.save_ability))),
         dc: exProp('actor', 'spell_dc'),
         degrees: {
-            success: { condition: landingCondition(def.save_ability, 'target'), mutations: [muAddTag('target', def.applies_tag)] },
+            success: { condition: landingCondition(def.save_ability, 'target'), mutations: [muAddTag('target', tag)] },
             failure: { condition: { type: 'delta_gte', value: 0 }, mutations: [] },
         },
     };

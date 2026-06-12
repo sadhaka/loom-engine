@@ -42,6 +42,8 @@ export declare class EventChain<T = unknown> {
     static verifyRecords<T = unknown>(key: string | Uint8Array, records: ReadonlyArray<ChainedRecord<T>>, genesis?: string, expectedSeal?: ChainSeal): ChainVerifyResult;
     seal(): ChainSeal;
     static verifySeal(key: string | Uint8Array, seal: ChainSeal): boolean;
+    bindBundle(worldId: string, stateHash: string, eventIndex: number, tailGenesis: string): string;
+    static verifyBundleBinding(key: string | Uint8Array, worldId: string, stateHash: string, eventIndex: number, tailGenesis: string, count: number, head: string, binding: string): boolean;
     bySeq(seq: number): ChainedRecord<T> | null;
     byType(type: string): ChainedRecord<T>[];
     list(): ChainedRecord<T>[];

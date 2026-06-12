@@ -52,6 +52,7 @@ var MAX_TARGETS = 32; // v2: hard cap on entities one foreach_target may touch; 
 var MAX_ITERATIONS = 16; // v2: hard cap on a repeat node's count
 var MAX_APPLIED_MUTATIONS = 1024; // v2: worst-case leaf-mutation APPLICATIONS, summed document-globally at multiplicity M
 var MAX_WORLD_ENTITIES = 65536; // v2: RUNTIME cap on working-state entity count at any foreach_target SELECT (spec 8.7)
+var MAX_NAME_LEN = 256; // Codex audit P2: cap property/tag name length (UTF-16 .length) so a valid AST cannot smuggle a multi-megabyte name past the node/dice budgets
 // Degrees are evaluated in this FIXED order across every surface (first match wins).
 var DEGREE_ORDER = ['critical_success', 'success', 'failure', 'critical_failure'];
 // Parse "NdM", "NdM+K", "NdM-K". Rejects any '.' (no floats) and out-of-bounds.
@@ -298,9 +299,14 @@ function applyMutationInto(node, ctx, q, applied) {
             var id = resolveTarget(node.target, ctx);
             var ent = ensureEntity(ctx.state, id);
             var value = evalExpression(node.value, ctx);
-            var prev = ent.properties[node.property];
-            if (prev === undefined)
-                prev = 0;
+            // Codex audit P1: read the previous value through the SAME boundary as
+            // prop_ref and compare `prop` - missing reads 0, a PRESENT non-integer
+            // (including null) throws via assertInt. The old `undefined ? 0` mapped
+            // only undefined to 0 and left a present null to flow into `null + value`
+            // (JS-coerced to 0) and be recorded as previous:null - a fork from the
+            // ports. Now previous is always an asserted integer or a throw.
+            var prevRaw = ent.properties[node.property];
+            var prev = assertInt(prevRaw === undefined ? 0 : prevRaw, 'property ' + node.property);
             var next;
             if (node.type === 'set_prop')
                 next = value;
@@ -429,6 +435,10 @@ function assertCleanName(s, what) {
         throw new Error('AST: ' + what + ' name must be a non-empty string');
     if (s === '__proto__')
         throw new Error('AST: ' + what + ' name "__proto__" is forbidden');
+    // Codex audit P2: bound name length (UTF-16 code units) so a huge property /
+    // tag name cannot pass the node/dice budgets and bloat state/hash work.
+    if (s.length > MAX_NAME_LEN)
+        throw new Error('AST: ' + what + ' name exceeds max length ' + MAX_NAME_LEN);
     assertCleanString(s);
 }
 function validateExpr(node, w, depth, m, eachOk) {

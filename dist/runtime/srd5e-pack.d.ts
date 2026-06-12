@@ -67,7 +67,7 @@ export declare function buildMultiTargetSaveTrigger(spellId: string, castSlotLev
 }): MutationNode[];
 export declare function buildMagicMissileTrigger(castSlotLevel: number): MutationNode[];
 export declare function buildHealTrigger(spellId: string, castSlotLevel: number): MutationNode[];
-export declare function buildConditionSpellCheck(spellId: string, castSlotLevel: number): CheckNode;
+export declare function buildConditionSpellCheck(spellId: string, castSlotLevel: number, appliesTagOverride?: string): CheckNode;
 export interface CastPlan {
     ok: boolean;
     reason: 'ok' | 'no_slot' | 'not_known' | 'not_a_caster';

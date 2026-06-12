@@ -34,6 +34,7 @@ export interface UpcastInfo {
 export declare function casterKind(classId: string): 'full' | 'half' | 'pact' | null;
 export declare function isCaster(classId: string): boolean;
 export declare function spellAbilityForClass(classId: string): 'int' | 'wis' | 'cha' | null;
+export declare function sanitizeSlotPool(slots: SlotPool): SlotPool;
 export declare function spellSlotsFor(classId: string, level: number): SlotPool;
 export declare function highestSlotLevel(slots: SlotPool): number;
 export declare function slotAvailable(slots: SlotPool, slotLevel: number): number;

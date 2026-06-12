@@ -12,6 +12,7 @@ export interface WorldBundle {
     chainTail: ChainedRecord<EpochResolvedEvent>[];
     tailGenesis: string;
     seal: ChainSeal;
+    binding: string;
 }
 export declare function replayEpochEvent(state: WorldState, event: EpochResolvedEvent): WorldState;
 export interface SuspendInput {
@@ -31,6 +32,7 @@ export interface ResumeInput {
     maxCatchup: number;
     actorTags?: string[] | undefined;
     maxActions?: number | undefined;
+    expectedWorldId?: string | undefined;
 }
 export interface ResumeResult {
     worldId: string;
