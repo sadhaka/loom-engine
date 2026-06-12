@@ -9,6 +9,19 @@ contract yet.
 
 ## Unreleased
 
+- **demo/delve-mini - a seeded roguelike run proving "same seed = same dungeon =
+  same run"** (`tests/delve-mini-run.ts`, `tests/delve-mini.test.ts`,
+  `demo/delve-mini/README.md`). Chains seven primitives that shipped in isolation
+  into one deterministic pipeline from a single seed: DungeonGenerator (BSP) ->
+  bestiary -> TileMap -> Pcg32 combat -> LootTable -> InventoryGrid, plus
+  SaveSlots + Leaderboard for the meta-loop. The headless test runs the whole
+  crawl TWICE in-process and asserts the results are byte-identical, pins a run
+  fingerprint as a regression, proves different seeds diverge, and round-trips a
+  run through SaveSlots + Leaderboard - it runs in npm test so the demo logic
+  cannot rot. The reference seed `crypt-of-names` carves a 14-room crypt and
+  dies in room 11 to the bone-host, score 1172, fingerprint 23f71bf5. (The
+  interactive browser page is a documented follow-up; the determinism guarantee
+  it would show is already proven by the test.)
 - **SECURITY / BREAKING (bundle format v3): a signed bundle binding closes the
   leading-truncation and cross-world forges** (`runtime/event-chain`,
   `runtime/world-session`, the Rust `loom_events` / `loom_session` ports, the
