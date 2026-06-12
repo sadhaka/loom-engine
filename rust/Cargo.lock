@@ -114,6 +114,7 @@ dependencies = [
  "loom_snapshot",
  "serde_json",
  "sha2",
+ "unicode-normalization",
 ]
 
 [[package]]
@@ -137,6 +138,7 @@ dependencies = [
  "loom_snapshot",
  "serde_json",
  "sha2",
+ "unicode-normalization",
 ]
 
 [[package]]
