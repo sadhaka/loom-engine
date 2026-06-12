@@ -3,7 +3,7 @@ name = "loom_events"
 description = "Tamper-evident HMAC-SHA256 event chain for the Loom Engine - the Rust core of the server-authoritative event tape, byte-compatible with the TS EventChain."
 # 0.1.1: republish exposing `pub fn field` (the published 0.1.0 had it private),
 # which loom_snapshot + loom_frame depend on. Still MIT (commodity HMAC chain).
-version = "0.1.1"
+version = "0.1.2"
 edition.workspace = true
 # Commodity primitive (HMAC-SHA256 chain = RFC-standard crypto); first published at
 # 0.1.0 under this permissive license, which is immutable on crates.io.

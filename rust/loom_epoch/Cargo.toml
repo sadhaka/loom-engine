@@ -24,6 +24,6 @@ sha2 = "0.10"
 # derive guards. Same crate + version loom_events uses; a loom_events dep is
 # deliberately NOT added here (it would pull hmac into an HMAC-free crate).
 unicode-normalization = "0.1"
-loom_math = { path = "../loom_math", version = "0.1.1" }
-loom_snapshot = { path = "../loom_snapshot", version = "0.1.1" }
-loom_ruleset = { path = "../loom_ruleset", version = "0.1.1" }
+loom_math = { path = "../loom_math", version = "0.1.2" }
+loom_snapshot = { path = "../loom_snapshot", version = "0.1.2" }
+loom_ruleset = { path = "../loom_ruleset", version = "0.1.2" }

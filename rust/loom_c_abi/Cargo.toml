@@ -15,16 +15,16 @@ name = "loom_engine"
 crate-type = ["cdylib", "staticlib"]
 
 [dependencies]
-loom_math = { path = "../loom_math", version = "0.1.1" }
-loom_combat = { path = "../loom_combat", version = "0.1.1" }
-loom_events = { path = "../loom_events", version = "0.1.1" }
+loom_math = { path = "../loom_math", version = "0.1.2" }
+loom_combat = { path = "../loom_combat", version = "0.1.2" }
+loom_events = { path = "../loom_events", version = "0.1.2" }
 serde_json = "1"
 # v3.0 surface: a Unity/Godot/Go client runs the SAME compiled Rust core as the
 # browser (WASM) and the Python server (PyO3).
-loom_snapshot = { path = "../loom_snapshot", version = "0.1.1" }
-loom_epoch = { path = "../loom_epoch", version = "0.1.1" }
-loom_session = { path = "../loom_session", version = "0.1.1" }
-loom_frame = { path = "../loom_frame", version = "0.1.1" }
+loom_snapshot = { path = "../loom_snapshot", version = "0.1.2" }
+loom_epoch = { path = "../loom_epoch", version = "0.1.2" }
+loom_session = { path = "../loom_session", version = "0.1.2" }
+loom_frame = { path = "../loom_frame", version = "0.1.2" }
 
 [lints.clippy]
 float_arithmetic = "deny"
