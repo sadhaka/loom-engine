@@ -7,7 +7,29 @@ Section 7 and the GitHub commit. Format follows the spirit of
 phase rather than calendar release - solo-dev project, no semver
 contract yet.
 
-## Unreleased
+## 3.1.0 - 2026-06-12 (AST v2 + 5e Action Pack + forge-proof persistence + delve-mini - the audited content milestone)
+
+- **3.1.0 release audit (Codex round 4) - all findings fixed by hand before this
+  tag.** HIGH: Rust `bundle_bind_message` now validates NFC on every identity
+  string exactly like TS `assertCleanString` / Python `assert_clean_string` -
+  a Rust producer can no longer SIGN a non-NFC worldId into a bundle the other
+  two surfaces reject ("binding invalid"), which was a cross-surface
+  persistence fork; `bind_bundle` returns `Err` (never panics) and
+  `verify_bundle_binding` fails closed to `false`, with a regression test in
+  both directions. MEDIUM: Rust `resume()` gained `expected_world_id`
+  (+ `expectedWorldId` on the JSON surface for WASM/PyO3) with the identical
+  TS/Python gate position (first, before any parse or crypto) and wording, so
+  a host that knows which world it asked for refuses a cross-world bundle at
+  the core boundary on every surface. LOW sweep: the delve-mini fingerprint
+  now folds the TileMap stage in (every room-centre marker is READ BACK
+  through `map.get` into `mapChecksum`; pin re-pinned `23f71bf5` ->
+  `d5c0904c`), the delve README claim is narrowed to the TypeScript headless
+  proof, `sanitizeSlotPool` is actually exported from the public root (the
+  entry below claimed it already), the stale "bundle format v2 / KNOWN
+  RESIDUAL" module headers + vector notes are rewritten to v3 binding
+  semantics (vectors regenerated - data byte-identical, notes only), and
+  nested-demo build artifacts are ignored/cleaned so a stray tsc run can
+  never land in the repo.
 
 - **demo/delve-mini - a seeded roguelike run proving "same seed = same dungeon =
   same run"** (`tests/delve-mini-run.ts`, `tests/delve-mini.test.ts`,
