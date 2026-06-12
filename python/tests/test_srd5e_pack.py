@@ -209,7 +209,7 @@ with open(_PACK, encoding="utf-8") as _f:
     _pack = json.load(_f)
 ck("pack has meta provenance", isinstance(_pack.get("meta", {}).get("generator"), str))
 ck("pack has an actions array", isinstance(_pack.get("actions"), list))
-ck("expected exactly 245 enumerated actions", len(_pack["actions"]) == 245)
+ck("expected exactly 246 enumerated actions", len(_pack["actions"]) == 246)
 _ids = {}
 for _i, _a in enumerate(_pack["actions"]):
     if not (isinstance(_a.get("id"), str) and len(_a["id"]) > 0):

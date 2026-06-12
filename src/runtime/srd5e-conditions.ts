@@ -15,13 +15,26 @@
 // Code style: var-only, no arrow functions.
 
 // Attacks AGAINST a target with any of these have advantage.
-export var ADV_AGAINST_TARGET: string[] = ['restrained', 'stunned', 'paralyzed', 'unconscious'];
+// Codex audit P1: blinded and petrified were missing (5e RAW: attacks against a
+// blinded/petrified target have advantage). Appended to preserve the existing
+// adv_from ordering for vectors that pin it.
+export var ADV_AGAINST_TARGET: string[] = ['restrained', 'stunned', 'paralyzed', 'unconscious', 'blinded', 'petrified'];
 
 // An ATTACKER with any of these has disadvantage on attack rolls.
-export var DISADV_ON_ATTACKER: string[] = ['poisoned', 'frightened', 'restrained', 'prone'];
+// Codex audit P1: a blinded attacker has disadvantage (cannot see its target).
+export var DISADV_ON_ATTACKER: string[] = ['poisoned', 'frightened', 'restrained', 'prone', 'blinded'];
+
+// An ATTACKER with any of these has ADVANTAGE on attack rolls (5e RAW: an
+// invisible/unseen attacker). Codex audit P1: invisible was unrepresented.
+export var ADV_FROM_ATTACKER: string[] = ['invisible'];
+
+// Attacks AGAINST a target with any of these have DISADVANTAGE (5e RAW: an
+// invisible target cannot be clearly seen). Codex audit P1.
+export var DISADV_AGAINST_TARGET: string[] = ['invisible'];
 
 // These auto-fail STRENGTH and DEXTERITY saving throws (and only those).
-export var AUTO_FAIL_STR_DEX: string[] = ['paralyzed', 'stunned', 'unconscious'];
+// Codex audit P1: petrified auto-fails STR and DEX saves (5e RAW).
+export var AUTO_FAIL_STR_DEX: string[] = ['paralyzed', 'stunned', 'unconscious', 'petrified'];
 
 // These deny reactions (the SRD incapacitated family - an incapacitated
 // creature takes no actions or reactions).
@@ -92,6 +105,17 @@ export function attackAdvantageMode(
   for (i = 0; i < DISADV_ON_ATTACKER.length; i++) {
     var dc = DISADV_ON_ATTACKER[i] as string;
     if (hasCond(atk, dc)) disFrom.push(dc);
+  }
+  // Codex audit P1: an invisible/unseen ATTACKER gains advantage; attacks
+  // AGAINST an invisible target suffer disadvantage. Mutual invisibility lands
+  // one source on each side and cancels (5e RAW), exactly like other pairs.
+  for (i = 0; i < ADV_FROM_ATTACKER.length; i++) {
+    var aa = ADV_FROM_ATTACKER[i] as string;
+    if (hasCond(atk, aa)) advFrom.push(aa);
+  }
+  for (i = 0; i < DISADV_AGAINST_TARGET.length; i++) {
+    var dt = DISADV_AGAINST_TARGET[i] as string;
+    if (hasCond(tgt, dt)) disFrom.push(dt);
   }
   var cancelled = advFrom.length > 0 && disFrom.length > 0;
   var mode: 'adv' | 'dis' | null = null;

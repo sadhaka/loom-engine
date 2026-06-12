@@ -11118,7 +11118,7 @@
       "notes": [
         "ONE document = ONE ray (2d6 fire, spell attack, crit 4d6) - the eldritch_blast pattern; the host loops the ray count",
         "rays_by_slot: {\"2\":3,\"3\":4,\"4\":5,\"5\":6,\"6\":7,\"7\":8,\"8\":9,\"9\":10}",
-        "DELIBERATE DIVERGENCE: this pack ships RAW per-ray; the merged 6d6 all-or-nothing compromise is private host tuning - do not back-port it"
+        "This pack resolves Scorching Ray as RAW: each ray is its own spell attack roll (no merged all-or-nothing damage)."
       ],
       "document": {
         "type": "check",
@@ -22166,6 +22166,61 @@
                 "type": "add_tag",
                 "target": "target",
                 "tag": "slowed"
+              }
+            ]
+          },
+          "failure": {
+            "condition": {
+              "type": "delta_gte",
+              "value": 0
+            },
+            "mutations": []
+          }
+        }
+      }
+    },
+    {
+      "id": "blindness_deafness_deafened",
+      "name": "Blindness/Deafness (deafness)",
+      "action_type": "check",
+      "spell": "blindness_deafness",
+      "slot_level": 2,
+      "notes": [
+        "the deafness choice: applies 'deafened' instead of 'blinded' on a failed CON save",
+        "duration 10 rounds is catalog data for the host ConditionTrack, never AST",
+        "the blindness choice is the sibling action 'blindness_deafness' (applies 'blinded')"
+      ],
+      "document": {
+        "type": "check",
+        "roll": {
+          "type": "math",
+          "op": "add",
+          "left": {
+            "type": "dice",
+            "equation": "1d20"
+          },
+          "right": {
+            "type": "prop_ref",
+            "target": "target",
+            "property": "con_save"
+          }
+        },
+        "dc": {
+          "type": "prop_ref",
+          "target": "actor",
+          "property": "spell_dc"
+        },
+        "degrees": {
+          "success": {
+            "condition": {
+              "type": "delta_lte",
+              "value": -1
+            },
+            "mutations": [
+              {
+                "type": "add_tag",
+                "target": "target",
+                "tag": "deafened"
               }
             ]
           },

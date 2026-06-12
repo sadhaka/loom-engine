@@ -222,18 +222,47 @@ pub fn spell_slots_for(class_id: &str, level: i64) -> SlotPool {
     out
 }
 
+/// Codex audit P2: a host-supplied pool is untrusted. Clamp an entry to a
+/// well-formed shape (max >= 0, used in [0, max]) so a corrupted entry such as
+/// { max: 1, used: -100 } cannot inflate availability or be spent forever. A
+/// valid entry is returned unchanged. Mirrors the TS normEntry.
+fn norm_entry(max: i64, used: i64) -> (i64, i64) {
+    let m = if max > 0 { max } else { 0 };
+    let mut u = if used < 0 { 0 } else { used };
+    if u > m {
+        u = m;
+    }
+    (m, u)
+}
+
+/// Codex audit P2 boundary helper: clamp every entry of an untrusted pool. A
+/// well-formed pool is returned byte-identical. Every public op already
+/// sanitizes internally, so this is a convenience, not a precondition.
+pub fn sanitize_slot_pool(slots: &SlotPool) -> SlotPool {
+    let mut levels: BTreeMap<i64, SlotEntry> = BTreeMap::new();
+    for (k, e) in slots.levels.iter() {
+        let (m, u) = norm_entry(e.max, e.used);
+        levels.insert(*k, SlotEntry { max: m, used: u });
+    }
+    let pact = slots.pact.as_ref().map(|p| {
+        let (m, u) = norm_entry(p.max, p.used);
+        PactEntry { slot_level: p.slot_level, max: m, used: u }
+    });
+    SlotPool { levels, pact }
+}
+
 /// Highest slot level with max > 0 anywhere in the pool (pact included). 0 if none.
 pub fn highest_slot_level(slots: &SlotPool) -> i64 {
     let mut best = 0;
     for level in 1..=MAX_SLOT_LEVEL {
         if let Some(e) = slots.levels.get(&level) {
-            if e.max > 0 {
+            if norm_entry(e.max, e.used).0 > 0 {
                 best = level;
             }
         }
     }
     if let Some(p) = &slots.pact {
-        if p.max > 0 && p.slot_level > best {
+        if norm_entry(p.max, p.used).0 > 0 && p.slot_level > best {
             best = p.slot_level;
         }
     }
@@ -244,20 +273,26 @@ pub fn highest_slot_level(slots: &SlotPool) -> i64 {
 pub fn slot_available(slots: &SlotPool, slot_level: i64) -> i64 {
     let mut n: i64 = 0;
     if let Some(e) = slots.levels.get(&slot_level) {
-        if e.max > e.used {
-            n = n.saturating_add(e.max.saturating_sub(e.used));
+        let (m, u) = norm_entry(e.max, e.used); // P2: clamp untrusted entry
+        if m > u {
+            n = n.saturating_add(m - u);
         }
     }
     if let Some(p) = &slots.pact {
-        if p.slot_level == slot_level && p.max > p.used {
-            n = n.saturating_add(p.max.saturating_sub(p.used));
+        if p.slot_level == slot_level {
+            let (m, u) = norm_entry(p.max, p.used);
+            if m > u {
+                n = n.saturating_add(m - u);
+            }
         }
     }
     n
 }
 
 fn spend_reject(slots: &SlotPool, reason: SpendReason) -> SpendResult {
-    SpendResult { ok: false, reason, slot_level: None, slots: slots.clone() }
+    // P2: return the sanitized pool (TS spendReject returns clonePool, which
+    // now clamps) so a rejected spend on a malformed pool matches across surfaces.
+    SpendResult { ok: false, reason, slot_level: None, slots: sanitize_slot_pool(slots) }
 }
 
 /// Spend ONE slot at exactly `slot_level`. Never mutates the input (the
@@ -270,7 +305,7 @@ pub fn spend_slot(slots: &SlotPool, slot_level: i64) -> SpendResult {
     if !(1..=MAX_SLOT_LEVEL).contains(&slot_level) {
         return spend_reject(slots, SpendReason::BadSlotLevel);
     }
-    let mut out = slots.clone();
+    let mut out = sanitize_slot_pool(slots); // P2: clamp before spending
     if let Some(e) = out.levels.get_mut(&slot_level) {
         if e.used < e.max {
             e.used += 1; // used < max, so no overflow is possible here
@@ -309,7 +344,7 @@ pub fn spend_lowest_available(slots: &SlotPool, min_level: i64) -> SpendResult {
 /// pact tier restores only when no numeric tier exists at that level.
 /// Unknown level is a no-op clone.
 pub fn restore_slot(slots: &SlotPool, slot_level: i64, count: i64) -> SlotPool {
-    let mut out = slots.clone();
+    let mut out = sanitize_slot_pool(slots); // P2: clamp before restoring
     let n = if count > 0 { count } else { 1 };
     if let Some(e) = out.levels.get_mut(&slot_level) {
         e.used = e.used.saturating_sub(n).max(0);
@@ -328,14 +363,16 @@ pub fn slots_remaining(slots: &SlotPool) -> BTreeMap<i64, i64> {
     let mut out: BTreeMap<i64, i64> = BTreeMap::new();
     for level in 1..=MAX_SLOT_LEVEL {
         if let Some(e) = slots.levels.get(&level) {
-            if e.max > 0 {
-                out.insert(level, e.max.saturating_sub(e.used).max(0));
+            let (m, u) = norm_entry(e.max, e.used); // P2: clamp untrusted entry
+            if m > 0 {
+                out.insert(level, m - u);
             }
         }
     }
     if let Some(p) = &slots.pact {
-        if p.max > 0 {
-            let rem = p.max.saturating_sub(p.used).max(0);
+        let (m, u) = norm_entry(p.max, p.used);
+        if m > 0 {
+            let rem = m - u;
             let prior = out.get(&p.slot_level).copied().unwrap_or(0);
             out.insert(p.slot_level, prior.saturating_add(rem));
         }
@@ -574,6 +611,23 @@ mod tests {
         assert_eq!(spell_ability_for_class("warlock"), Some("cha"));
         assert_eq!(spell_ability_for_class("paladin"), Some("cha"));
         assert_eq!(spell_ability_for_class("barbarian"), None);
+    }
+
+    // Codex audit P2: a malformed pool must not mint slots.
+    #[test]
+    fn audit_malformed_pool_clamped() {
+        let bad = pool(&[(1, 1, -100)], None);
+        assert_eq!(slot_available(&bad, 1), 1, "negative used clamps to 0");
+        assert_eq!(slots_remaining(&bad).get(&1).copied(), Some(1));
+        let s1 = spend_slot(&bad, 1);
+        assert!(s1.ok);
+        assert_eq!(slot_available(&s1.slots, 1), 0, "the one real slot is spent");
+        assert!(!spend_slot(&s1.slots, 1).ok, "no phantom slots remain");
+        assert_eq!(slot_available(&pool(&[(2, 2, 9)], None), 2), 0, "used over max clamps down");
+        // A valid pool sanitizes byte-identical.
+        let clean = spell_slots_for("wizard", 5);
+        assert_eq!(sanitize_slot_pool(&clean), clean);
+        assert_eq!(sanitize_slot_pool(&bad), pool(&[(1, 1, 0)], None));
     }
 
     #[test]

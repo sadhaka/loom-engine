@@ -14,13 +14,22 @@
 //! NOTICE.md. Tables are mechanics-only id lists; no SRD prose.
 
 /// Attacks AGAINST a target with any of these have advantage.
-pub const ADV_AGAINST_TARGET: [&str; 4] = ["restrained", "stunned", "paralyzed", "unconscious"];
+/// Codex audit P1: blinded + petrified appended (5e RAW), order preserved.
+pub const ADV_AGAINST_TARGET: [&str; 6] = ["restrained", "stunned", "paralyzed", "unconscious", "blinded", "petrified"];
 
 /// An ATTACKER with any of these has disadvantage on attack rolls.
-pub const DISADV_ON_ATTACKER: [&str; 4] = ["poisoned", "frightened", "restrained", "prone"];
+/// Codex audit P1: a blinded attacker has disadvantage.
+pub const DISADV_ON_ATTACKER: [&str; 5] = ["poisoned", "frightened", "restrained", "prone", "blinded"];
+
+/// An ATTACKER with any of these has ADVANTAGE (5e RAW invisible attacker).
+pub const ADV_FROM_ATTACKER: [&str; 1] = ["invisible"];
+
+/// Attacks AGAINST a target with any of these have DISADVANTAGE (invisible target).
+pub const DISADV_AGAINST_TARGET: [&str; 1] = ["invisible"];
 
 /// These auto-fail STRENGTH and DEXTERITY saving throws (and only those).
-pub const AUTO_FAIL_STR_DEX: [&str; 3] = ["paralyzed", "stunned", "unconscious"];
+/// Codex audit P1: petrified auto-fails STR and DEX saves (5e RAW).
+pub const AUTO_FAIL_STR_DEX: [&str; 4] = ["paralyzed", "stunned", "unconscious", "petrified"];
 
 /// These deny reactions (the SRD incapacitated family - an incapacitated
 /// creature takes no actions or reactions).
@@ -117,6 +126,18 @@ pub fn attack_advantage_mode(
             dis_from.push((*id).to_string());
         }
     }
+    // Codex audit P1: invisible attacker -> advantage; invisible target ->
+    // disadvantage. Mutual invisibility lands one source on each side -> cancel.
+    for id in ADV_FROM_ATTACKER.iter() {
+        if has_cond(attacker_conds, id) {
+            adv_from.push((*id).to_string());
+        }
+    }
+    for id in DISADV_AGAINST_TARGET.iter() {
+        if has_cond(target_conds, id) {
+            dis_from.push((*id).to_string());
+        }
+    }
     let cancelled = !adv_from.is_empty() && !dis_from.is_empty();
     let mode = if !adv_from.is_empty() && dis_from.is_empty() {
         Some(AdvMode::Adv)
@@ -203,13 +224,27 @@ mod tests {
 
     #[test]
     fn srd_tables() {
-        assert_eq!(ADV_AGAINST_TARGET, ["restrained", "stunned", "paralyzed", "unconscious"]);
-        assert_eq!(DISADV_ON_ATTACKER, ["poisoned", "frightened", "restrained", "prone"]);
-        assert_eq!(AUTO_FAIL_STR_DEX, ["paralyzed", "stunned", "unconscious"]);
+        assert_eq!(ADV_AGAINST_TARGET, ["restrained", "stunned", "paralyzed", "unconscious", "blinded", "petrified"]);
+        assert_eq!(DISADV_ON_ATTACKER, ["poisoned", "frightened", "restrained", "prone", "blinded"]);
+        assert_eq!(AUTO_FAIL_STR_DEX, ["paralyzed", "stunned", "unconscious", "petrified"]);
         assert_eq!(
             INCAPACITATED_NO_REACTION,
             ["paralyzed", "stunned", "unconscious", "incapacitated", "petrified"]
         );
+    }
+
+    // Codex audit P1: blinded / petrified / invisible RAW.
+    #[test]
+    fn audit_blinded_petrified_invisible() {
+        assert_eq!(attack_advantage_mode(&conds(&[]), &conds(&["blinded"]), Some(true)).0, Some(AdvMode::Adv));
+        assert_eq!(attack_advantage_mode(&conds(&["blinded"]), &conds(&[]), Some(true)).0, Some(AdvMode::Dis));
+        assert_eq!(attack_advantage_mode(&conds(&[]), &conds(&["petrified"]), Some(true)).0, Some(AdvMode::Adv));
+        assert_eq!(auto_fail_save_condition("dex", &conds(&["petrified"])), Some("petrified"));
+        assert_eq!(auto_fail_save_condition("str", &conds(&["petrified"])), Some("petrified"));
+        assert_eq!(auto_fail_save_condition("wis", &conds(&["petrified"])), None);
+        assert_eq!(attack_advantage_mode(&conds(&["invisible"]), &conds(&[]), Some(true)).0, Some(AdvMode::Adv));
+        assert_eq!(attack_advantage_mode(&conds(&[]), &conds(&["invisible"]), Some(true)).0, Some(AdvMode::Dis));
+        assert_eq!(attack_advantage_mode(&conds(&["invisible"]), &conds(&["invisible"]), Some(true)).0, None);
     }
 
     #[test]

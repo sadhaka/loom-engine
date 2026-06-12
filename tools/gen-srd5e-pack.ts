@@ -302,8 +302,9 @@ for (var sw = 0; sw < SW_LEVELS.length; sw++) {
   });
 }
 
-// scorching_ray: RAW per-ray (one 2d6 check per ray; the merged all-or-nothing
-// compromise is private tuning and deliberately NOT shipped).
+// scorching_ray: RAW per-ray (one 2d6 spell-attack check per ray; the host
+// loops the ray count). Codex audit P2: the shipped note must not reference any
+// private host tuning - that commentary stays in private docs.
 var srRays: Record<string, number> = {};
 for (var srl = 2; srl <= MAX_SLOT_LEVEL; srl++) {
   var srInfo = upcastEffect('scorching_ray', srl);
@@ -317,7 +318,7 @@ pushCheck({
   notes: [
     'ONE document = ONE ray (2d6 fire, spell attack, crit 4d6) - the eldritch_blast pattern; the host loops the ray count',
     'rays_by_slot: ' + JSON.stringify(srRays),
-    'DELIBERATE DIVERGENCE: this pack ships RAW per-ray; the merged 6d6 all-or-nothing compromise is private host tuning - do not back-port it',
+    'This pack resolves Scorching Ray as RAW: each ray is its own spell attack roll (no merged all-or-nothing damage).',
   ],
   document: buildAttackSpellCheck('scorching_ray', 2),
 });
@@ -394,6 +395,25 @@ for (var cs = 0; cs < CONDITION_SPELLS.length; cs++) {
     document: buildConditionSpellCheck(csId, csDef.base_level),
   });
 }
+
+// Codex audit P2: Blindness/Deafness offers a CHOICE of conditions. The loop
+// above shipped only the blindness branch (applies 'blinded'); ship the
+// deafness branch explicitly so a consumer can represent either choice.
+var bdDef = LEVELED_SPELLS['blindness_deafness'];
+if (!bdDef) throw new Error('missing blindness_deafness def');
+pushCheck({
+  id: 'blindness_deafness_deafened',
+  name: 'Blindness/Deafness (deafness)',
+  action_type: 'check',
+  spell: 'blindness_deafness',
+  slot_level: bdDef.base_level,
+  notes: [
+    "the deafness choice: applies 'deafened' instead of 'blinded' on a failed CON save",
+    'duration ' + String(bdDef.applies_duration_rounds) + ' rounds is catalog data for the host ConditionTrack, never AST',
+    "the blindness choice is the sibling action 'blindness_deafness' (applies 'blinded')",
+  ],
+  document: buildConditionSpellCheck('blindness_deafness', bdDef.base_level, 'deafened'),
+});
 
 // ---- Write -------------------------------------------------------------------------
 
