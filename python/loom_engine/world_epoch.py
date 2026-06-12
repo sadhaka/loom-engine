@@ -268,6 +268,8 @@ def catch_up_epochs(world_id, state, current_epoch, max_catchup, ruleset,
         raise ValueError("world-epoch: current_epoch must be a JS-safe integer")
     if not _is_safe_integer(max_catchup) or max_catchup < 0:
         raise ValueError("world-epoch: max_catchup must be a non-negative JS-safe integer")
+    # Round-7 audit MEDIUM: validate the world_id BEFORE the no-op early return.
+    _assert_clean_string(world_id)
     client_epoch = state["epoch"]
     target = current_epoch - client_epoch
     if target <= 0:

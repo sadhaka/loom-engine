@@ -26,7 +26,8 @@
 //     tail chain HMAC; (4) reduce; (5) bound catch-up (reject time-travel);
 //     (6) tick. Any integrity failure throws before the world is trusted.
 //
-//   * THE STRUCTURAL SEAL (bundle format v2). A bare hash chain cannot see
+//   * THE STRUCTURAL SEAL (the format-v2 component of the current v3 bundle).
+//     A bare hash chain cannot see
 //     records dropped off its END, so a pre-seal bundle whose chainTail lost its
 //     trailing records verified clean and the lost events were silently replaced
 //     by re-simulated catch-up. The bundle CARRIES the chain's ChainSeal:
@@ -77,7 +78,8 @@ export interface WorldBundle {
   // The chain head signature at snapshotEventIndex (== chainTail[0].prevSig). The
   // anchor verifyRecords links the tail against.
   tailGenesis: string;
-  // Bundle format v2 (BREAKING): the chain's signed (count, head) commitment,
+  // The structural seal (the v2 component of the current v3 bundle): the
+  // chain's signed (count, head) commitment,
   // taken by suspend() via EventChain.seal() at pack time. resume() verifies it
   // FAIL-CLOSED - a missing/forged seal, a tail whose head is not the sealed
   // head (end-truncation), or a tail whose length disagrees with the sealed
