@@ -78,7 +78,7 @@ fn rust_chain_byte_matches_ts() {
         }
 
         // seal commitment (count, head, sig)
-        let seal = chain.seal();
+        let seal = chain.seal().expect("golden chain head is clean hex");
         let vseal = &c["seal"];
         let want_count = vseal["count"].as_u64().unwrap();
         let want_seal_head = vseal["head"].as_str().unwrap();

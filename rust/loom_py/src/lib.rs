@@ -20,7 +20,10 @@ use loom_math::{floor_div as core_floor_div, Pcg32};
 
 #[pyfunction]
 fn version() -> String {
-    "0.1.0".to_string()
+    // Round-5 audit BLOCKER: this was a stale hardcoded literal. It now tracks
+    // Cargo.toml (which maturin keeps in lockstep with pyproject) so the
+    // runtime can never disagree with the packaging again.
+    env!("CARGO_PKG_VERSION").to_string()
 }
 
 // ---- range bands ----
@@ -213,7 +216,7 @@ fn reconcile_frames(input_json: &str) -> PyResult<String> {
 /// The module name MUST equal the [lib] name (loom_engine_native).
 #[pymodule]
 fn loom_engine_native(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    m.add("__version__", "0.1.0")?;
+    m.add("__version__", env!("CARGO_PKG_VERSION"))?;
     m.add_function(wrap_pyfunction!(version, m)?)?;
     m.add_function(wrap_pyfunction!(band_from_distance_ft, m)?)?;
     m.add_function(wrap_pyfunction!(band_within, m)?)?;

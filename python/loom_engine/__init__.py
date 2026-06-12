@@ -18,7 +18,7 @@ canonical encoder (JS UTF-16 key sort + literal non-ASCII). The snapshot encoder
 matches the TS/Rust core byte-for-byte (pinned by v3_0_snapshot_canonical.json).
 """
 
-__version__ = "3.0.0"
+__version__ = "3.1.1"
 
 from .range_bands import (  # noqa: F401
     RANGE_BAND_ENGAGED, RANGE_BAND_NEAR, RANGE_BAND_FAR, ENGAGED_MAX_FT,

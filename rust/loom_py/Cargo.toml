@@ -8,10 +8,10 @@
 
 [package]
 name = "loom_py"
-# Tracks the engine/wheel version (3.0.0), not the core-crate 0.1.x line. loom_py is
+# Tracks the engine/wheel version, not the core-crate 0.1.x line. loom_py is
 # workspace-excluded + publish=false, so its version is independent; maturin reads
-# the wheel version from pyproject ([project].version = "3.0.0").
-version = "3.0.0"
+# the wheel version from pyproject ([project].version).
+version = "3.1.1"
 edition = "2021"
 # BUSL-1.1 (matches the engine). Shipped to PyPI as a wheel (loom_engine_native),
 # never to crates.io.

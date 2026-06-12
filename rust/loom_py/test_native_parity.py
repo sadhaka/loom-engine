@@ -35,7 +35,13 @@ def ref_initiative(entries):
 
 
 def main():
-    ck("version", ln.version() == "0.1.0" and ln.__version__ == "0.1.0")
+    # Round-5 audit BLOCKER fix: the expected version comes from the native
+    # pyproject.toml (the single packaging source maturin reads), never a
+    # hardcoded literal that can go stale.
+    _pyproject = open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                   "pyproject.toml"), encoding="utf-8").read()
+    _want = _pyproject.split('version = "', 1)[1].split('"', 1)[0]
+    ck("version", ln.version() == _want and ln.__version__ == _want)
 
     prims = json.load(open(os.path.join(VEC, "v2_3_0_primitives.json"), encoding="utf-8"))
     for c in prims["range_bands.band_from_distance_ft"]:

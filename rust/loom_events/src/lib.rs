@@ -284,12 +284,19 @@ fn canonical_message(
     Ok(msg)
 }
 
-fn seal_message(count: u64, head: &str) -> String {
+// Round-5 release audit HIGH: the head is validated for NFC exactly like the TS
+// sealMessage (assertCleanString) and the Python _seal_message guard. Without
+// this, a Rust chain created with a non-NFC GENESIS (the only way a dirty
+// string reaches head_sig - record sigs are always hex) could sign an
+// empty-chain seal that verified here but was rejected by TS/Python - the same
+// cross-surface fork class as the round-4 bundle-binding HIGH.
+fn seal_message(count: u64, head: &str) -> Result<String, CanonError> {
+    assert_nfc(head)?;
     let mut m = String::new();
     m.push_str(&field(SEAL_DOMAIN));
     m.push_str(&field(&count.to_string()));
     m.push_str(&field(head));
-    m
+    Ok(m)
 }
 
 // Codex audit P1: the world-bundle binding message - byte-identical to the TS
@@ -554,16 +561,24 @@ impl EventChain {
 
     /// Sign the current (count, head) so a holder can later prove no records were
     /// dropped off the END. Persist out of band.
-    pub fn seal(&self) -> ChainSeal {
+    /// Errors (never panics) on a non-NFC head - reachable only via a non-NFC
+    /// GENESIS on an empty chain - the same inputs the TS seal() throws on.
+    pub fn seal(&self) -> Result<ChainSeal, CanonError> {
         let count = self.records.len() as u64;
         let head = self.head_sig.clone();
-        let sig = hmac_sha256_hex(&self.key, &seal_message(count, &head));
-        ChainSeal { count, head, sig }
+        let sig = hmac_sha256_hex(&self.key, &seal_message(count, &head)?);
+        Ok(ChainSeal { count, head, sig })
     }
 
-    /// Verify a seal's own signature (constant-time).
+    /// Verify a seal's own signature (constant-time). A malformed (non-NFC)
+    /// head can never be part of a valid seal - false, never a panic, exactly
+    /// like the TS verifySeal catch.
     pub fn verify_seal(key: &[u8], seal: &ChainSeal) -> bool {
-        let expected = hmac_sha256_hex(key, &seal_message(seal.count, &seal.head));
+        let msg = match seal_message(seal.count, &seal.head) {
+            Ok(m) => m,
+            Err(_) => return false,
+        };
+        let expected = hmac_sha256_hex(key, &msg);
         constant_time_eq(expected.as_bytes(), seal.sig.as_bytes())
     }
 
@@ -721,7 +736,7 @@ mod tests {
     fn seal_round_trips() {
         let mut chain = EventChain::create(b"k", "genesis-seed");
         chain.append("e", json!({ "n": 1 }));
-        let seal = chain.seal();
+        let seal = chain.seal().expect("clean head seals");
         assert!(EventChain::verify_seal(b"k", &seal));
         assert_eq!(seal.count, 1);
     }
@@ -732,7 +747,7 @@ mod tests {
         chain.append("e", json!({ "n": 1 }));
         chain.append("e", json!({ "n": 2 }));
         chain.append("e", json!({ "n": 3 }));
-        let seal = chain.seal();
+        let seal = chain.seal().expect("clean head seals");
 
         // Intact + seal -> ok, total 3, zero mismatches.
         let ok = chain.verify_detailed(Some(&seal));
@@ -775,7 +790,7 @@ mod tests {
 
         // Empty records + a seal over the empty chain: head falls back to genesis.
         let empty_chain = EventChain::create(b"k", "g");
-        let empty_seal = empty_chain.seal();
+        let empty_seal = empty_chain.seal().expect("clean genesis seals");
         let r = EventChain::verify_records_detailed(b"k", &[], "g", Some(&empty_seal));
         assert!(r.ok, "empty chain verifies against its own seal (head == genesis)");
     }
@@ -818,5 +833,32 @@ mod tests {
         assert!(!EventChain::verify_bundle_binding(
             b"k", nfc, "deadbeef", 0, "g", 0, non_nfc, &ok_binding
         ));
+    }
+
+    #[test]
+    fn seal_rejects_non_nfc_head() {
+        // Round-5 release audit HIGH: a non-NFC GENESIS becomes the empty
+        // chain's head, and Rust used to SIGN a seal over it that verified
+        // locally while TS/Python reject the same seal - the bundle-binding
+        // fork class, one message family over. Both directions must reject.
+        let dirty = EventChain::create(b"k", "cafe\u{0301}");
+        assert!(
+            matches!(dirty.seal(), Err(CanonError::NonNfc)),
+            "a non-NFC head must not be sealable (cross-surface fork)"
+        );
+
+        // verify_seal on a hand-built dirty seal: false, never a panic - even
+        // if the sig was forged to match SOME message, the head is invalid.
+        let forged = ChainSeal {
+            count: 0,
+            head: "cafe\u{0301}".to_string(),
+            sig: "00".repeat(32),
+        };
+        assert!(!EventChain::verify_seal(b"k", &forged));
+
+        // Control: a clean genesis still seals and round-trips.
+        let clean = EventChain::create(b"k", "g");
+        let seal = clean.seal().expect("clean genesis seals");
+        assert!(EventChain::verify_seal(b"k", &seal));
     }
 }
