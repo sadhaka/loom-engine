@@ -26,7 +26,8 @@
 //     tail chain HMAC; (4) reduce; (5) bound catch-up (reject time-travel);
 //     (6) tick. Any integrity failure throws before the world is trusted.
 //
-//   * THE STRUCTURAL SEAL (bundle format v2). A bare hash chain cannot see
+//   * THE STRUCTURAL SEAL (the format-v2 component of the current v3 bundle).
+//     A bare hash chain cannot see
 //     records dropped off its END, so a pre-seal bundle whose chainTail lost its
 //     trailing records verified clean and the lost events were silently replaced
 //     by re-simulated catch-up. The bundle CARRIES the chain's ChainSeal:

@@ -289,6 +289,10 @@ export function reconcileFrames(input) {
     if (input.toFrame < fromFrame) {
         throw new Error('world-frame: toFrame must be >= correctedState.frame');
     }
+    // Round-7 audit MEDIUM: validate the worldId up front so a non-NFC id is
+    // rejected even when toFrame == correctedState.frame replays nothing (Rust
+    // validates in the no-op path; this matches it).
+    assertCleanString(input.worldId);
     // Bound the replay so an oversized/forged correction cannot spin a multi-million
     // frame loop (anti-DoS). A genuine rollback window is tens of frames.
     if (input.toFrame - fromFrame > MAX_RECONCILE_WINDOW) {
