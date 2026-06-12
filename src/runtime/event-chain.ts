@@ -308,8 +308,16 @@ function canonicalMessage(seq: number, type: string, payload: unknown, prevSig: 
 // validated for clean Unicode like every other signed string, so a tampered
 // seal head with a lone surrogate cannot be lossily re-encoded into a colliding
 // commitment (TextEncoder maps lone surrogates to U+FFFD).
+// Round-6 audit LOW: the count is validated as a non-negative JS-safe integer,
+// matching Python (_num_str rejects fractional/unsafe numbers) and Rust (u64 by
+// type). A key holder could previously sign a TS seal over {count: 1.5} that
+// Python rejected and Rust could not even represent - a cross-surface fork in
+// what counts as a valid seal.
 function sealMessage(count: number, head: string): string {
   assertCleanString(head);
+  if (!Number.isSafeInteger(count) || count < 0) {
+    throw new Error('EventChain: seal count must be a non-negative JS-safe integer');
+  }
   return field(SEAL_DOMAIN) + field(String(count)) + field(head);
 }
 
@@ -457,8 +465,12 @@ export class EventChain<T = unknown> {
   // Verify a seal's own signature (constant-time). Does not check it against
   // any record set - verifyRecords(..., seal) does that.
   static verifySeal(key: string | Uint8Array, seal: ChainSeal): boolean {
+    // Round-6 audit LOW: count must be a non-negative JS-safe integer (the
+    // sealMessage guard also throws-to-false below, but the explicit gate
+    // keeps the rejection visible + identical to the Python/Rust shape).
     if (!seal || typeof seal.count !== 'number' || typeof seal.head !== 'string'
-      || typeof seal.sig !== 'string') {
+      || typeof seal.sig !== 'string'
+      || !Number.isSafeInteger(seal.count) || seal.count < 0) {
       return false;
     }
     var expected: string;

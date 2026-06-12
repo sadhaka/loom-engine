@@ -9,7 +9,7 @@ import assert from 'node:assert';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { tickFrame } from '../src/runtime/world-frame.js';
+import { tickFrame, deriveFramePrng } from '../src/runtime/world-frame.js';
 import { worldStateHash, type WorldState } from '../src/runtime/world-state-snapshot.js';
 import { type Ruleset, type WorldAction } from '../src/runtime/world-epoch.js';
 
@@ -86,4 +86,9 @@ test('fail-closed: a negative frameNumber is rejected', function () {
   assert.throws(function () {
     tickFrame({ worldId: 'w', state: state, frameNumber: -1, commands: [], ruleset: RULESET, playerEntities: {} });
   }, /non-negative/);
+});
+
+test('non-NFC worldId is rejected (round-6 cross-surface parity pin)', function () {
+  assert.throws(function () { deriveFramePrng('cafe\u0301', 1); });
+  deriveFramePrng('caf\u00e9', 1);
 });

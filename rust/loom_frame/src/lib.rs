@@ -89,7 +89,13 @@ fn with_frame(state: &Value, frame_number: i64) -> Value {
 /// field(world_id) ) ++ LE64(frame_number), then SHA-256; bytes 0-7 (LE) = PCG
 /// state, 8-15 (LE, forced odd) = increment. Injective across world ids + domain-
 /// separated from the Epoch seed. Codex P2.
-pub fn derive_frame_prng(world_id: &str, frame_number: i64) -> Pcg32 {
+pub fn derive_frame_prng(world_id: &str, frame_number: i64) -> Result<Pcg32, String> {
+    // Round-6 audit HIGH: TS deriveFramePrng (assertCleanString) rejects a
+    // non-NFC worldId; Rust hashed the decomposed bytes and derived a
+    // DIFFERENT seed - a cross-surface determinism fork. Reject identically.
+    if !unicode_normalization::is_nfc(world_id) {
+        return Err("world-frame: non-NFC world_id (normalize to NFC first)".to_string());
+    }
     let prefix = format!("{}{}", field(FRAME_PRNG_DOMAIN), field(world_id));
     let mut hasher = Sha256::new();
     hasher.update(prefix.as_bytes());
@@ -101,7 +107,7 @@ pub fn derive_frame_prng(world_id: &str, frame_number: i64) -> Pcg32 {
     inc_b.copy_from_slice(&digest[8..16]);
     let state = u64::from_le_bytes(state_b);
     let inc = u64::from_le_bytes(inc_b) | 1;
-    Pcg32::from_raw(state, inc)
+    Ok(Pcg32::from_raw(state, inc))
 }
 
 /// Structural pre-sort validation of the command list (mirrors the TS fail-closed
@@ -134,6 +140,9 @@ pub struct TickFrameResult {
 
 /// Resolve one server frame. Pure: does not mutate `state`. Returns the new state
 /// (frame advanced) + the canonical FrameResolved event.
+/// Errs (never panics) on a non-NFC world_id - the same inputs TS throws on
+/// (round-6 audit HIGH).
+#[allow(clippy::too_many_arguments)]
 pub fn tick_frame(
     world_id: &str,
     state: &Value,
@@ -143,11 +152,11 @@ pub fn tick_frame(
     player_entities: &Value,
     max_per_player: Option<u64>,
     max_commands: Option<u64>,
-) -> TickFrameResult {
+) -> Result<TickFrameResult, String> {
     let max_per_player = max_per_player.unwrap_or(u64::MAX);
     let max_commands = max_commands.unwrap_or(u64::MAX);
 
-    let mut prng: Pcg32 = derive_frame_prng(world_id, frame_number);
+    let mut prng: Pcg32 = derive_frame_prng(world_id, frame_number)?;
 
     // Stable sort a COPY of the command refs by (compare_ids(playerId), seq).
     let empty: Vec<Value> = Vec::new();
@@ -282,7 +291,7 @@ pub fn tick_frame(
         "commands_processed": Value::Array(entries),
         "pcg_steps_consumed": prng.get_draws(),
     });
-    TickFrameResult { state: out_state, event, resolved, rejected }
+    Ok(TickFrameResult { state: out_state, event, resolved, rejected })
 }
 
 // ---- validating JSON boundary (WASM / PyO3 / C-ABI bind THIS) ----------------
@@ -322,7 +331,7 @@ pub fn tick_frame_from_json(input_json: &str) -> Result<String, String> {
         &v["playerEntities"],
         max_per_player,
         max_commands,
-    );
+    )?;
     let out = json!({ "state": r.state, "event": r.event, "resolved": r.resolved, "rejected": r.rejected });
     serde_json::to_string(&out).map_err(|e| format!("world-frame: serialize: {}", e))
 }
@@ -337,6 +346,7 @@ pub struct ReconcileResult {
 
 /// Replay frames (corrected_state.frame + 1) ..= to_frame over the corrected state,
 /// applying each frame's local commands. Pure; checked arithmetic (Codex-style).
+/// Errs (never panics) on a non-NFC world_id (round-6 audit HIGH).
 #[allow(clippy::too_many_arguments)]
 pub fn reconcile_frames(
     world_id: &str,
@@ -347,19 +357,22 @@ pub fn reconcile_frames(
     player_entities: &Value,
     max_per_player: Option<u64>,
     max_commands: Option<u64>,
-) -> ReconcileResult {
+) -> Result<ReconcileResult, String> {
+    // Validate even the no-op path so a non-NFC id rejects regardless of
+    // whether any frames need replaying (parity with the epoch twin).
+    derive_frame_prng(world_id, 0)?;
     let from_frame = corrected_state.get("frame").and_then(|f| f.as_i64()).unwrap_or(0);
     let mut work = corrected_state.clone();
     let mut events: Vec<Value> = Vec::new();
     let mut replayed: i64 = 0;
     let mut f = match from_frame.checked_add(1) {
         Some(n) => n,
-        None => return ReconcileResult { state: work, events, frames_replayed: 0 },
+        None => return Ok(ReconcileResult { state: work, events, frames_replayed: 0 }),
     };
     while f <= to_frame {
         let empty = Value::Array(Vec::new());
         let cmds = commands_by_frame.get(f.to_string().as_str()).unwrap_or(&empty);
-        let r = tick_frame(world_id, &work, f, cmds, ruleset, player_entities, max_per_player, max_commands);
+        let r = tick_frame(world_id, &work, f, cmds, ruleset, player_entities, max_per_player, max_commands)?;
         work = r.state;
         events.push(r.event);
         replayed += 1;
@@ -368,7 +381,7 @@ pub fn reconcile_frames(
             None => break,
         };
     }
-    ReconcileResult { state: work, events, frames_replayed: replayed }
+    Ok(ReconcileResult { state: work, events, frames_replayed: replayed })
 }
 
 /// JSON-in / JSON-out reconcile. Input: {worldId, correctedState, commandsByFrame,
@@ -416,7 +429,7 @@ pub fn reconcile_frames_from_json(input_json: &str) -> Result<String, String> {
         &v["playerEntities"],
         max_per_player,
         max_commands,
-    );
+    )?;
     let out = json!({ "state": r.state, "events": r.events, "framesReplayed": r.frames_replayed });
     serde_json::to_string(&out).map_err(|e| format!("world-frame: serialize: {}", e))
 }

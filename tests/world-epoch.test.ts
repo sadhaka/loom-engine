@@ -150,3 +150,11 @@ test('Codex P1: invalid/edge inputs are fail-closed (maxActions, unknown kind, m
   assert.strictEqual((r5.event.actions_processed[0] as { action_id: string }).action_id, '');
   assert.strictEqual((r5.event.actions_processed[0] as { reason: string }).reason, 'malformed_proposal');
 });
+
+test('non-NFC worldId is rejected (round-6 cross-surface parity pin)', function () {
+  // Rust used to derive a seed from the decomposed bytes while TS/Python
+  // threw - all three surfaces now reject identically; this pins the TS side.
+  assert.throws(function () { deriveEpochPrng('cafe\u0301', 1); });
+  // The precomposed twin (same grapheme, NFC) derives normally.
+  deriveEpochPrng('caf\u00e9', 1);
+});

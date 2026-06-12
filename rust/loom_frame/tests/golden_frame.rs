@@ -97,3 +97,19 @@ fn reconcile_from_json_is_fail_closed() {
     let huge = serde_json::json!({"worldId":"w","correctedState":{"frame":0,"epoch":0,"worldSeed":0,"entities":{}},"commandsByFrame":base_cmds,"toFrame":9000,"ruleset":{},"playerEntities":{}});
     assert!(loom_frame::reconcile_frames_from_json(&huge.to_string()).is_err(), "oversized reconcile window must be rejected");
 }
+
+#[test]
+fn non_nfc_world_id_is_rejected_on_every_frame_entry_point() {
+    // Round-6 audit HIGH: the frame twin of the epoch seed gap - TS
+    // deriveFramePrng rejects a non-NFC worldId, Rust derived a different
+    // seed from the decomposed bytes. Every entry point rejects.
+    let dirty = "cafe\u{0301}";
+    assert!(loom_frame::derive_frame_prng(dirty, 1).is_err());
+    let bad = serde_json::json!({"worldId": dirty, "frameNumber": 1,
+        "state": {"frame": 0, "worldSeed": 0, "entities": {}},
+        "commands": [], "ruleset": {}, "playerEntities": {}});
+    let e = loom_frame::tick_frame_from_json(&bad.to_string());
+    assert!(e.is_err() && e.unwrap_err().contains("non-NFC"));
+    // The precomposed twin is accepted.
+    assert!(loom_frame::derive_frame_prng("caf\u{00e9}", 1).is_ok());
+}

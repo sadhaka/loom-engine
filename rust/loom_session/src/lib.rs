@@ -120,11 +120,13 @@ pub fn replay_epoch_event(state: &Value, event: &Value) -> Value {
 
 // ---- suspend ---------------------------------------------------------------
 
-/// Pack a world into a verifiable WorldBundle (format v2). The tail is every
+/// Pack a world into a verifiable WorldBundle (format v3). The tail is every
 /// chain record after the snapshot index; tailGenesis is the head signature at
 /// that index (so the tail links cleanly under verify_records on resume); the
-/// seal is the chain's signed (count, head) commitment so resume() can detect an
-/// end-truncated tail. FAIL-CLOSED, mirroring the TS `suspend()` exactly:
+/// seal (the v2 structural field) is the chain's signed (count, head)
+/// commitment so resume() can detect an end-truncated tail; the binding (the
+/// v3 field) signs the bundle's identity so leading-truncation + cross-world
+/// splices are rejected too. FAIL-CLOSED, mirroring the TS `suspend()` exactly:
 /// snapshot_event_index is validated against the chain's last seq - an index
 /// past the end would yield a bundle claiming a snapshot at a nonexistent event
 /// (and a tail/seal accounting that can never verify). Errors, never panics.
@@ -366,7 +368,10 @@ pub fn resume(
         return Err("world-session: time travel detected (currentEpoch < state.epoch)".to_string());
     }
 
-    // (6) bounded catch-up.
+    // (6) bounded catch-up. Fallible since the round-6 audit (a non-NFC
+    // world_id is rejected by the epoch seed derivation) - in practice the
+    // binding gate above already rejected such a bundle, so this is the
+    // belt to that suspender.
     let r = loom_epoch::catch_up_epochs(loom_epoch::CatchUpInput {
         world_id: world_id.as_str(),
         state: &work,
@@ -376,7 +381,7 @@ pub fn resume(
         proposals_by_epoch,
         actor_tags,
         max_actions,
-    });
+    })?;
 
     Ok(ResumeOutput {
         world_id,

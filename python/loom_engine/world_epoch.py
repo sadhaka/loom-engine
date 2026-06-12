@@ -35,8 +35,15 @@ from .ruleset import compare_ids
 from .ruleset_ast import (
     evaluate_action, apply_triggered_mutations,
     validate_check, validate_triggered_mutations,
-    _assert_clean_string,
 )
+# Round-6 audit follow-on (caught by the new parity pin, missed by the audit
+# itself): the seed derivation borrowed ruleset_ast's guard, which is
+# SURROGATE-ONLY - it never gained the NFC check the 2026-06-07 hardening
+# added to event_chain. A non-NFC world_id therefore derived a seed from the
+# decomposed bytes here while TS threw - the same fork Rust just closed.
+# Use the FULL clean-string guard (lone surrogates + NFC), same as TS
+# deriveEpochPrng's assertCleanString.
+from .event_chain import assert_clean_string as _assert_clean_string
 
 _MASK64 = (1 << 64) - 1
 
