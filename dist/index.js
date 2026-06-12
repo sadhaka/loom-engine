@@ -8,7 +8,7 @@
 // the previous suffix `-perf-9-1` lingered after package.json was
 // bumped to 0.10.0, surfacing as a drift bug in
 // engine.LOOM_ENGINE_VERSION-based diagnostics.
-export const LOOM_ENGINE_VERSION = '3.0.0';
+export const LOOM_ENGINE_VERSION = '3.1.0';
 export { vec2, vec3, rect, clamp, lerp, smoothstep, approxEq, rectContains, rectIntersects, visibleInView, } from './util/math.js';
 export { rgba, hexToRgba, rgbaToHexString, rgbaToCssString, colorLerp, COLOR_WHITE, COLOR_BLACK, COLOR_TRANSPARENT, COLOR_KNOT_STR, COLOR_KNOT_DEX, COLOR_KNOT_INT, COLOR_KNOT_CENTER, } from './util/color.js';
 export { EntityAllocator, NULL_ENTITY, entityIndex, entityGeneration, makeEntity, } from './entity.js';
@@ -633,7 +633,7 @@ export { BestiaryKernel, CREATURE_CATALOG, RESOURCE_BESTIARY, BESTIARY_FP_SHIFT,
 // golden vectors at test_vectors/srd5e_pack_v1.json.
 // ============================================================================
 // Spell-slot economy: tables, spend/restore, rests, the widen-merge, upcast.
-export { MAX_SLOT_LEVEL, PACT_KEY, casterKind, isCaster, spellAbilityForClass, spellSlotsFor, highestSlotLevel, slotAvailable, spendSlot, spendLowestAvailable, restoreSlot, slotsRemaining, longRest, shortRest, widenSlots, spellRequiresConcentration, spellBaseLevel, upcastEffect, totalDiceForCast, } from './runtime/srd5e-spell-slots.js';
+export { MAX_SLOT_LEVEL, PACT_KEY, casterKind, isCaster, spellAbilityForClass, spellSlotsFor, highestSlotLevel, slotAvailable, spendSlot, spendLowestAvailable, restoreSlot, slotsRemaining, longRest, shortRest, widenSlots, sanitizeSlotPool, spellRequiresConcentration, spellBaseLevel, upcastEffect, totalDiceForCast, } from './runtime/srd5e-spell-slots.js';
 // Concentration state machine (caller rolls the CON save, passes the total).
 export { CONCENTRATION_MIN_DC, maintainSaveDc, isConcentrating, startConcentration, dropConcentration, maintainSave, } from './runtime/srd5e-concentration.js';
 // Condition tables: advantage/disadvantage MODE, auto-fail, reaction denial.
