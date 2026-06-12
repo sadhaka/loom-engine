@@ -61,6 +61,10 @@ export interface DelveResult {
   height: number;
   floorTiles: number;
   roomCount: number;
+  // fnv1a over every room-centre marker READ BACK through TileMap.get - the
+  // tile-map stage is part of the fingerprinted chain, not just populated and
+  // discarded (3.1.0 release audit: a no-op set() must change the fingerprint).
+  mapChecksum: number;
   rooms: DelveRoomLog[];
   roomsCleared: number;
   died: boolean;
@@ -199,14 +203,21 @@ export function runDelve(seed: string | number): DelveResult {
     if (dungeon.tiles[i] === 1) floorTiles++;
   }
 
-  // 2. The tile map - place an entity at each room centre (spawn + foes).
+  // 2. The tile map - place an entity at each room centre (spawn + foes), then
+  // READ each marker back through TileMap.get and fold (x, y, value) into a
+  // checksum carried on the result. 3.1.0 release audit LOW: the map used to be
+  // populated and discarded, so a no-op set() could not change the fingerprint;
+  // now the tile-map stage is genuinely part of the proved chain.
   const map = TileMap.create({ width: dungeon.width, height: dungeon.height });
+  let mapChecksum = 0;
   for (let r = 0; r < dungeon.rooms.length; r++) {
     const room = dungeon.rooms[r];
     if (!room) continue;
     const cx = room.x + (room.w >> 1);
     const cy = room.y + (room.h >> 1);
     map.set(cx, cy, r === 0 ? 2 : 3); // 2 = spawn, 3 = foe marker
+    mapChecksum = fnv1a(
+      mapChecksum.toString(16) + ':' + cx + ',' + cy + '=' + map.get(cx, cy));
   }
 
   // 3-6. Walk the rooms after the spawn, fighting + looting off shared rngs.
@@ -250,6 +261,7 @@ export function runDelve(seed: string | number): DelveResult {
     height: dungeon.height,
     floorTiles,
     roomCount: dungeon.rooms.length,
+    mapChecksum,
     rooms,
     roomsCleared,
     died,

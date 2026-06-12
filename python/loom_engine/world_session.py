@@ -27,20 +27,23 @@ THE DESIGN:
     tail chain HMAC; (4) reduce; (5) bound catch-up (reject time-travel);
     (6) tick. Any integrity failure raises before the world is trusted.
 
-  * THE STRUCTURAL SEAL (bundle format v2 - BREAKING). A bare hash chain
-    cannot see records dropped off its END, so a pre-seal bundle whose
-    chainTail lost its trailing records verified clean and the lost events
-    were silently replaced by re-simulated catch-up. The bundle now CARRIES
-    the chain's ChainSeal: suspend() signs the (count, head) commitment via
-    EventChain.seal(), and resume() rejects any bundle whose seal is missing,
-    forged, or disagrees with the tail (head or count). NO compatibility
-    escape hatch - bundles produced before the seal field existed are
-    rejected; re-suspend with the current engine. KNOWN RESIDUAL: the
-    snapshot hash binds the STATE but not its claimed chain POSITION, so a
-    forger who rewrites snapshot.eventIndex + tailGenesis together and drops
-    LEADING tail records still presents a structurally consistent bundle;
-    binding state-to-position needs the snapshot commitment to fold in
-    (worldId, eventIndex) - a future format revision.
+  * THE SEALED + BOUND BUNDLE (format v3 - BREAKING). Two commitments travel
+    with every bundle. (1) The STRUCTURAL SEAL (format v2): a bare hash chain
+    cannot see records dropped off its END, so suspend() signs the
+    (count, head) commitment via EventChain.seal() and resume() rejects any
+    bundle whose seal is missing, forged, or disagrees with the tail (head or
+    count). (2) The IDENTITY BINDING (format v3, Codex audit P1): the seal
+    alone binds the tail's shape but not the snapshot's claimed chain
+    POSITION, so a forger could rewrite snapshot.eventIndex + tailGenesis
+    together and drop LEADING tail records. suspend() therefore also signs a
+    binding over worldId + snapshot stateHash + eventIndex + tailGenesis +
+    (count, head) via bind_bundle(); resume() re-derives it FIRST and rejects
+    fail-closed, closing the leading-truncation and cross-world splice forges
+    - the v2 KNOWN RESIDUAL is RESOLVED. resume() additionally takes
+    expected_world_id so a caller that knows which world it asked for refuses
+    a cross-world bundle outright. NO compatibility escape hatch - pre-v3
+    bundles (no binding field) are rejected; re-suspend with the current
+    engine.
 
 The bundle is a plain dict in the cross-language wire shape:
     {"worldId": str,

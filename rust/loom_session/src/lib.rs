@@ -7,20 +7,23 @@
 //! later ruleset re-balance cannot rewrite history); (5) reject time-travel;
 //! (6) run bounded Epoch catch-up.
 //!
-//! THE STRUCTURAL SEAL (bundle format v2 - BREAKING, mirrors the TS reference).
-//! A bare hash chain cannot see records dropped off its END, so a pre-seal bundle
-//! whose chainTail lost its trailing records verified clean and the lost events
-//! were silently replaced by re-simulated catch-up. The bundle now CARRIES the
-//! chain's ChainSeal: `suspend` signs the (count, head) commitment via
-//! `EventChain::seal`, and `resume` rejects any bundle whose seal is missing,
-//! forged, or disagrees with the tail (head or count). NO compatibility escape
-//! hatch - bundles produced before the seal field existed are rejected;
-//! re-suspend with the current engine. KNOWN RESIDUAL (same as TS): the snapshot
-//! hash binds the STATE but not its claimed chain POSITION, so a forger who
-//! rewrites snapshot.eventIndex + tailGenesis together and drops LEADING tail
-//! records still presents a structurally consistent bundle; binding
-//! state-to-position needs the snapshot commitment to fold in
-//! (worldId, eventIndex) - a future format revision.
+//! THE SEALED + BOUND BUNDLE (format v3 - BREAKING, mirrors the TS reference).
+//! Two commitments travel with every bundle. (1) The STRUCTURAL SEAL (format
+//! v2): a bare hash chain cannot see records dropped off its END, so `suspend`
+//! signs the (count, head) commitment via `EventChain::seal` and `resume`
+//! rejects any bundle whose seal is missing, forged, or disagrees with the
+//! tail (head or count). (2) The IDENTITY BINDING (format v3, Codex audit P1):
+//! the seal alone binds the tail's shape but not the snapshot's claimed chain
+//! POSITION, so a forger could rewrite snapshot.eventIndex + tailGenesis
+//! together and drop LEADING tail records. `suspend` therefore also signs a
+//! binding over worldId + snapshot.stateHash + eventIndex + tailGenesis +
+//! (count, head) via `EventChain::bind_bundle`; `resume` re-derives it FIRST
+//! and rejects fail-closed, closing the leading-truncation and cross-world
+//! splice forges - the v2 KNOWN RESIDUAL is RESOLVED. `resume` additionally
+//! takes an optional expected_world_id so a caller that knows which world it
+//! asked for refuses a cross-world bundle outright. NO compatibility escape
+//! hatch - pre-v3 bundles (no binding field) are rejected; re-suspend with the
+//! current engine.
 //!
 //! Built on loom_events (verify_records + seal), loom_snapshot (world_state_hash +
 //! normalize_tags), and loom_epoch (catch_up_epochs), so it reproduces the TS
@@ -177,7 +180,12 @@ pub fn suspend(
     let seal = chain.seal();
     // Bundle format v3 (Codex audit P1): bind the identity fields the seal does
     // not cover - worldId + stateHash + eventIndex + tailGenesis + (count, head).
-    let binding = chain.bind_bundle(world_id, &state_hash, idx, &tail_genesis);
+    // 3.1.0 audit HIGH: bind_bundle now rejects a non-NFC identity string (the
+    // same inputs TS/Python throw on), so a bundle suspended here verifies on
+    // every surface - Err, never a panic.
+    let binding = chain
+        .bind_bundle(world_id, &state_hash, idx, &tail_genesis)
+        .map_err(|e| format!("world-session: binding: {:?} (non-NFC identity string rejected)", e))?;
     Ok(json!({
         "worldId": world_id,
         "snapshot": {
@@ -214,6 +222,11 @@ fn parse_record(v: &Value) -> Result<ChainedRecord, String> {
 
 /// Reconstruct + verify + fast-forward a world from a bundle. Fail-closed at every
 /// integrity gate. Deterministic across surfaces.
+/// `expected_world_id` (3.1.0 audit MEDIUM, parity with TS `expectedWorldId` /
+/// Python `expected_world_id`): when Some, a bundle whose worldId differs is
+/// rejected outright - checked FIRST, before any other parse or crypto, so a
+/// caller that knows which world it asked for can refuse a cross-world /
+/// cross-path bundle at the core boundary on every surface.
 #[allow(clippy::too_many_arguments)]
 pub fn resume(
     key: &[u8],
@@ -224,7 +237,14 @@ pub fn resume(
     proposals_by_epoch: &Value,
     actor_tags: Vec<String>,
     max_actions: Option<u64>,
+    expected_world_id: Option<&str>,
 ) -> Result<ResumeOutput, String> {
+    // (0a) expectedWorldId gate - identical wording + position to TS/Python.
+    if let Some(exp) = expected_world_id {
+        if bundle.get("worldId").and_then(|x| x.as_str()) != Some(exp) {
+            return Err("world-session: bundle worldId does not match expectedWorldId (cross-world or cross-path bundle rejected)".to_string());
+        }
+    }
     let snapshot = bundle.get("snapshot").ok_or("world-session: bundle missing snapshot")?;
     let snap_state = snapshot.get("state").ok_or("world-session: snapshot missing state")?;
     let expected = snapshot.get("stateHash").and_then(|x| x.as_str()).ok_or("world-session: snapshot missing stateHash")?;
@@ -364,7 +384,10 @@ pub fn resume(
 
 /// JSON-in / JSON-out resume for the WASM + PyO3 surfaces. Input:
 /// {key, bundle, currentEpoch, maxCatchup, ruleset, proposalsByEpoch?, actorTags?,
-/// maxActions?}. Returns {worldId, state, newEvents, epochsResolved, epochsVoided}.
+/// maxActions?, expectedWorldId?}. Returns {worldId, state, newEvents,
+/// epochsResolved, epochsVoided}. expectedWorldId: absent/null skips the gate
+/// (JSON has no undefined; null follows the Python optional-param convention);
+/// a non-string value can never equal a string worldId, so it rejects outright.
 pub fn resume_from_json(input_json: &str) -> Result<String, String> {
     let v: Value = serde_json::from_str(input_json).map_err(|e| format!("world-session: bad input json: {}", e))?;
     let key = v.get("key").and_then(|x| x.as_str()).ok_or("world-session: missing key")?;
@@ -393,8 +416,18 @@ pub fn resume_from_json(input_json: &str) -> Result<String, String> {
                 .ok_or("world-session: maxActions must be a non-negative JS-safe integer")?,
         ),
     };
+    // expectedWorldId: absent/null -> gate skipped; a present non-string can
+    // never match a string worldId, so it is the same rejection the typed gate
+    // produces - fail closed with the identical TS/Python wording.
+    let expected_world_id: Option<&str> = match v.get("expectedWorldId") {
+        None | Some(Value::Null) => None,
+        Some(Value::String(s)) => Some(s.as_str()),
+        Some(_) => {
+            return Err("world-session: bundle worldId does not match expectedWorldId (cross-world or cross-path bundle rejected)".to_string());
+        }
+    };
 
-    let out = resume(key.as_bytes(), bundle, current_epoch, max_catchup, &ruleset, &proposals_by_epoch, actor_tags, max_actions)?;
+    let out = resume(key.as_bytes(), bundle, current_epoch, max_catchup, &ruleset, &proposals_by_epoch, actor_tags, max_actions, expected_world_id)?;
     let j = json!({
         "worldId": out.world_id,
         "state": out.state,

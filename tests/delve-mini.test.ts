@@ -25,15 +25,21 @@ test('delve-mini: SAME SEED = SAME RUN (byte-identical across two runs)', functi
 });
 
 test('delve-mini: the run fingerprint is pinned (regression)', function () {
-  // Pinned 2026-06-12 from the reference run. A change here means the chained
-  // pipeline (dungeon / spawn / combat / loot order) shifted - intended or not.
-  assert.strictEqual(delveFingerprint(runDelve(SEED)), '23f71bf5');
+  // Pinned 2026-06-12 from the reference run; re-pinned same day when the
+  // 3.1.0 release audit folded the TileMap stage into the result (mapChecksum)
+  // - the prior pin 23f71bf5 did not cover the map. A change here means the
+  // chained pipeline (dungeon / map / spawn / combat / loot order) shifted -
+  // intended or not.
+  assert.strictEqual(delveFingerprint(runDelve(SEED)), 'd5c0904c');
 });
 
 test('delve-mini: the chain produced a real dungeon + crawl', function () {
   var r = runDelve(SEED);
   assert.ok(r.roomCount > 1, 'more than one room');
   assert.ok(r.floorTiles > 0, 'the dungeon carved floor tiles');
+  // The TileMap stage is read back, not just populated: every room-centre
+  // marker round-trips through map.get into the checksum (3.1.0 audit LOW).
+  assert.ok(r.mapChecksum !== 0, 'the tile-map markers were placed and read back');
   assert.strictEqual(r.rooms.length, r.died ? r.roomsCleared + 1 : r.roomCount - 1,
     'one room log per fought room (a death stops the crawl)');
   assert.ok(r.score >= 0);

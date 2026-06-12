@@ -13,11 +13,14 @@ demo/*.js
 demo/*.js.map
 demo/*.d.ts
 demo/*.d.ts.map
-# Phase 14.2: nested examples gallery (demo/<name>/main.ts -> main.js)
-demo/*/main.js
-demo/*/main.js.map
-demo/*/main.d.ts
-demo/*/main.d.ts.map
+# Phase 14.2: nested examples gallery (demo/<name>/main.ts -> main.js).
+# 3.1.0 release audit: widened from main.* to ALL compiled JS in nested demos -
+# a stray tsc run (e.g. the old delve-mini driver before it moved to tests/)
+# must never land in the repo. Tracked non-JS assets (vector.json) unaffected.
+demo/*/*.js
+demo/*/*.js.map
+demo/*/*.d.ts
+demo/*/*.d.ts.map
 
 # TypeDoc output (Phase 9.3) - HTML site is generated, never tracked.
 # `npm run docs` writes here; `npm run docs:ci` writes to docs-build/.

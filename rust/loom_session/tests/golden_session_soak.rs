@@ -102,6 +102,7 @@ fn resume_case(
         proposals,
         tags(c),
         None,
+        None,
     )
 }
 
@@ -483,3 +484,52 @@ fn s5_second_resume_across_the_void_boundary_is_deterministic() {
     assert_eq!(hash(key, &Value::Array(r2.new_events.clone())), second["events_hash"].as_str().unwrap(), "events hash");
     assert_eq!(hash(key, &r2.state), second["final_state_hash"].as_str().unwrap(), "final state hash");
 }
+
+// ---- 3.1.0 release audit MEDIUM: the expected_world_id gate -------------------
+
+#[test]
+fn s6_expected_world_id_mismatch_is_rejected_before_any_crypto() {
+    // A valid sealed bundle for world B, handed to a host that intended to load
+    // world A, must be refused at the core boundary - the gate TS/Python carry
+    // as expectedWorldId. Wording is pinned to the cross-surface error.
+    let c = load_case("boundary");
+    match resume(
+        c["key"].as_str().unwrap().as_bytes(),
+        &c["bundleA"],
+        c["expect"]["b"]["currentEpoch"].as_i64().unwrap(),
+        c["maxCatchup"].as_i64().unwrap(),
+        &c["ruleset"],
+        &c["proposalsByEpoch"],
+        tags(&c),
+        None,
+        Some("some-other-world"),
+    ) {
+        Ok(_) => panic!("cross-world bundle must be rejected by expected_world_id"),
+        Err(e) => assert!(
+            e.contains("does not match expectedWorldId"),
+            "reason is the worldId gate, got: {}",
+            e
+        ),
+    }
+}
+
+#[test]
+fn s6_expected_world_id_match_resumes_normally() {
+    // The same bundle with the CORRECT expectation resumes exactly like the
+    // gate-less call - the gate is identity-only, no behavior change.
+    let c = load_case("boundary");
+    let r = resume(
+        c["key"].as_str().unwrap().as_bytes(),
+        &c["bundleA"],
+        c["expect"]["b"]["currentEpoch"].as_i64().unwrap(),
+        c["maxCatchup"].as_i64().unwrap(),
+        &c["ruleset"],
+        &c["proposalsByEpoch"],
+        tags(&c),
+        None,
+        Some(c["worldId"].as_str().unwrap()),
+    )
+    .expect("matching expected_world_id resumes");
+    assert_eq!(r.world_id, c["worldId"].as_str().unwrap());
+}
+

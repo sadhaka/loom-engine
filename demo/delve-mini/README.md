@@ -2,9 +2,11 @@
 
 One shareable seed drives a whole crawl. The same seed produces the **same
 dungeon, the same fights, the same loot, the same death** - byte for byte, every
-time, on every surface that runs the engine. No other JS/Python roguelike engine
-can make that promise, because here the dice and the layout are seeded and
-deterministic by construction.
+time. The proof here is the TypeScript headless run in `npm test` (the engine's
+other surfaces share the same seeded primitives, but THIS demo's pipeline is
+proven on TS only - a cross-surface delve vector is a follow-up). The promise
+holds because the dice and the layout are seeded and deterministic by
+construction.
 
 ## What it chains
 
@@ -26,7 +28,9 @@ runs them as one pipeline (`tests/delve-mini-run.ts`, `runDelve(seed)`):
 Seed `crypt-of-names` carves a **14-room** dungeon (528 floor tiles). The crawler
 clears 10 rooms of the bone-host - Skeleton Archers, Warriors, Casters, a Bone
 Reaver, the Choir - then falls in room 11, one short of the First Standing at the
-heart of the crypt. Score 1172, loot value 172. Run fingerprint: **`23f71bf5`**.
+heart of the crypt. Score 1172, loot value 172. Run fingerprint: **`d5c0904c`**
+(re-pinned when the 3.1.0 release audit folded the TileMap stage into the
+fingerprinted result - the prior pin `23f71bf5` did not cover the map).
 
 Change the seed, get a different crypt and a different fate. Run the same seed
 twice, get the identical 11-line combat log.
@@ -38,7 +42,7 @@ It:
 
 - runs the whole crawl **twice in-process and asserts the results are
   byte-identical** (same seed = same run),
-- pins the run **fingerprint** as a regression (`23f71bf5`),
+- pins the run **fingerprint** as a regression (`d5c0904c`),
 - proves **different seeds diverge**,
 - exercises the **SaveSlots round-trip** (a run saved and loaded back unchanged)
   and the **Leaderboard ranking** of three runs.
