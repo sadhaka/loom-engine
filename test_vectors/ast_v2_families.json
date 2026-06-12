@@ -3340,6 +3340,321 @@
         "applied_count": 3,
         "rng_draws_total": 1
       }
+    },
+    {
+      "label": "G1 present-null mutation previous-read rejects (audit P1, all surfaces)",
+      "context": "trigger",
+      "actor": "hero",
+      "target": "hero",
+      "state": {
+        "epoch": 0,
+        "worldSeed": 0,
+        "entities": {
+          "hero": {
+            "properties": {
+              "hp": null
+            },
+            "tags": []
+          }
+        }
+      },
+      "mutations": [
+        {
+          "type": "add_prop",
+          "target": "actor",
+          "property": "hp",
+          "value": {
+            "type": "literal",
+            "value": 5
+          }
+        }
+      ],
+      "dice_stream": [],
+      "expect": {
+        "reject": true,
+        "rng_draws_total": 0,
+        "state_unchanged": true
+      }
+    },
+    {
+      "label": "G2 present-null compare operand rejects (audit P1, read_prop parity)",
+      "context": "trigger",
+      "actor": "hero",
+      "target": "hero",
+      "state": {
+        "epoch": 0,
+        "worldSeed": 0,
+        "entities": {
+          "hero": {
+            "properties": {
+              "mark": null
+            },
+            "tags": []
+          }
+        }
+      },
+      "mutations": [
+        {
+          "type": "if",
+          "condition": {
+            "type": "compare",
+            "op": "gte",
+            "left": {
+              "source": "prop",
+              "target": "actor",
+              "property": "mark"
+            },
+            "right": {
+              "source": "literal",
+              "value": 0
+            }
+          },
+          "then": [
+            {
+              "type": "add_tag",
+              "target": "actor",
+              "tag": "x"
+            }
+          ]
+        }
+      ],
+      "dice_stream": [],
+      "expect": {
+        "reject": true,
+        "rng_draws_total": 0,
+        "state_unchanged": true
+      }
+    },
+    {
+      "label": "G3 over-length property name rejects at validation (audit P2)",
+      "context": "trigger",
+      "actor": "hero",
+      "target": "hero",
+      "state": {
+        "epoch": 0,
+        "worldSeed": 0,
+        "entities": {
+          "hero": {
+            "properties": {},
+            "tags": []
+          }
+        }
+      },
+      "mutations": [
+        {
+          "type": "set_prop",
+          "target": "actor",
+          "property": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "value": {
+            "type": "literal",
+            "value": 1
+          }
+        }
+      ],
+      "dice_stream": [],
+      "expect": {
+        "reject": true,
+        "rng_draws_total": 0,
+        "state_unchanged": true
+      }
+    },
+    {
+      "label": "G4 compare op ne fires when operands differ",
+      "context": "trigger",
+      "actor": "hero",
+      "target": "hero",
+      "state": {
+        "epoch": 0,
+        "worldSeed": 0,
+        "entities": {
+          "hero": {
+            "properties": {
+              "hp": 10
+            },
+            "tags": []
+          }
+        }
+      },
+      "mutations": [
+        {
+          "type": "if",
+          "condition": {
+            "type": "compare",
+            "op": "ne",
+            "left": {
+              "source": "prop",
+              "target": "actor",
+              "property": "hp"
+            },
+            "right": {
+              "source": "literal",
+              "value": 0
+            }
+          },
+          "then": [
+            {
+              "type": "add_tag",
+              "target": "actor",
+              "tag": "alive"
+            }
+          ]
+        }
+      ],
+      "dice_stream": [],
+      "expect": {
+        "tags_after": {
+          "hero": [
+            "alive"
+          ]
+        },
+        "applied_count": 1
+      }
+    },
+    {
+      "label": "G5 foreach_target limit 0 rejects",
+      "context": "trigger",
+      "actor": "hero",
+      "state": {
+        "epoch": 0,
+        "worldSeed": 0,
+        "entities": {
+          "hero": {
+            "properties": {},
+            "tags": []
+          },
+          "foe_a": {
+            "properties": {
+              "hp": 5
+            },
+            "tags": [
+              "foe"
+            ]
+          }
+        }
+      },
+      "mutations": [
+        {
+          "type": "foreach_target",
+          "select": {
+            "tag": "foe",
+            "limit": 0
+          },
+          "mutations": [
+            {
+              "type": "sub_prop",
+              "target": "each",
+              "property": "hp",
+              "value": {
+                "type": "literal",
+                "value": 1
+              }
+            }
+          ]
+        }
+      ],
+      "dice_stream": [],
+      "expect": {
+        "reject": true,
+        "rng_draws_total": 0,
+        "state_unchanged": true
+      }
+    },
+    {
+      "label": "G6 foreach_target limit 33 exceeds MAX_TARGETS and rejects",
+      "context": "trigger",
+      "actor": "hero",
+      "state": {
+        "epoch": 0,
+        "worldSeed": 0,
+        "entities": {
+          "hero": {
+            "properties": {},
+            "tags": []
+          },
+          "foe_a": {
+            "properties": {
+              "hp": 5
+            },
+            "tags": [
+              "foe"
+            ]
+          }
+        }
+      },
+      "mutations": [
+        {
+          "type": "foreach_target",
+          "select": {
+            "tag": "foe",
+            "limit": 33
+          },
+          "mutations": [
+            {
+              "type": "sub_prop",
+              "target": "each",
+              "property": "hp",
+              "value": {
+                "type": "literal",
+                "value": 1
+              }
+            }
+          ]
+        }
+      ],
+      "dice_stream": [],
+      "expect": {
+        "reject": true,
+        "rng_draws_total": 0,
+        "state_unchanged": true
+      }
+    },
+    {
+      "label": "G7 foreach_target select.tag __proto__ rejects",
+      "context": "trigger",
+      "actor": "hero",
+      "state": {
+        "epoch": 0,
+        "worldSeed": 0,
+        "entities": {
+          "hero": {
+            "properties": {},
+            "tags": []
+          },
+          "foe_a": {
+            "properties": {
+              "hp": 5
+            },
+            "tags": [
+              "foe"
+            ]
+          }
+        }
+      },
+      "mutations": [
+        {
+          "type": "foreach_target",
+          "select": {
+            "tag": "__proto__"
+          },
+          "mutations": [
+            {
+              "type": "sub_prop",
+              "target": "each",
+              "property": "hp",
+              "value": {
+                "type": "literal",
+                "value": 1
+              }
+            }
+          ]
+        }
+      ],
+      "dice_stream": [],
+      "expect": {
+        "reject": true,
+        "rng_draws_total": 0,
+        "state_unchanged": true
+      }
     }
   ]
 }

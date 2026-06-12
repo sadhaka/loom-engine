@@ -50,6 +50,11 @@ const MAX_TARGETS: i64 = 32;
 const MAX_ITERATIONS: i64 = 16;
 const MAX_APPLIED_MUTATIONS: i64 = 1024;
 const MAX_WORLD_ENTITIES: usize = 65536;
+// Codex audit P2: cap property/tag name length so a valid AST cannot smuggle a
+// multi-megabyte name past the node/dice budgets and bloat state/hash work.
+// Counted in UTF-16 code units (JS string .length) for byte-identical limits
+// across TS, Python, and Rust.
+const MAX_NAME_LEN: usize = 256;
 const DEGREE_ORDER: [&str; 4] = ["critical_success", "success", "failure", "critical_failure"];
 
 /// The single PRNG-consuming surface of the evaluator (spec 10: only rollDie
@@ -205,8 +210,13 @@ fn resolve_target_rc(t: &str, rc: &RunCtx) -> Result<String, String> {
 }
 
 fn read_prop(state: &Value, id: &str, prop: &str) -> Result<i64, String> {
+    // Codex audit P1: a MISSING property (None) reads 0 (v1 rule), but a
+    // PRESENT non-integer value - including a JSON null - must hit the same
+    // value_int / assert_int choke point as TS and Python, which throw.
+    // Folding Some(Value::Null) into the Ok(0) arm was a cross-language fork:
+    // Rust returned 0 where TS/Python rejected. value_int(Null) returns Err.
     match state.get("entities").and_then(|e| e.get(id)).and_then(|ent| ent.get("properties")).and_then(|p| p.get(prop)) {
-        None | Some(Value::Null) => Ok(0),
+        None => Ok(0),
         Some(v) => value_int(v, "property"),
     }
 }
@@ -688,6 +698,11 @@ fn assert_clean_name(s: &str, what: &str) -> Result<(), String> {
     if s == "__proto__" {
         return Err(format!("AST: {} name \"__proto__\" is forbidden", what));
     }
+    // Codex audit P2: bound name length (UTF-16 code units, matching JS .length)
+    // so a huge property/tag name cannot pass node/dice budgets and bloat work.
+    if s.encode_utf16().count() > MAX_NAME_LEN {
+        return Err(format!("AST: {} name exceeds max length {}", what, MAX_NAME_LEN));
+    }
     Ok(())
 }
 
@@ -1008,9 +1023,15 @@ fn eval_check_core(
 // ---- shared-rng API (Epoch world-tick; validation is the caller's job) ------
 
 /// Resolve a flat mutation action threading a SHARED rng (the Epoch world-tick
-/// supplies the epoch PRNG). Validation is the caller's responsibility (the
-/// Epoch tick validates first, separately, to assign reason codes); this clones
-/// state and never mutates the input.
+/// supplies the epoch PRNG). This clones state and never mutates the input.
+///
+/// Codex audit P1: this is a `pub` cross-crate entry point (the Epoch tick and
+/// the Frame loop call it), so it must NOT trust its input. It now validates
+/// FAIL-CLOSED before drawing any rng or mutating state - an external Rust
+/// consumer can no longer pass an over-budget or malformed AST and consume rng
+/// or get Ok for a shape the TS/Python public APIs reject. The Epoch/Frame
+/// callers still validate first to assign their own reason codes; for already
+/// valid input this re-validation is a bounded, side-effect-free AST walk.
 pub fn apply_triggered_mutations_with_rng(
     state: &Value,
     mutations: &Value,
@@ -1018,11 +1039,14 @@ pub fn apply_triggered_mutations_with_rng(
     target: Option<&str>,
     rng: &mut Pcg32,
 ) -> Result<MutationsResolution, String> {
+    validate_triggered_mutations(mutations)?;
     apply_trigger_core(state, mutations, actor, target, rng)
 }
 
 /// Resolve a check action threading a SHARED rng (the Epoch PRNG). Same
-/// contract as `apply_triggered_mutations_with_rng`.
+/// fail-closed contract as `apply_triggered_mutations_with_rng` (Codex audit P1:
+/// validates before any rng draw so a `pub` cross-crate caller cannot bypass
+/// validation).
 pub fn evaluate_action_with_rng(
     state: &Value,
     check: &Value,
@@ -1030,6 +1054,7 @@ pub fn evaluate_action_with_rng(
     target: Option<&str>,
     rng: &mut Pcg32,
 ) -> Result<CheckResolution, String> {
+    validate_check(check)?;
     let r = eval_check_core(state, check, actor, target, rng)?;
     Ok(CheckResolution { state: r.state, degree: r.degree, mutations: r.mutations })
 }
@@ -1152,4 +1177,43 @@ pub fn evaluate_action(state: &Value, check: &Value, actor: &str, target: Option
     validate_check(check)?; // fail-closed before any rng/mutation
     let mut rng = Pcg32::seeded(seed);
     eval_check_core(state, check, actor, target, &mut rng)
+}
+
+#[cfg(test)]
+mod audit_p1_shared_rng {
+    //! Codex audit P1: the `pub` shared-rng entry points (called cross-crate by
+    //! loom_epoch and loom_frame) must validate FAIL-CLOSED so an external Rust
+    //! consumer cannot bypass validation, consume rng, or get Ok for a shape the
+    //! seed-constructed public API rejects. Zero rng draws on reject is
+    //! structural: `validate_*` runs before the core (the sole rng consumer) and
+    //! never receives the rng, so a rejected document cannot advance it.
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn evaluate_action_with_rng_rejects_malformed_check() {
+        let state = json!({"epoch":0,"worldSeed":0,"entities":{"hero":{"properties":{},"tags":[]}}});
+        let check = json!({
+            "type":"check",
+            "roll":{"type":"dice","equation":"1d20"},
+            "dc":{"type":"literal","value":1},
+            // unknown condition type: the seed-constructed evaluate_action rejects
+            // this; the shared-rng variant MUST reject it too.
+            "degrees":{"success":{"condition":{"type":"nope_condition"},"mutations":[]}}
+        });
+        let mut rng = Pcg32::seeded(42);
+        assert!(evaluate_action_with_rng(&state, &check, "hero", None, &mut rng).is_err());
+        // The seed-constructed public API agrees (parity sanity).
+        assert!(evaluate_action(&state, &check, "hero", None, 42).is_err());
+    }
+
+    #[test]
+    fn apply_triggered_mutations_with_rng_rejects_malformed_mutation() {
+        let state = json!({"epoch":0,"worldSeed":0,"entities":{"hero":{"properties":{},"tags":[]}}});
+        // unknown expression type inside the mutation value.
+        let muts = json!([{"type":"set_prop","target":"actor","property":"hp","value":{"type":"bogus_op"}}]);
+        let mut rng = Pcg32::seeded(42);
+        assert!(apply_triggered_mutations_with_rng(&state, &muts, "hero", None, &mut rng).is_err());
+        assert!(apply_triggered_mutations(&state, &muts, "hero", None, 42).is_err());
+    }
 }

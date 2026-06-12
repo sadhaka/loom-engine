@@ -884,6 +884,110 @@ cases.push({
     applied_count: 3, rng_draws_total: 1 },
 });
 
+// ============================================================================
+// Family G - Codex audit regression cases (2026-06-12)
+// Pin the three audit P1 forks + the P2 name cap + the requested coverage
+// gaps. The present-null and limit rejects are authored as TRIGGERS so they
+// reject with ZERO dice draws (no check roll), satisfying the spec 1.3 reject
+// contract on every surface.
+// ============================================================================
+
+var LONG_NAME = '';
+for (var gi = 0; gi < 257; gi++) { LONG_NAME += 'a'; }  // 257 > MAX_NAME_LEN 256
+
+// G1: a PRESENT null property feeding a mutation previous-read must THROW on
+// every surface (the audit fork: TS recorded previous:null, Python coerced to
+// 0, Rust rejected). missing -> 0, present non-integer -> throw is now one rule.
+cases.push({
+  label: 'G1 present-null mutation previous-read rejects (audit P1, all surfaces)',
+  context: 'trigger', actor: 'hero', target: 'hero',
+  state: { epoch: 0, worldSeed: 0, entities: {
+    hero: { properties: { hp: null as unknown as number }, tags: [] } } },
+  mutations: [{ type: 'add_prop', target: 'actor', property: 'hp', value: { type: 'literal', value: 5 } }],
+  dice_stream: [],
+  expect: { reject: true, rng_draws_total: 0, state_unchanged: true },
+});
+
+// G2: a PRESENT null property read by a compare operand must THROW (the
+// read_prop / prop fork - Rust returned 0 where TS/Python threw). The `if`
+// condition reads hero.mark = null and rejects with zero draws.
+cases.push({
+  label: 'G2 present-null compare operand rejects (audit P1, read_prop parity)',
+  context: 'trigger', actor: 'hero', target: 'hero',
+  state: { epoch: 0, worldSeed: 0, entities: {
+    hero: { properties: { mark: null as unknown as number }, tags: [] } } },
+  mutations: [{ type: 'if',
+    condition: { type: 'compare', op: 'gte',
+      left: { source: 'prop', target: 'actor', property: 'mark' },
+      right: { source: 'literal', value: 0 } },
+    then: [{ type: 'add_tag', target: 'actor', tag: 'x' }] }],
+  dice_stream: [],
+  expect: { reject: true, rng_draws_total: 0, state_unchanged: true },
+});
+
+// G3: a property name over MAX_NAME_LEN rejects at VALIDATION (audit P2).
+cases.push({
+  label: 'G3 over-length property name rejects at validation (audit P2)',
+  context: 'trigger', actor: 'hero', target: 'hero',
+  state: { epoch: 0, worldSeed: 0, entities: { hero: { properties: {}, tags: [] } } },
+  mutations: [{ type: 'set_prop', target: 'actor', property: LONG_NAME, value: { type: 'literal', value: 1 } }],
+  dice_stream: [],
+  expect: { reject: true, rng_draws_total: 0, state_unchanged: true },
+});
+
+// G4: compare op 'ne' accepts and fires (requested coverage gap).
+cases.push({
+  label: 'G4 compare op ne fires when operands differ',
+  context: 'trigger', actor: 'hero', target: 'hero',
+  state: { epoch: 0, worldSeed: 0, entities: { hero: { properties: { hp: 10 }, tags: [] } } },
+  mutations: [{ type: 'if',
+    condition: { type: 'compare', op: 'ne',
+      left: { source: 'prop', target: 'actor', property: 'hp' },
+      right: { source: 'literal', value: 0 } },
+    then: [{ type: 'add_tag', target: 'actor', tag: 'alive' }] }],
+  dice_stream: [],
+  expect: { tags_after: { hero: ['alive'] }, applied_count: 1 },
+});
+
+// G5: foreach_target limit 0 rejects at validation (requested coverage gap).
+cases.push({
+  label: 'G5 foreach_target limit 0 rejects',
+  context: 'trigger', actor: 'hero',
+  state: { epoch: 0, worldSeed: 0, entities: {
+    hero: { properties: {}, tags: [] },
+    foe_a: { properties: { hp: 5 }, tags: ['foe'] } } },
+  mutations: [{ type: 'foreach_target', select: { tag: 'foe', limit: 0 },
+    mutations: [{ type: 'sub_prop', target: 'each', property: 'hp', value: { type: 'literal', value: 1 } }] }],
+  dice_stream: [],
+  expect: { reject: true, rng_draws_total: 0, state_unchanged: true },
+});
+
+// G6: foreach_target limit above MAX_TARGETS rejects at validation.
+cases.push({
+  label: 'G6 foreach_target limit 33 exceeds MAX_TARGETS and rejects',
+  context: 'trigger', actor: 'hero',
+  state: { epoch: 0, worldSeed: 0, entities: {
+    hero: { properties: {}, tags: [] },
+    foe_a: { properties: { hp: 5 }, tags: ['foe'] } } },
+  mutations: [{ type: 'foreach_target', select: { tag: 'foe', limit: 33 },
+    mutations: [{ type: 'sub_prop', target: 'each', property: 'hp', value: { type: 'literal', value: 1 } }] }],
+  dice_stream: [],
+  expect: { reject: true, rng_draws_total: 0, state_unchanged: true },
+});
+
+// G7: foreach_target select.tag '__proto__' rejects (unclean tag name).
+cases.push({
+  label: 'G7 foreach_target select.tag __proto__ rejects',
+  context: 'trigger', actor: 'hero',
+  state: { epoch: 0, worldSeed: 0, entities: {
+    hero: { properties: {}, tags: [] },
+    foe_a: { properties: { hp: 5 }, tags: ['foe'] } } },
+  mutations: [{ type: 'foreach_target', select: { tag: '__proto__' },
+    mutations: [{ type: 'sub_prop', target: 'each', property: 'hp', value: { type: 'literal', value: 1 } }] }],
+  dice_stream: [],
+  expect: { reject: true, rng_draws_total: 0, state_unchanged: true },
+});
+
 // ---- Verify every case against the real evaluator, then write ---------------
 
 for (var ci = 0; ci < cases.length; ci++) {

@@ -60,6 +60,10 @@ MAX_TARGETS = 32             # v2: hard cap on one foreach_target's entities; al
 MAX_ITERATIONS = 16          # v2: hard cap on a repeat node's count
 MAX_APPLIED_MUTATIONS = 1024  # v2: worst-case leaf-mutation applications at multiplicity M, document-global
 MAX_WORLD_ENTITIES = 65536   # v2: RUNTIME cap on working-state entity count at foreach_target SELECT (spec 8.7)
+# Codex audit P2: cap property/tag name length so a valid AST cannot smuggle a
+# multi-megabyte name past the node/dice budgets. Counted in UTF-16 code units
+# (JS string .length) for byte-identical limits across TS, Python, and Rust.
+MAX_NAME_LEN = 256
 DEGREE_ORDER = ["critical_success", "success", "failure", "critical_failure"]
 
 _DICE_RE = re.compile(r"^([0-9]+)d([0-9]+)([+-][0-9]+)?$")
@@ -325,9 +329,12 @@ def _apply_mutation_into(node, ctx, q, applied):
         eid = _resolve_target(node["target"], ctx)
         ent = _ensure_entity(ctx["state"], eid)
         value = eval_expression(node["value"], ctx)
-        prev = ent["properties"].get(node["property"])
-        if prev is None:
-            prev = 0
+        # Codex audit P1: the previous-value read must use the SAME boundary as
+        # prop_ref and compare `prop` - missing reads 0, a PRESENT non-integer
+        # (including null) throws. The old `.get() or 0` conflated a missing key
+        # with a present JSON null (both -> 0), forking from TS (recorded null)
+        # and Rust (rejected). _read_prop is that one shared boundary.
+        prev = _read_prop(ctx["state"], eid, node["property"])
         if t == "set_prop":
             nxt = value
         elif t == "add_prop":
@@ -454,6 +461,11 @@ def _assert_clean_name(s, what):
         raise ValueError("AST: %s name must be a non-empty string" % what)
     if s == "__proto__":
         raise ValueError('AST: %s name "__proto__" is forbidden' % what)
+    # Codex audit P2: bound name length in UTF-16 code units (JS .length) so a
+    # huge property/tag name cannot pass the node/dice budgets. len(str) counts
+    # code points, so measure UTF-16 units explicitly for cross-surface parity.
+    if len(s.encode("utf-16-le")) // 2 > MAX_NAME_LEN:
+        raise ValueError("AST: %s name exceeds max length %d" % (what, MAX_NAME_LEN))
     _assert_clean_string(s)
 
 
