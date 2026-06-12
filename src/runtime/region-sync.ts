@@ -67,7 +67,13 @@ export function partitionRegions(state: WorldState, prefix?: string): Record<str
   var p = (typeof prefix === 'string' && prefix.length > 0) ? prefix : DEFAULT_REGION_TAG_PREFIX;
   var entities = state.entities || {};
   var entityIds = Object.keys(entities);
-  var byRegion: Record<string, Record<string, WorldEntity>> = {};
+  // Prototype-pollution safe: regionId/entityId keys derive from entity tags
+  // (untrusted), so a "__proto__"/"constructor" key must set an OWN property,
+  // never reach Object.prototype. Null-proto maps make every keyed write below
+  // safe; Object.keys + the hasOwn helper (hasOwnProperty.call) are unchanged,
+  // so canonical hashing stays byte-identical. (CodeQL js/prototype-polluting-
+  // assignment.)
+  var byRegion: Record<string, Record<string, WorldEntity>> = Object.create(null);
   for (var i = 0; i < entityIds.length; i++) {
     var entityId = entityIds[i] as string;
     var ent = entities[entityId];
@@ -87,11 +93,11 @@ export function partitionRegions(state: WorldState, prefix?: string): Record<str
         + p + '<id>" tag (found ' + matches + ')');
     }
     var bucket = byRegion[regionId];
-    if (!bucket) { bucket = {}; byRegion[regionId] = bucket; }
+    if (!bucket) { bucket = Object.create(null) as Record<string, WorldEntity>; byRegion[regionId] = bucket; }
     bucket[entityId] = cloneJson(ent);
   }
   var regionIds = Object.keys(byRegion).sort(compareIds);
-  var out: Record<string, WorldState> = {};
+  var out: Record<string, WorldState> = Object.create(null);
   for (var r = 0; r < regionIds.length; r++) {
     var id = regionIds[r] as string;
     // epoch pinned to 0: a partition leaf is a CONTENT address (see header).
@@ -203,7 +209,9 @@ export function applyPartialSync(input: PartialSyncInput): PartialSyncResult {
 
   // (3) recombine pulled + kept cached regions over the server's region list.
   var serverIds = Object.keys(leaves).sort(compareIds);
-  var merged: Record<string, unknown> = {};
+  // Null-proto: serverIds keys derive from entity tags (untrusted) - same
+  // prototype-pollution guard as partitionWorldIntoRegionLeaves above.
+  var merged: Record<string, unknown> = Object.create(null);
   var keptIds: string[] = [];
   for (var s = 0; s < serverIds.length; s++) {
     var sid = serverIds[s] as string;
