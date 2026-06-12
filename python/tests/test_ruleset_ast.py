@@ -11,6 +11,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from loom_engine.ruleset_ast import (  # noqa: E402
     apply_triggered_mutations, evaluate_action, make_context,
+    validate_triggered_mutations,
 )
 from loom_engine.world_snapshot import world_state_hash  # noqa: E402
 from loom_engine.pcg32 import Pcg32  # noqa: E402
@@ -83,3 +84,18 @@ if __name__ == "__main__":
     test_fail_closed_zero_rng_advance()
     test_p1b_unsafe_dice_mod_rejected_before_rng()
     print("ruleset_ast Python parity: all tests pass")
+
+def test_round7_non_nfc_name_is_rejected():
+    # Instance #5 NFC parity pin: the AST name guard borrowed a surrogate-only
+    # check; it now rejects non-NFC like TS. validate_triggered_mutations is
+    # the fail-closed guard apply_* runs before any rng/mutation.
+    import pytest
+    dirty_prop = [{'type': 'set_prop', 'target': 'actor', 'property': 'cafe\u0301', 'value': {'type': 'literal', 'value': 1}}]
+    with pytest.raises(Exception):
+        validate_triggered_mutations(dirty_prop)
+    dirty_tag = [{'type': 'add_tag', 'target': 'actor', 'tag': 'cafe\u0301'}]
+    with pytest.raises(Exception):
+        validate_triggered_mutations(dirty_tag)
+    # precomposed twin (same grapheme, NFC) is accepted
+    clean = [{'type': 'set_prop', 'target': 'actor', 'property': 'caf\u00e9', 'value': {'type': 'literal', 'value': 1}}]
+    validate_triggered_mutations(clean)

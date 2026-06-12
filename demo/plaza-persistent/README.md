@@ -34,8 +34,9 @@ so the demo and the test suite pin the same hashes and neither can rot.
    appended to an `EventChain` and the record signatures + chain head match
    the pins.
 3. **Suspend** - `suspend()` packs the snapshot (index 0) + the 2-event HMAC
-   tail and EMBEDS `chain.seal()` in the bundle (bundle format v2 - the seal
-   is structural, not external bookkeeping). The demo also shows the hole the
+   tail and EMBEDS `chain.seal()` + `chain.bindBundle()` in the bundle (bundle format
+   v3 - the structural seal plus a signed identity binding, not external
+   bookkeeping). The demo also shows the hole the
    seal closes: a TRUNCATED tail passes a bare hash-chain verify and is
    rejected only when the seal's (count, head) commitment is checked.
 4. **Resume** - `resume()` verifies the snapshot hash, verifies the bundle's

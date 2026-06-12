@@ -102,6 +102,15 @@ def _assert_clean_string(s):
     for ch in s:
         if 0xD800 <= ord(ch) <= 0xDFFF:
             raise ValueError("AST: string contains a lone surrogate")
+    # Round-7 audit HIGH (instance #5 of the NFC class): a property/tag NAME must
+    # also be NFC, exactly like the TS assertCleanName -> assertCleanString path.
+    # Without this a non-NFC name ("cafe" + U+0301) signed two ways and forked
+    # the chain at the AST mutation gate across producers that normalize
+    # differently. REJECT (never silently normalize a player's name).
+    import unicodedata as _ud
+    if not _ud.is_normalized("NFC", s):
+        raise ValueError(
+            "AST: non-NFC name (normalize to NFC first)")
 
 
 def _utf16_key(s):

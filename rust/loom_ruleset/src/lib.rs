@@ -703,6 +703,13 @@ fn assert_clean_name(s: &str, what: &str) -> Result<(), String> {
     if s.encode_utf16().count() > MAX_NAME_LEN {
         return Err(format!("AST: {} name exceeds max length {}", what, MAX_NAME_LEN));
     }
+    // Round-7 audit HIGH (instance #5 of the NFC class): the name must be NFC,
+    // matching the TS assertCleanName -> assertCleanString NFC guard. A non-NFC
+    // name forked the chain at the mutation gate (Rust hashed the decomposed
+    // bytes where TS rejected).
+    if !unicode_normalization::is_nfc(s) {
+        return Err(format!("AST: {} name is not NFC (normalize first)", what));
+    }
     Ok(())
 }
 
@@ -1215,5 +1222,18 @@ mod audit_p1_shared_rng {
         let mut rng = Pcg32::seeded(42);
         assert!(apply_triggered_mutations_with_rng(&state, &muts, "hero", None, &mut rng).is_err());
         assert!(apply_triggered_mutations(&state, &muts, "hero", None, 42).is_err());
+    }
+
+    #[test]
+    fn round7_non_nfc_name_is_rejected() {
+        // Instance #5 NFC parity pin: assert_clean_name now rejects non-NFC,
+        // matching the TS assertCleanName NFC guard. Fail-closed before rng.
+        let state = json!({"epoch":0,"worldSeed":0,"entities":{"hero":{"properties":{},"tags":[]}}});
+        let dirty_prop = json!([{"type":"set_prop","target":"actor","property":"cafe\u{0301}","value":{"type":"literal","value":1}}]);
+        assert!(apply_triggered_mutations(&state, &dirty_prop, "hero", None, 1).is_err());
+        let dirty_tag = json!([{"type":"add_tag","target":"actor","tag":"cafe\u{0301}"}]);
+        assert!(apply_triggered_mutations(&state, &dirty_tag, "hero", None, 1).is_err());
+        let clean = json!([{"type":"set_prop","target":"actor","property":"caf\u{00e9}","value":{"type":"literal","value":1}}]);
+        assert!(apply_triggered_mutations(&state, &clean, "hero", None, 1).is_ok());
     }
 }

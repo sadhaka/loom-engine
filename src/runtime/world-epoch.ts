@@ -385,6 +385,10 @@ export function catchUpEpochs(input: CatchUpInput): CatchUpResult {
   if (!Number.isSafeInteger(input.maxCatchup) || input.maxCatchup < 0) {
     throw new Error('world-epoch: maxCatchup must be a non-negative JS-safe integer');
   }
+  // Round-7 audit MEDIUM: validate the worldId BEFORE the no-op early return,
+  // so a non-NFC worldId is rejected even when target <= 0 (Rust already did;
+  // this closes the TS/Rust no-op seed fork in the opposite direction).
+  assertCleanString(input.worldId);
   var clientEpoch = input.state.epoch;
   var target = input.currentEpoch - clientEpoch;
   if (target <= 0) {

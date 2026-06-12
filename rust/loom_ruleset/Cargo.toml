@@ -14,6 +14,9 @@ description = "Deterministic data-driven ruleset AST interpreter for the Loom En
 
 [dependencies]
 serde_json = "1"
+# Round-7 audit HIGH: NFC validation on AST property/tag names, mirroring the
+# TS assertCleanName NFC guard (instance #5 of the cross-surface NFC class).
+unicode-normalization = "0.1"
 loom_math = { path = "../loom_math", version = "0.1.1" }
 loom_snapshot = { path = "../loom_snapshot", version = "0.1.1" }
 

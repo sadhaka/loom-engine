@@ -153,6 +153,7 @@ dependencies = [
  "loom_math",
  "loom_snapshot",
  "serde_json",
+ "unicode-normalization",
 ]
 
 [[package]]

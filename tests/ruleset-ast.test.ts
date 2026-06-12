@@ -131,3 +131,17 @@ test('evalExpression: literal/prop_ref/math (floor_div), fail-closed on unknown 
   assert.throws(function () { evalExpression({ type: 'literal', value: 1.5 } as unknown as { type: 'literal'; value: number }, ctx); }, /integer/);
   assert.throws(function () { evalExpression({ type: 'bogus' } as unknown as { type: 'literal'; value: number }, ctx); }, /unknown expression/);
 });
+
+test('round-7: a non-NFC property/tag name is rejected (NFC parity pin)', function () {
+  // Instance #5 of the cross-surface NFC class: TS already rejected; this
+  // pins it so Python/Rust cannot drift back. applyTriggeredMutations
+  // validates names fail-closed before any rng/mutation.
+  var state = { epoch: 0, worldSeed: 0, entities: { hero: { properties: {}, tags: [] } } };
+  var dirtyProp = [{ type: 'set_prop', target: 'actor', property: 'cafe\u0301', value: { type: 'literal', value: 1 } }];
+  assert.throws(function () { applyTriggeredMutations(state as any, dirtyProp as any, 'hero', null, 1); }, /NFC|name/);
+  var dirtyTag = [{ type: 'add_tag', target: 'actor', tag: 'cafe\u0301' }];
+  assert.throws(function () { applyTriggeredMutations(state as any, dirtyTag as any, 'hero', null, 1); }, /NFC|name/);
+  // the precomposed twin is accepted
+  var cleanProp = [{ type: 'set_prop', target: 'actor', property: 'caf\u00e9', value: { type: 'literal', value: 1 } }];
+  applyTriggeredMutations(state as any, cleanProp as any, 'hero', null, 1);
+});
