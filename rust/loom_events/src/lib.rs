@@ -294,6 +294,11 @@ fn seal_message(count: u64, head: &str) -> String {
 
 // Codex audit P1: the world-bundle binding message - byte-identical to the TS
 // bundleBindMessage. Length-prefixed (injective) fields, no delimiter ambiguity.
+// 3.1.0 release audit HIGH: the string fields are validated for NFC exactly like
+// TS assertCleanString / Python assert_clean_string (a Rust &str cannot hold a
+// lone surrogate, so NFC is the only check needed). Without this, a Rust
+// producer could SIGN a non-NFC worldId into a bundle that TS/Python then
+// reject as "binding invalid" - a cross-surface persistence fork.
 fn bundle_bind_message(
     world_id: &str,
     state_hash: &str,
@@ -301,7 +306,11 @@ fn bundle_bind_message(
     tail_genesis: &str,
     count: u64,
     head: &str,
-) -> String {
+) -> Result<String, CanonError> {
+    assert_nfc(world_id)?;
+    assert_nfc(state_hash)?;
+    assert_nfc(tail_genesis)?;
+    assert_nfc(head)?;
     let mut m = String::new();
     m.push_str(&field(BUNDLE_DOMAIN));
     m.push_str(&field(world_id));
@@ -310,7 +319,7 @@ fn bundle_bind_message(
     m.push_str(&field(tail_genesis));
     m.push_str(&field(&count.to_string()));
     m.push_str(&field(head));
-    m
+    Ok(m)
 }
 
 /// The HMAC hex signature for one record, byte-identical to the TS per-record
@@ -561,14 +570,19 @@ impl EventChain {
     /// Codex audit P1 (persistence forge): sign a world bundle's identity. Binds
     /// worldId + snapshot stateHash + eventIndex + tailGenesis to the sealed
     /// (count, head). Byte-identical to the TS EventChain.bindBundle.
-    pub fn bind_bundle(&self, world_id: &str, state_hash: &str, event_index: u64, tail_genesis: &str) -> String {
+    /// Errors (never panics) on a non-NFC identity string - the same inputs
+    /// TS/Python bindBundle throw on, so a bundle signable on one surface is
+    /// signable on all three.
+    pub fn bind_bundle(&self, world_id: &str, state_hash: &str, event_index: u64, tail_genesis: &str) -> Result<String, CanonError> {
         let count = self.records.len() as u64;
         let head = self.head_sig.clone();
-        hmac_sha256_hex(&self.key, &bundle_bind_message(world_id, state_hash, event_index, tail_genesis, count, &head))
+        Ok(hmac_sha256_hex(&self.key, &bundle_bind_message(world_id, state_hash, event_index, tail_genesis, count, &head)?))
     }
 
     /// Verify a world-bundle binding (constant-time). A mismatch on ANY identity
-    /// field fails closed.
+    /// field fails closed; a non-NFC identity string fails closed (false, never
+    /// a panic) exactly like the TS/Python verifiers, which catch the message
+    ///-construction throw and return false.
     #[allow(clippy::too_many_arguments)]
     pub fn verify_bundle_binding(
         key: &[u8],
@@ -580,7 +594,11 @@ impl EventChain {
         head: &str,
         binding: &str,
     ) -> bool {
-        let expected = hmac_sha256_hex(key, &bundle_bind_message(world_id, state_hash, event_index, tail_genesis, count, head));
+        let msg = match bundle_bind_message(world_id, state_hash, event_index, tail_genesis, count, head) {
+            Ok(m) => m,
+            Err(_) => return false,
+        };
+        let expected = hmac_sha256_hex(key, &msg);
         constant_time_eq(expected.as_bytes(), binding.as_bytes())
     }
 }
@@ -760,5 +778,45 @@ mod tests {
         let empty_seal = empty_chain.seal();
         let r = EventChain::verify_records_detailed(b"k", &[], "g", Some(&empty_seal));
         assert!(r.ok, "empty chain verifies against its own seal (head == genesis)");
+    }
+
+    #[test]
+    fn bundle_binding_rejects_non_nfc_identity_strings() {
+        // 3.1.0 release audit HIGH: TS/Python reject a non-NFC worldId at the
+        // binding message (assertCleanString / assert_clean_string). Rust used
+        // to SIGN it - producing a bundle that verified here but failed
+        // "binding invalid" on the other two surfaces. Both directions must
+        // reject: sign-side Err (never a panic), verify-side false.
+        let chain = EventChain::create(b"k", "g");
+        let nfc = "caf\u{00e9}"; // precomposed - the canonical form
+        let non_nfc = "cafe\u{0301}"; // decomposed - same grapheme, different bytes
+
+        // A clean worldId signs fine, and the binding round-trips.
+        let ok_binding = chain
+            .bind_bundle(nfc, "deadbeef", 0, "g")
+            .expect("NFC identity strings sign");
+        assert!(EventChain::verify_bundle_binding(
+            b"k", nfc, "deadbeef", 0, "g", 0, "g", &ok_binding
+        ));
+
+        // The decomposed twin is rejected on the SIGN side...
+        assert_eq!(
+            chain.bind_bundle(non_nfc, "deadbeef", 0, "g"),
+            Err(CanonError::NonNfc),
+            "non-NFC worldId must not be signable (cross-surface fork)"
+        );
+        // ...and on the VERIFY side (false, never a panic), for every field.
+        assert!(!EventChain::verify_bundle_binding(
+            b"k", non_nfc, "deadbeef", 0, "g", 0, "g", &ok_binding
+        ));
+        assert!(!EventChain::verify_bundle_binding(
+            b"k", nfc, non_nfc, 0, "g", 0, "g", &ok_binding
+        ));
+        assert!(!EventChain::verify_bundle_binding(
+            b"k", nfc, "deadbeef", 0, non_nfc, 0, "g", &ok_binding
+        ));
+        assert!(!EventChain::verify_bundle_binding(
+            b"k", nfc, "deadbeef", 0, "g", 0, non_nfc, &ok_binding
+        ));
     }
 }
