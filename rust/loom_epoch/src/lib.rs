@@ -64,7 +64,15 @@ pub fn is_safe_epoch(n: i64) -> bool {
 ///   state  = u64 from digest[0..8]  little-endian
 ///   inc    = u64 from digest[8..16] little-endian, |1 (forced odd)
 ///   prng   = Pcg32::from_raw(state, inc)
-pub fn derive_epoch_prng(world_id: &str, epoch_number: i64) -> Pcg32 {
+pub fn derive_epoch_prng(world_id: &str, epoch_number: i64) -> Result<Pcg32, String> {
+    // Round-6 audit HIGH: TS deriveEpochPrng (assertCleanString) and Python
+    // derive_epoch_prng (_assert_clean_string) reject a non-NFC world_id;
+    // Rust hashed the decomposed bytes and derived a DIFFERENT seed - a
+    // cross-surface determinism fork. Reject identically (a Rust &str cannot
+    // hold a lone surrogate, so NFC is the only check needed).
+    if !unicode_normalization::is_nfc(world_id) {
+        return Err("world-epoch: non-NFC world_id (normalize to NFC first)".to_string());
+    }
     let id_bytes = world_id.as_bytes();
     let epoch_bytes = epoch_number.to_le_bytes(); // i64 LE, two's complement for negatives
     let mut hasher = Sha256::new();
@@ -78,7 +86,7 @@ pub fn derive_epoch_prng(world_id: &str, epoch_number: i64) -> Pcg32 {
     inc_b.copy_from_slice(&digest[8..16]);
     let state = u64::from_le_bytes(state_b);
     let inc = u64::from_le_bytes(inc_b) | 1;
-    Pcg32::from_raw(state, inc)
+    Ok(Pcg32::from_raw(state, inc))
 }
 
 // ---- Action AST kinds ------------------------------------------------------
@@ -190,7 +198,9 @@ pub struct TickEpochResult {
 
 /// Resolve one offline epoch. Pure: does not mutate `input.state`. Returns the
 /// new state (epoch advanced) + the canonical EpochResolved event.
-pub fn tick_epoch(input: TickEpochInput) -> TickEpochResult {
+/// Errs (never panics) on a non-NFC world_id - the same inputs TS/Python throw
+/// on (round-6 audit HIGH).
+pub fn tick_epoch(input: TickEpochInput) -> Result<TickEpochResult, String> {
     let actor_tags: Vec<String> = if input.actor_tags.is_empty() {
         vec![DEFAULT_ACTOR_TAG.to_string()]
     } else {
@@ -198,7 +208,7 @@ pub fn tick_epoch(input: TickEpochInput) -> TickEpochResult {
     };
     let max_actions = input.max_actions.unwrap_or(u64::MAX);
 
-    let mut prng = derive_epoch_prng(input.world_id, input.epoch_number);
+    let mut prng = derive_epoch_prng(input.world_id, input.epoch_number)?;
 
     // Identify offline actors, then sort by the numeric-aware id comparator so the
     // resolution (and PRNG draw) order is byte-identical everywhere.
@@ -325,12 +335,12 @@ pub fn tick_epoch(input: TickEpochInput) -> TickEpochResult {
         "actions_processed": Value::Array(entries),
         "pcg_steps_consumed": prng.get_draws(),
     });
-    TickEpochResult {
+    Ok(TickEpochResult {
         state: out_state,
         event,
         resolved,
         rejected,
-    }
+    })
 }
 
 // ---- catch_up_epochs -------------------------------------------------------
@@ -359,18 +369,22 @@ pub struct CatchUpResult {
 /// Deterministically replay offline epochs from `state.epoch` up to
 /// `current_epoch`, capped at `max_catchup`. Result depends only on
 /// (state, capped, proposals) - never on the wall clock directly.
-pub fn catch_up_epochs(input: CatchUpInput) -> CatchUpResult {
+/// Errs (never panics) on a non-NFC world_id (round-6 audit HIGH).
+pub fn catch_up_epochs(input: CatchUpInput) -> Result<CatchUpResult, String> {
     let client_epoch = input.state.get("epoch").and_then(|e| e.as_i64()).unwrap_or(0);
     // Codex P1: checked arithmetic - a hostile state.epoch (e.g. i64::MIN) must not
     // overflow/panic; an un-subtractable epoch yields no catch-up.
     let target = input.current_epoch.checked_sub(client_epoch).unwrap_or(0);
     if target <= 0 {
-        return CatchUpResult {
+        // Even the no-op path validates world_id, so a non-NFC id is rejected
+        // identically regardless of whether any epochs need replaying.
+        derive_epoch_prng(input.world_id, 0)?;
+        return Ok(CatchUpResult {
             state: input.state.clone(),
             events: Vec::new(),
             epochs_resolved: 0,
             epochs_voided: 0,
-        };
+        });
     }
     // Defense-in-depth: clamp a negative max_catchup to 0 (the JSON boundary already
     // rejects it; a direct caller gets "no catch-up" instead of garbage counts). Codex P1.
@@ -398,18 +412,18 @@ pub fn catch_up_epochs(input: CatchUpInput) -> CatchUpResult {
             ruleset: input.ruleset,
             actor_tags: input.actor_tags.clone(),
             max_actions: input.max_actions,
-        });
+        })?;
         work = r.state;
         events.push(r.event);
         i += 1;
     }
 
-    CatchUpResult {
+    Ok(CatchUpResult {
         state: work,
         events,
         epochs_resolved: capped,
         epochs_voided: target - capped,
-    }
+    })
 }
 
 // ---- validating JSON boundary (the WASM + PyO3 surfaces call THESE) ---------
@@ -456,7 +470,7 @@ pub fn tick_epoch_from_json(input_json: &str) -> Result<String, String> {
         ruleset: &v["ruleset"],
         actor_tags: parse_actor_tags(&v),
         max_actions,
-    });
+    })?;
     let out = json!({ "state": r.state, "event": r.event, "resolved": r.resolved, "rejected": r.rejected });
     serde_json::to_string(&out).map_err(|e| format!("world-epoch: serialize: {}", e))
 }
@@ -491,7 +505,7 @@ pub fn catch_up_epochs_from_json(input_json: &str) -> Result<String, String> {
         proposals_by_epoch: &v["proposalsByEpoch"],
         actor_tags: parse_actor_tags(&v),
         max_actions,
-    });
+    })?;
     let out = json!({ "state": r.state, "events": r.events, "epochsResolved": r.epochs_resolved, "epochsVoided": r.epochs_voided });
     serde_json::to_string(&out).map_err(|e| format!("world-epoch: serialize: {}", e))
 }

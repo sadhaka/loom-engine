@@ -122,7 +122,7 @@ fn s1_single_shot_120_epoch_catchup_reproduces_pinned_hashes() {
         proposals_by_epoch: &c["proposalsByEpoch"],
         actor_tags: tags(&c),
         max_actions: None,
-    });
+    }).expect("golden inputs are NFC-clean");
     assert_eq!(r.epochs_resolved, expect["epochsResolved"].as_i64().unwrap(), "epochsResolved");
     assert_eq!(r.epochs_voided, expect["epochsVoided"].as_i64().unwrap(), "epochsVoided");
     assert_eq!(r.state["epoch"].as_i64().unwrap(), expect["final_epoch"].as_i64().unwrap(), "final epoch");
@@ -150,7 +150,7 @@ fn s1_chunked_catchup_equals_single_shot_checkpoint_pinned() {
             proposals_by_epoch: &c["proposalsByEpoch"],
             actor_tags: tags(&c),
             max_actions: None,
-        });
+        }).expect("golden inputs are NFC-clean");
         work = r.state;
         all_events.extend(r.events);
         assert_eq!(

@@ -46,7 +46,7 @@ fn golden_epoch_byte_parity_with_ts() {
                 ruleset,
                 actor_tags: actor_tags.clone(),
                 max_actions,
-            });
+            }).expect("golden inputs are NFC-clean");
             let sh = world_state_hash(key.as_bytes(), &r.state).unwrap();
             assert_eq!(sh, expect["state_hash"].as_str().unwrap(), "{} state_hash", label);
             let eh = world_state_hash(key.as_bytes(), &Value::Array(vec![r.event.clone()])).unwrap();
@@ -72,7 +72,7 @@ fn golden_epoch_byte_parity_with_ts() {
                 proposals_by_epoch,
                 actor_tags: actor_tags.clone(),
                 max_actions: None,
-            });
+            }).expect("golden inputs are NFC-clean");
             let sh = world_state_hash(key.as_bytes(), &r.state).unwrap();
             assert_eq!(sh, expect["state_hash"].as_str().unwrap(), "{} state_hash", label);
             let eh = world_state_hash(key.as_bytes(), &Value::Array(r.events.clone())).unwrap();
@@ -98,4 +98,25 @@ fn from_json_boundary_is_fail_closed() {
     // sanity: a valid tick still succeeds through the boundary.
     let ok = serde_json::json!({"worldId":"w","epochNumber":1,"state":{"epoch":0,"worldSeed":0,"entities":{}},"proposals":{},"ruleset":{}});
     assert!(loom_epoch::tick_epoch_from_json(&ok.to_string()).is_ok(), "valid tick must pass");
+}
+
+#[test]
+fn non_nfc_world_id_is_rejected_on_every_epoch_entry_point() {
+    // Round-6 audit HIGH: TS/Python reject a non-NFC worldId at the epoch
+    // seed derivation; Rust hashed the decomposed bytes and derived a
+    // DIFFERENT PRNG - a cross-surface determinism fork reachable through
+    // WASM/PyO3/C-ABI via tick_epoch_from_json. Every entry point rejects.
+    let dirty = "cafe\u{0301}";
+    assert!(loom_epoch::derive_epoch_prng(dirty, 1).is_err());
+    let bad_tick = serde_json::json!({"worldId": dirty, "epochNumber": 1,
+        "state": {"epoch": 0, "worldSeed": 0, "entities": {}},
+        "proposals": {}, "ruleset": {}});
+    let e = loom_epoch::tick_epoch_from_json(&bad_tick.to_string());
+    assert!(e.is_err() && e.unwrap_err().contains("non-NFC"));
+    let bad_catchup = serde_json::json!({"worldId": dirty, "currentEpoch": 5,
+        "maxCatchup": 5, "state": {"epoch": 0, "worldSeed": 0, "entities": {}},
+        "proposalsByEpoch": {}, "ruleset": {}});
+    assert!(loom_epoch::catch_up_epochs_from_json(&bad_catchup.to_string()).is_err());
+    // The precomposed twin (same grapheme, NFC bytes) is accepted.
+    assert!(loom_epoch::derive_epoch_prng("caf\u{00e9}", 1).is_ok());
 }

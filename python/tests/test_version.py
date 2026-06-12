@@ -45,6 +45,17 @@ def test_every_version_surface_agrees():
         "native publish")
     assert _toml_version("rust/loom_py/Cargo.toml") == pkg, (
         "rust/loom_py/Cargo.toml drifted from package.json")
+    # Round-6 audit LOW: the LOCKFILES are packaging artifacts too - the
+    # 3.1.0 round left rust/loom_py/Cargo.lock at the old version even after
+    # the manifests moved. Pin both lockfiles' root-package entries.
+    lock = _read("rust/loom_py/Cargo.lock")
+    m = re.search(r'name = "loom_py"\nversion = "([^"]+)"', lock)
+    assert m and m.group(1) == pkg, (
+        "rust/loom_py/Cargo.lock root entry (%s) drifted from package.json (%s)"
+        % (m.group(1) if m else "missing", pkg))
+    npm_lock = json.loads(_read("package-lock.json"))
+    assert npm_lock.get("version") == pkg, (
+        "package-lock.json root version drifted from package.json")
 
 
 def test_native_runtime_constant_is_not_a_literal():

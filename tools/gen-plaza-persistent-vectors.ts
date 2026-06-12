@@ -183,9 +183,10 @@ function runScenario(): ScenarioResult {
   var rec2 = chain.append('EpochResolved', t2.event);
   if (!rec1 || !rec2) throw new Error('gen-plaza: chain append rejected an event');
 
-  // (3) SUSPEND - the bundle (snapshot S0 @ index 0, tail = both events) now
-  // CARRIES its seal structurally (bundle format v2): suspend() embeds
-  // chain.seal() and resume() verifies it fail-closed.
+  // (3) SUSPEND - the bundle (snapshot S0 @ index 0, tail = both events)
+  // CARRIES its structural seal AND its signed identity binding (bundle
+  // format v3): suspend() embeds chain.seal() + bindBundle() and resume()
+  // verifies both fail-closed, the binding first.
   var bundle = suspend({ key: KEY, worldId: WORLD, snapshotState: S0, snapshotEventIndex: SNAPSHOT_EVENT_INDEX, chain: chain });
   var seal = bundle.seal;
   // The snapshot is at index 0, so the tail IS the full chain and ONE

@@ -107,3 +107,11 @@ if __name__ == "__main__":
     test_golden_vector_byte_parity()
     test_p1_fail_closed_edges()
     print("world_epoch Python parity: all 7 cases pass")
+
+def test_non_nfc_world_id_is_rejected_round6_parity_pin():
+    # Rust used to derive a seed from the decomposed bytes while TS/Python
+    # raised - all three surfaces now reject identically; this pins Python.
+    import pytest
+    with pytest.raises(Exception):
+        derive_epoch_prng("cafe\u0301", 1)
+    derive_epoch_prng("caf\u00e9", 1)  # precomposed twin derives normally
