@@ -154,7 +154,13 @@ test('partial sync: leaves, root, diff, pulled/kept sets, and bytes metric match
   assert.deepStrictEqual(run.synced.pulled, vec.expect.partial_sync.pulled, 'pulled set');
   assert.deepStrictEqual(run.synced.kept, vec.expect.partial_sync.kept, 'kept set');
   assert.strictEqual(run.synced.root, run.serverRoot, 'recombined root equals the server root');
-  assert.deepStrictEqual(run.synced.regions, run.serverRegions, 'recombined regions ARE the server regions');
+  // Compare by CANONICAL CONTENT, not JS prototype: partitionRegions hands back
+  // null-prototype maps (the proto-pollution guard) while applyPartialSync rebuilds
+  // its regions through cloneJson (JSON round-trip -> plain {}), so the two are
+  // content-identical but differ in [[Prototype]] - a deepStrictEqual implementation
+  // detail with no bearing on the contract. The contract IS the canonical bytes, and
+  // those are what the leaves + root commit to.
+  assert.strictEqual(canonicalJson(run.synced.regions), canonicalJson(run.serverRegions), 'recombined regions ARE the server regions (canonical content)');
   var bytesPulled = 0;
   var bytesFull = 0;
   var ids = Object.keys(run.serverRegions);
