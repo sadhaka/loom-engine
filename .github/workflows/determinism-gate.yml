@@ -67,7 +67,7 @@ jobs:
       PYTHONHASHSEED: '0'
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.x'
       - name: Run every python/tests file as a script
@@ -94,7 +94,7 @@ jobs:
       - name: Run Rust workspace test suite (all core-crate golden tests)
         working-directory: rust
         run: cargo test --workspace
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.x'
       # loom_py is workspace-excluded (no Rust #[test] items; extension-module
