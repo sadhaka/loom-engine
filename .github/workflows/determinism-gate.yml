@@ -48,7 +48,7 @@ jobs:
     name: TS golden vectors
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v6
         with:
           node-version: '20'
@@ -66,7 +66,7 @@ jobs:
       # README pins PYTHONHASHSEED=0 for any cross-language hashing - honor it.
       PYTHONHASHSEED: '0'
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v6
         with:
           python-version: '3.x'
@@ -86,7 +86,7 @@ jobs:
     name: Rust golden vectors + loom_py parity
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Toolchain versions
         run: |
           rustc --version
